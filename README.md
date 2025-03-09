@@ -1,79 +1,118 @@
-# orbitpy-revised
-Python package (with C++ base) to compute satellite remote-sensing related orbit data. Revision of the `OrbitPy` package.
+# **orbitpy-revised**  
+A Python package (with a C++ base) for computing satellite remote-sensing orbit data. This is a revision of the `OrbitPy` package.  
 
 **Currently under active development.**
 
-# Developer Notes
+## Installation
 
-This repository is a revamp of the OrbitPy codebase, with the primary objective of removing the dependency on the `propcov` library. 
-Instead, we will use the `CoverageKinematics` library for coverage calculations and integrate orbit propagators from third-party libraries, such as Skyfield and Orekit.
-The `CoverageKinematics` library will be added as a submodule, and is based on C++, with python bindings using PyBind11.
+Requires: Unix-like operating system, `python 3.13`, `pip`
 
-One challenge in removing the `propcov` dependency lies in the use of (wrapped) propcov C++ objects by some core utility classes in OrbitPy. For example, 
-classes like `propcov.OrbitState` and `propcov.AbsoluteDate` are integral to existing functionality. 
-However, this transition offers an opportunity to redesign and improve these classes (their API), incorporating lessons learned from the development and use of the `OrbitPy` library.
+Create a conda environment:
+```
+conda create -n eosim-revised python=3.13
+conda activate eosim-revised
+conda install sphinx
+pip install sphinx-rtd-theme
+pip install pylint
+pip install black
 
-## Guidelines:
+```
 
-We can use the following sources as reference for reformulating the API:
+## Developer Notes
 
-* [OrbitPy library](https://github.com/EarthObservationSimulator/orbitpy/wiki) 
-     * Refer to the `docs/api_reference.rst` (and sub-links within the file) for high-level description of the modules and classes.
-* [EOSE-API library](https://github.com/eose-tools-org/eose-api)
-* [TAT-C schemas](https://github.com/code-lab-org/tatc/tree/main/src/tatc/schemas)
-* [InstruPy](https://github.com/EarthObservationSimulator/instrupy/tree/master/instrupy): 
-    Support import of instrument objects and datametrics calculation with the InstruPy library, while providing a default instrument object.
-* [SPICE](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/index.html)
-* [Cesium CZML](https://github.com/AnalyticalGraphicsInc/czml-writer/wiki)
-* [STK](https://help.agi.com/stk/)
+This repository is a revamp of the `OrbitPy` codebase, primarily aimed at removing the dependency on the `propcov` library. Instead, we will:  
+- Use the `CoverageKinematics` library for coverage calculations (added as a submodule).  
+- Integrate orbit propagators from third-party libraries such as Skyfield and Orekit.  
+- Use `PyBind11` to create Python bindings for C++ implementations in `CoverageKinematics`. 
 
-### Coding style
+### **Challenges & Opportunities**  
 
-Each class/ function is supported with the following:
+The transition away from `propcov` presents a challenge because several core `OrbitPy` utility classes rely on wrapped `propcov` C++ objects (e.g., `propcov.OrbitState`, `propcov.AbsoluteDate`). However, this provides an opportunity to:  
+- Redesign these classes with a cleaner API.  
+- Incorporate lessons learned from prior development and use of `OrbitPy`.  
+- Improve efficiency and maintainability.  
 
-* Sphinx style inline commenting. Make the comments descriptive and provide examples of implementations. (Check out [SPICE](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/index.html) documentation.)
+## **API & Design References**  
 
-* Unit tests, validation.
+For API design, we will reference the following sources:  
 
-* Descriptive documentation if required in Sphinx style documentation.
+- [OrbitPy library](https://github.com/EarthObservationSimulator/orbitpy/wiki)  
+  - Key reference: `docs/api_reference.rst` for high-level descriptions of modules and classes.  
+- [EOSE-API library](https://github.com/eose-tools-org/eose-api)  
+- [TAT-C schemas](https://github.com/code-lab-org/tatc/tree/main/src/tatc/schemas)  
+- [InstruPy](https://github.com/EarthObservationSimulator/instrupy/tree/master/instrupy)  
+  - Supports instrument object imports and data metric calculations, while providing default instrument objects.  
+- [SPICE Toolkit](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/index.html)  
+- [Cesium CZML](https://github.com/AnalyticalGraphicsInc/czml-writer/wiki)  
+- [STK](https://help.agi.com/stk/)
 
-### List of major 3rd party dependencies under consideration:
+## **Coding Guidelines**  
 
-* AstroPy, python datetime for handling time
-* Skyfield for SGP4 propagation, coordinate transformations to the TEME frame, conversations of Inertial from/to Keplerian elements.
-* SPICE (SpiceyPy) for time, coordinate transformations (favored for its computational speed over AstroPy)
-* Orekit for numerical orbit propagation
-* SciPy for rotations, interpolation.
+Each class/function must adhere to the following:  
 
+1. **Documentation**  
+   - Use **Sphinx-style inline comments** 
+   - Provide descriptive documentation and examples. (similar to [SPICE](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/index.html)).  
 
-### Other general guidelines
+2. **Testing**  
+   - Write unit tests and validation tests.  
+   - Validation data is sourced from other mission simulators (e.g., GMAT or STK) or real-world datasets (e.g., CYGNSS data).  
 
-* We will rely on tested, and well maintained open-source 3rd party software whenever available, 
-  instead of trying to recreate the functionality in-house. 
-  For example, we can use `AstroPy` for time related operations, instead of coding in transformations from one time system to another.
+3. **Code Style & Standards**  
+   - Follow a well-defined **Styling README** (to be created).  
+   - Use Python **type hints** and follow PEP 8/PEP 257 where applicable.  
 
-* Use and support particular frame, time representations, which are commonly used another third party software, 
-  real-world data representation (e.g., CYNGSS data). ITRF for ECEF, J2000 or ICRF for ECI. UTC and UT1 for time. 
+4. **File Handling & Data Structures**  
+   - Favor **NumPy arrays** for representing trajectories.  
+   - Use **Python dictionaries** for data structures instead of niche objects (AstroPy, SpiceyPy).  
+   - Consider **Xarray** or **Pandas** for data indexing.  
 
-* Use basic objects for API (python dicitonaries, numpy, and not niche objects such as AstroPy, SpicePY)
+## **Major Dependencies**  
 
-* Use the latest stable version of Python at the time of writing (Python 3.13.2).
+- **AstroPy**, `datetime` → Handling time conversions.  
+- **Skyfield** → SGP4 propagation, TEME frame transformations, Keplerian elements.  
+- **SPICE (SpiceyPy)** → Time and coordinate transformations (preferred over AstroPy for speed).  
+- **Orekit** → Numerical orbit propagation.  
+- **SciPy** → Rotations and interpolation.  
+- **PyBind11** → Python bindings for C++ code.  
+- **Pydantic?** → For enforcing data validation in API.  
 
-* Sphinx will be used for documentation.
+## **General Guidelines**  
 
-* Handle file writing by ....
+- **Leverage existing open-source tools** whenever possible instead of reinventing functionality.  
+- **Standardize frame and time representations**:  
+  - **Frames:** ITRF (ECEF), J2000/ICRF (ECI).  
+  - **Time systems:** UTC, UT1.  
+- **Use the latest stable Python version** (currently Python 3.13.2).  
+- **Sphinx will be used for documentation.**
 
-* Use `pydantic`?
+## **Revamping Strategy**  
 
-* Favor use of numpy (for representing trajectories). python dictionaries for data sets. numpy for file reading. xarray or pandas for data indexing.
+1. **Catalog Existing Codebase**  
+   - List all classes, functions, and modules in `OrbitPy`.  
+   - Identify `propcov` dependencies that need replacements.
 
-## Revamping strategy
+  **Count:** 
+  - Modules: 9
+  - Classes: 9 + 3 + 4 + 2 + 6 + 2 + 2 + 2 + 2 = 33
+  - Functions: 7 + 0 + 1 + 2 + 4 + 1 + 0 + 1 + 0 = 16
+  - Examples: ~10
 
-- List all the classes and functions in OrbitPy.
-- Make a GitHub discussion post for each (revised/ revised) module, class, function.
-- Make a prototype of the class/function with a unittest/ validation-test after the discussion and get it reviewed.
-- Make a corresponding high-level Sphinx API doc for the class (along with inline Sphinx type documentation).
-- Update examples with the revised codebase.
+Total: 58 + 10
+
+2. **Establish Development Standards**  
+   - Create a **Styling README** for code and documentation.  
+
+3. **Collaborative Review Process**  
+   - Open **GitHub discussions** for each module/class/function revision.  
+
+4. **Prototyping & Validation**  
+   - Develop prototypes with unit tests and validation cases.  
+   - Get reviews before finalizing implementations.  
+
+5. **Documentation & Examples**  
+   - Generate high-level **Sphinx API documentation** for each class.  
+   - Update examples to reflect the revised codebase.  
 
 ## List of classes, functions to be revamped/ developed
 
@@ -189,6 +228,6 @@ Each class/ function is supported with the following:
 * orbitpy.mission.Mission
 
 
-### `orbitpy.sensorpixelprojection`
+<strike> ### `orbitpy.sensorpixelprojection` </strike>
 
 TBD if time permits.

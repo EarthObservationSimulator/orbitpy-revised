@@ -1,0 +1,4 @@
+# Ignore temporary files and folders in the docs folder
+docs/_build
+docs/_static
+docs/_templates
