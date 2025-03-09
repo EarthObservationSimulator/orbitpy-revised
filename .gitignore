@@ -1,2 +1,8 @@
+# Ignore egg-info directories
+*.egg-info/
+
+# Ignore __pycache__ directories
+__pycache__/
+
 # Ignore temporary files and folders in the docs folder
 docs/build/

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=57", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbitpy"
+version = "0.1.0"
+description = "A Python package for computing satellite remote-sensing orbit data."
+authors = [
+    { name = "Vinay Ravindra", email = "vravindra@baeri.org" },
+    { name = "Ryan Ketzner", email = "ketzner@ucf.edu" }
+]
+dependencies = [
+    "sphinx",
+    "sphinx-rtd-theme",
+
+]
+
+[project.optional-dependencies]
+dev = [
+    "pylint",
+    "black",
+    "coverage"
+]
+
+[tool.black]
+line-length = 80 # Match with pylintrc
