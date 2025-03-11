@@ -1,10 +1,10 @@
-.PHONY: install test lint format docs
+.PHONY: install test lint format docs coverage
 
 install:
 	pip install -e .
 
 test:
-	python -m unittest discover -s tests
+	coverage run -m unittest discover -s tests
 
 lint:
 	pylint --rcfile=pylintrc orbitpy tests examples # Use the pylintrc file from the Google Python Style Guide 
@@ -14,3 +14,7 @@ format:
 
 docs:
 	sphinx-build -b html docs/source docs/build
+
+coverage:
+	coverage report -m
+	coverage html
