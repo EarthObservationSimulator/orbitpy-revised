@@ -27,4 +27,6 @@ Take cues from the above references, then use linters, auto-formatters, and LLMs
 
 - Use Google style docstrings.  https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html. The following configuration option in the `conf.py` enables Sphinx to parse Google style dosctrings:  `napoleon_google_docstring = True`
 
-- All OrbitPy objects (classes) intended for use by external users must support initialization and serialization using Python dictionaries. This means that these classes should provide methods to be instantiated with dictionary inputs and to export their state or data back into a dictionary format.
+- All OrbitPy objects (classes) intended for use by external users must support initialization and serialization using Python dictionaries. Each class should provide `from_dict(...)` and `to_dict(...)` methods to allow instantiation from dictionary inputs and export their state or data back into a dictionary format.
+
+- All enum values should be in capital letters and formatted with underscores, e.g., `GREGORIAN_DATE`.

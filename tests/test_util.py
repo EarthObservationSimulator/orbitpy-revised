@@ -6,10 +6,11 @@ from astropy.time import Time as Astropy_Time
 
 
 class TestAbsoluteDate(unittest.TestCase):
-    """ Test the AbsoluteDate class. """
+    """Test the AbsoluteDate class."""
+
     def test_from_dict_gregorian(self):
         dict_in = {
-            "time_format": "GregorianDate",
+            "time_format": "Gregorian_Date",
             "year": 2025,
             "month": 3,
             "day": 10,
@@ -25,7 +26,7 @@ class TestAbsoluteDate(unittest.TestCase):
 
     def test_from_dict_julian(self):
         dict_in = {
-            "time_format": "JulianDate",
+            "time_format": "Julian_Date",
             "jd": 2457081.10417,
             "time_scale": "utc",
         }
@@ -39,9 +40,9 @@ class TestAbsoluteDate(unittest.TestCase):
             "2025-03-10T14:30:00", format="isot", scale="utc"
         )
         absolute_date = AbsoluteDate(astropy_time)
-        dict_out = absolute_date.to_dict("GregorianDate")
+        dict_out = absolute_date.to_dict("Gregorian_Date")
         expected_dict = {
-            "time_format": "GregorianDate",
+            "time_format": "GREGORIAN_DATE",
             "year": 2025,
             "month": 3,
             "day": 10,
@@ -55,9 +56,9 @@ class TestAbsoluteDate(unittest.TestCase):
     def test_to_dict_julian(self):
         astropy_time = Astropy_Time(2457081.10417, format="jd", scale="utc")
         absolute_date = AbsoluteDate(astropy_time)
-        dict_out = absolute_date.to_dict("JulianDate")
+        dict_out = absolute_date.to_dict("Julian_Date")
         expected_dict = {
-            "time_format": "JulianDate",
+            "time_format": "JULIAN_DATE",
             "jd": 2457081.10417,
             "time_scale": "utc",
         }
@@ -66,7 +67,7 @@ class TestAbsoluteDate(unittest.TestCase):
     def test_gregorian_to_julian(self):
         # Initialize with Gregorian date
         dict_in = {
-            "time_format": "GregorianDate",
+            "time_format": "GREGORIAN_DATE",
             "year": 2025,
             "month": 3,
             "day": 11,
@@ -84,7 +85,7 @@ class TestAbsoluteDate(unittest.TestCase):
     def test_julian_to_gregorian(self):
         # Initialize with Julian Date
         dict_in = {
-            "time_format": "JulianDate",
+            "time_format": "Julian_Date",
             "jd": 2460325.145250,
             "time_scale": "ut1",
         }
