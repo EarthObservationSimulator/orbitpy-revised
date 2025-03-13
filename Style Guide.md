@@ -31,4 +31,11 @@ Take cues from the above references, then use linters, auto-formatters, and LLMs
 
 - All enum values should be in capital letters and formatted with underscores, e.g., `GREGORIAN_DATE`.
 
+- Imports of classes and/or functions from external libraries must be prefixed by the name of the external library. For example:
+  ```python
+  from astropy.time import Time as Astropy_Time
+  ```
+
 - Use only the `from_dict(...)` and other functions that do not depend on external libraries to initialize the OrbitPy objects, even in test functions. External library members should be kept internal to the implementation, as they may change.
+
+- A class representing a physical object (e.g., Ground-station, instrument) or a collection of objects (e.g., grid of physical locations) must include an identifier attribute.

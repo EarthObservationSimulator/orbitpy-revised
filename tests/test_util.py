@@ -7,9 +7,13 @@ from orbitpy.util import (
     Cartesian3DVelocity,
     CartesianState,
     ReferenceFrame,
+    GeographicPosition,
 )
 from astropy.time import Time as Astropy_Time
 import random
+
+from astropy.coordinates import EarthLocation as Astropy_EarthLocation
+import astropy.units as astropy_u
 
 
 class TestAbsoluteDate(unittest.TestCase):
@@ -105,6 +109,7 @@ class TestAbsoluteDate(unittest.TestCase):
 
 class TestCartesian3DPosition(unittest.TestCase):
     """Test the Cartesian3DPosition class."""
+
     def setUp(self):
         self.x = round(random.uniform(-1e6, 1e6), 6)
         self.y = round(random.uniform(-1e6, 1e6), 6)
@@ -149,6 +154,7 @@ class TestCartesian3DPosition(unittest.TestCase):
 
 class TestCartesian3DVelocity(unittest.TestCase):
     """Test the Cartesian3DVelocity class."""
+
     def setUp(self):
         self.vx = round(random.uniform(-1e6, 1e6), 6)
         self.vy = round(random.uniform(-1e6, 1e6), 6)
@@ -199,6 +205,7 @@ class TestCartesian3DVelocity(unittest.TestCase):
 
 class TestCartesianState(unittest.TestCase):
     """Test the CartesianState class."""
+
     def setUp(self):
         self.time_dict = {
             "time_format": "Gregorian_Date",
@@ -292,6 +299,103 @@ class TestCartesianState(unittest.TestCase):
         self.assertEqual(dict_out["position"], self.position.to_list())
         self.assertEqual(dict_out["velocity"], self.velocity.to_list())
         self.assertEqual(dict_out["frame"], "ICRF")
+
+
+class TestGeographicPosition(unittest.TestCase):
+    """Test the GeographicPosition class."""
+
+    def setUp(self):
+        self.latitude_degrees = round(random.uniform(-90, 90), 6)
+        self.longitude_degrees = round(random.uniform(-180, 180), 6)
+        self.elevation_m = round(random.uniform(0, 10000), 6)
+
+    def test_initialization(self):
+        geo_pos = GeographicPosition(
+            self.latitude_degrees, self.longitude_degrees, self.elevation_m
+        )
+        self.assertAlmostEqual(
+            geo_pos.latitude, self.latitude_degrees, places=6
+        )
+        self.assertAlmostEqual(
+            geo_pos.longitude, self.longitude_degrees, places=6
+        )
+        self.assertAlmostEqual(geo_pos.elevation, self.elevation_m, places=6)
+
+    def test_from_dict(self):
+        dict_in = {
+            "latitude": self.latitude_degrees,
+            "longitude": self.longitude_degrees,
+            "elevation": self.elevation_m,
+        }
+        geo_pos = GeographicPosition.from_dict(dict_in)
+        self.assertAlmostEqual(
+            geo_pos.latitude, self.latitude_degrees, places=6
+        )
+        self.assertAlmostEqual(
+            geo_pos.longitude, self.longitude_degrees, places=6
+        )
+        self.assertAlmostEqual(geo_pos.elevation, self.elevation_m, places=6)
+
+    def test_to_dict(self):
+        geo_pos = GeographicPosition(
+            self.latitude_degrees, self.longitude_degrees, self.elevation_m
+        )
+        dict_out = geo_pos.to_dict()
+        self.assertAlmostEqual(
+            dict_out["latitude_degrees"], self.latitude_degrees, places=6
+        )
+        self.assertAlmostEqual(
+            dict_out["longitude_degrees"], self.longitude_degrees, places=6
+        )
+        self.assertAlmostEqual(
+            dict_out["elevation_m"], self.elevation_m, places=6
+        )
+
+    def test_itrs_xyz(self):
+        geo_pos = GeographicPosition(37.7749, -122.4194, 10)
+        itrs_xyz = geo_pos.itrs_xyz
+        self.assertEqual(len(itrs_xyz), 3)
+        self.assertTrue(all(isinstance(coord, float) for coord in itrs_xyz))
+        # validation data from Astropy EarthLocation class
+        expected_xyz = [-2706179.084e-3, -4261066.162e-3, 3885731.616e-3]
+        for coord, expected in zip(itrs_xyz, expected_xyz):
+            self.assertAlmostEqual(coord, expected, places=3)
+
+    def test_itrs_xyz_astropy_validation(self):
+        def geodetic_to_itrf(lat_deg: float, lon_deg: float, height_m: float):
+            """
+            Astropy function to convert WGS84 geodetic coordinates to 
+            ITRF (ECEF) Cartesian coordinates.
+
+            Args:
+                lat_deg (float): Latitude in degrees.
+                lon_deg (float): Longitude in degrees.
+                height_m (float): Height above WGS84 ellipsoid in meters.
+
+            Returns:
+                tuple: (x, y, z) coordinates in meters.
+            """
+            location = Astropy_EarthLocation.from_geodetic(
+                lon=lon_deg * astropy_u.deg,
+                lat=lat_deg * astropy_u.deg,
+                height=height_m * astropy_u.m,
+            )
+            return (
+                location.x.value,
+                location.y.value,
+                location.z.value,
+            )  # Return as a tuple of floats
+
+        geo_pos = GeographicPosition(
+            self.latitude_degrees, self.longitude_degrees, self.elevation_m
+        )
+        itrs_xyz = geo_pos.itrs_xyz * 1e3  # convert to meters
+        # validation data from Astropy EarthLocation class
+        expected_xyz = geodetic_to_itrf(
+            self.latitude_degrees, self.longitude_degrees, self.elevation_m
+        )
+        for coord, expected in zip(itrs_xyz, expected_xyz):
+            self.assertAlmostEqual(coord, expected, places=3)
 
 
 if __name__ == "__main__":

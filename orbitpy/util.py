@@ -10,6 +10,7 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 
 from astropy.time import Time as Astropy_Time
+from skyfield.api import wgs84 as skyfield_wgs84
 
 
 class EnumBase(str, Enum):
@@ -54,7 +55,7 @@ class AbsoluteDate:
     date-time formats and UT1 and UTC time scales. Date-time is managed
     internally using the Astropy Time object.
 
-    .. note:: Skyfield Time was not used since it appears not to 
+    .. note:: Skyfield Time was not used since it appears not to
     support handling of JD-UTC."""
 
     def __init__(self, astropy_time: Astropy_Time) -> None:
@@ -379,3 +380,78 @@ class CartesianState:
             "velocity": self.velocity.to_list(),
             "frame": self.frame.value,
         }
+
+
+class GeographicPosition:
+    """Handles geographic position information using Skyfield.
+    The geographic position is managed internally using the Skyfield
+    GeographicPosition object."""
+
+    def __init__(
+        self,
+        latitude_degrees: float,
+        longitude_degrees: float,
+        elevation_m: float,
+    ):
+        """
+        Args:
+            latitude_degrees (float): Latitude in degrees.
+            longitude_degrees (float): Longitude in degrees.
+            elevation_m (float): Elevation in meters.
+        """
+        self.skyfield_geo_position = skyfield_wgs84.latlon(
+            latitude_degrees=latitude_degrees,
+            longitude_degrees=longitude_degrees,
+            elevation_m=elevation_m,
+        )
+
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, Any]) -> "GeographicPosition":
+        """Construct a GeographicPosition object from a dictionary.
+
+        Args:
+            dict_in (dict): Dictionary with the geographic position information.
+                The dictionary should contain the following key-value pairs:
+                - "latitude" (float): Latitude in degrees.
+                - "longitude" (float): Longitude in degrees.
+                - "elevation" (float): Elevation in meters.
+
+        Returns:
+            GeographicPosition: GeographicPosition object.
+        """
+        latitude_degrees = dict_in["latitude"]
+        longitude_degrees = dict_in["longitude"]
+        elevation_m = dict_in["elevation"]
+        return cls(latitude_degrees, longitude_degrees, elevation_m)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the GeographicPosition object to a dictionary.
+
+        Returns:
+            dict: Dictionary with the geographic position information.
+        """
+        return {
+            "latitude_degrees": self.skyfield_geo_position.latitude.degrees,
+            "longitude_degrees": self.skyfield_geo_position.longitude.degrees,
+            "elevation_m": self.skyfield_geo_position.elevation.m,
+        }
+
+    @property
+    def latitude(self):
+        """Get the latitude in degrees."""
+        return self.skyfield_geo_position.latitude.degrees
+
+    @property
+    def longitude(self):
+        """Get the longitude in degrees."""
+        return self.skyfield_geo_position.longitude.degrees
+
+    @property
+    def elevation(self):
+        """Get the elevation in meters."""
+        return self.skyfield_geo_position.elevation.m
+
+    @property
+    def itrs_xyz(self):
+        """Get the ITRS XYZ position in kilometers."""
+        return self.skyfield_geo_position.itrs_xyz.km
