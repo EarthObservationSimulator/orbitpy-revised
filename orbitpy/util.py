@@ -51,7 +51,11 @@ class TimeScale(EnumBase):
 
 class AbsoluteDate:
     """Handles date-time information with support to Julian and Gregorian
-    date-time formats and UT1 and UTC time scales."""
+    date-time formats and UT1 and UTC time scales. Date-time is managed
+    internally using the Astropy Time object.
+
+    .. note:: Skyfield Time was not used since it appears not to 
+    support handling of JD-UTC."""
 
     def __init__(self, astropy_time: Astropy_Time) -> None:
         """Constructor for the AbsoluteDate class.
@@ -152,7 +156,7 @@ class ReferenceFrame(EnumBase):
 
     ICRF = "ICRF"  # International Celestial Reference Frame
     ITRF = "ITRF"  # International Terrestrial Reference Frame
-    TEME = "TEME"  # True Equator Mean Equinox
+    # TEME = "TEME"  # True Equator Mean Equinox
 
 
 class Cartesian3DPosition:

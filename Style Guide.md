@@ -30,3 +30,5 @@ Take cues from the above references, then use linters, auto-formatters, and LLMs
 - All OrbitPy objects (classes) intended for use by external users must support initialization and serialization using Python dictionaries. Each class should provide `from_dict(...)` and `to_dict(...)` methods to allow instantiation from dictionary inputs and export their state or data back into a dictionary format.
 
 - All enum values should be in capital letters and formatted with underscores, e.g., `GREGORIAN_DATE`.
+
+- Use only the `from_dict(...)` and other functions that do not depend on external libraries to initialize the OrbitPy objects, even in test functions. External library members should be kept internal to the implementation, as they may change.
