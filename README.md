@@ -1,5 +1,8 @@
 # **orbitpy-revised**  
-A Python package (with a C++ base) for computing satellite remote-sensing orbit data. This is a revision of the `OrbitPy` package.  
+A Python package (with a C++ base) for computing satellite remote-sensing orbit data. (This is a revision of the package in the `orbitpy` repository.)
+
+The purpose of `OrbitPy` is to offer a comprehensive set of classes and functions tailored for Earth Observation mission simulations. 
+Wherever feasible, third-party library classes and functions are leveraged to avoid redundancy. In certain cases, `OrbitPy` classes act as wrappers around these third-party implementations.
 
 **Currently under active development.**
 
