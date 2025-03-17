@@ -1,9 +1,10 @@
 """Unit tests for orbitpy.time module."""
 
 import unittest
-from orbitpy.time import AbsoluteDate
 
 from astropy.time import Time as Astropy_Time
+
+from orbitpy.time import AbsoluteDate
 
 
 class TestAbsoluteDate(unittest.TestCase):
