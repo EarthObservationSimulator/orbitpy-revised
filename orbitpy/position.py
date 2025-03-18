@@ -8,19 +8,10 @@ Collection of classes and functions for handling position information.
 from typing import Dict, Any, List, Optional
 
 from skyfield.api import wgs84 as skyfield_wgs84
+from skyfield.positionlib import build_position as skyfield_build_position
 
-from .base import EnumBase
+from .base import ReferenceFrame
 from .time import AbsoluteDate
-
-
-class ReferenceFrame(EnumBase):
-    """
-    Enumeration of recognized Reference frames.
-    """
-
-    ICRF = "ICRF"  # International Celestial Reference Frame
-    ITRF = "ITRF"  # International Terrestrial Reference Frame
-    # TEME = "TEME"  # True Equator Mean Equinox
 
 
 class Cartesian3DPosition:

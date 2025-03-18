@@ -25,11 +25,11 @@ class TestCartesian3DPosition(unittest.TestCase):
         self.z = round(random.uniform(-1e6, 1e6), 6)
 
     def test_initialization(self):
-        pos = Cartesian3DPosition(self.x, self.y, self.z, ReferenceFrame.ICRF)
+        pos = Cartesian3DPosition(self.x, self.y, self.z, ReferenceFrame.GCRF)
         self.assertEqual(pos.x, self.x)
         self.assertEqual(pos.y, self.y)
         self.assertEqual(pos.z, self.z)
-        self.assertEqual(pos.frame, ReferenceFrame.ICRF)
+        self.assertEqual(pos.frame, ReferenceFrame.GCRF)
 
     def test_from_list(self):
         pos = Cartesian3DPosition.from_list(
@@ -41,16 +41,16 @@ class TestCartesian3DPosition(unittest.TestCase):
         self.assertEqual(pos.frame, ReferenceFrame.ITRF)
 
     def test_to_list(self):
-        pos = Cartesian3DPosition(self.x, self.y, self.z, ReferenceFrame.ICRF)
+        pos = Cartesian3DPosition(self.x, self.y, self.z, ReferenceFrame.GCRF)
         self.assertEqual(pos.to_list(), [self.x, self.y, self.z])
 
     def test_from_dict(self):
-        dict_in = {"x": self.x, "y": self.y, "z": self.z, "frame": "ICRF"}
+        dict_in = {"x": self.x, "y": self.y, "z": self.z, "frame": "GCRF"}
         pos = Cartesian3DPosition.from_dict(dict_in)
         self.assertEqual(pos.x, self.x)
         self.assertEqual(pos.y, self.y)
         self.assertEqual(pos.z, self.z)
-        self.assertEqual(pos.frame, ReferenceFrame.ICRF)
+        self.assertEqual(pos.frame, ReferenceFrame.GCRF)
 
     def test_to_dict(self):
         pos = Cartesian3DPosition(self.x, self.y, self.z, ReferenceFrame.ITRF)
@@ -71,12 +71,12 @@ class TestCartesian3DVelocity(unittest.TestCase):
 
     def test_initialization(self):
         vel = Cartesian3DVelocity(
-            self.vx, self.vy, self.vz, ReferenceFrame.ICRF
+            self.vx, self.vy, self.vz, ReferenceFrame.GCRF
         )
         self.assertEqual(vel.vx, self.vx)
         self.assertEqual(vel.vy, self.vy)
         self.assertEqual(vel.vz, self.vz)
-        self.assertEqual(vel.frame, ReferenceFrame.ICRF)
+        self.assertEqual(vel.frame, ReferenceFrame.GCRF)
 
     def test_from_list(self):
         vel = Cartesian3DVelocity.from_list(
@@ -89,17 +89,17 @@ class TestCartesian3DVelocity(unittest.TestCase):
 
     def test_to_list(self):
         vel = Cartesian3DVelocity(
-            self.vx, self.vy, self.vz, ReferenceFrame.ICRF
+            self.vx, self.vy, self.vz, ReferenceFrame.GCRF
         )
         self.assertEqual(vel.to_list(), [self.vx, self.vy, self.vz])
 
     def test_from_dict(self):
-        dict_in = {"vx": self.vx, "vy": self.vy, "vz": self.vz, "frame": "ICRF"}
+        dict_in = {"vx": self.vx, "vy": self.vy, "vz": self.vz, "frame": "GCRF"}
         vel = Cartesian3DVelocity.from_dict(dict_in)
         self.assertEqual(vel.vx, self.vx)
         self.assertEqual(vel.vy, self.vy)
         self.assertEqual(vel.vz, self.vz)
-        self.assertEqual(vel.frame, ReferenceFrame.ICRF)
+        self.assertEqual(vel.frame, ReferenceFrame.GCRF)
 
     def test_to_dict(self):
         vel = Cartesian3DVelocity(
@@ -132,7 +132,7 @@ class TestCartesianState(unittest.TestCase):
             "x": round(random.uniform(-1e6, 1e6), 6),
             "y": round(random.uniform(-1e6, 1e6), 6),
             "z": round(random.uniform(-1e6, 1e6), 6),
-            "frame": "ICRF",
+            "frame": "GCRF",
         }
         self.position = Cartesian3DPosition.from_dict(self.position_dict)
 
@@ -140,11 +140,11 @@ class TestCartesianState(unittest.TestCase):
             "vx": round(random.uniform(-1e6, 1e6), 6),
             "vy": round(random.uniform(-1e6, 1e6), 6),
             "vz": round(random.uniform(-1e6, 1e6), 6),
-            "frame": "ICRF",
+            "frame": "GCRF",
         }
         self.velocity = Cartesian3DVelocity.from_dict(self.velocity_dict)
 
-        self.frame = ReferenceFrame.ICRF
+        self.frame = ReferenceFrame.GCRF
 
     def test_initialization(self):
         state = CartesianState(
@@ -160,7 +160,7 @@ class TestCartesianState(unittest.TestCase):
             "x": round(random.uniform(-1e6, 1e6), 6),
             "y": round(random.uniform(-1e6, 1e6), 6),
             "z": round(random.uniform(-1e6, 1e6), 6),
-            "frame": "ICRF",
+            "frame": "GCRF",
         }
         position = Cartesian3DPosition.from_dict(position_dict)
 
@@ -173,7 +173,7 @@ class TestCartesianState(unittest.TestCase):
         velocity = Cartesian3DVelocity.from_dict(velocity_dict)
 
         with self.assertRaises(ValueError) as context:
-            CartesianState(self.time, position, velocity, ReferenceFrame.ICRF)
+            CartesianState(self.time, position, velocity, ReferenceFrame.GCRF)
 
         self.assertTrue(
             "Velocity frame does not match the provided frame."
@@ -185,7 +185,7 @@ class TestCartesianState(unittest.TestCase):
             "time": self.time_dict,
             "position": self.position.to_list(),
             "velocity": self.velocity.to_list(),
-            "frame": "ICRF",
+            "frame": "GCRF",
         }
         state = CartesianState.from_dict(dict_in)
         self.assertEqual(
@@ -207,7 +207,7 @@ class TestCartesianState(unittest.TestCase):
         self.assertEqual(dict_out["time"], self.time.to_dict())
         self.assertEqual(dict_out["position"], self.position.to_list())
         self.assertEqual(dict_out["velocity"], self.velocity.to_list())
-        self.assertEqual(dict_out["frame"], "ICRF")
+        self.assertEqual(dict_out["frame"], "GCRF")
 
 
 class TestGeographicPosition(unittest.TestCase):

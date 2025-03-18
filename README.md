@@ -85,7 +85,7 @@ Each class/function must adhere to the following:
 
 - **Leverage existing open-source tools** whenever possible instead of reinventing functionality.  
 - **Standardize frame and time representations**:  
-  - **Frames:** ITRF (ECEF), J2000/ICRF (ECI).  
+  - **Frames:** ITRF (ECEF), GCRF (ECI).  
   - **Time systems:** UTC, UT1.  
 - **Use the latest stable Python version** (currently Python 3.13.2).  
 - **Sphinx will be used for documentation.**

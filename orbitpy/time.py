@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Optional
 from astropy.time import Time as Astropy_Time
 from skyfield.api import wgs84 as skyfield_wgs84
 
-from .base import EnumBase
+from .base import EnumBase, ReferenceFrame
 
 
 class TimeFormat(EnumBase):
@@ -130,16 +130,20 @@ class AbsoluteDate:
         else:
             raise ValueError(f"Unsupported date-time format: {time_format}")
 
+    def __eq__(self, other: object) -> bool:
+        """
+        Check if two AbsoluteDate objects are equal.
 
-class ReferenceFrame(EnumBase):
-    """
-    Enumeration of recognized Reference frames.
-    """
+        Args:
+            other (object): The object to compare with.
 
-    ICRF = "ICRF"  # International Celestial Reference Frame
-    ITRF = "ITRF"  # International Terrestrial Reference Frame
-    # TEME = "TEME"  # True Equator Mean Equinox
-
+        Returns:
+            bool: True if the two AbsoluteDate objects represent the 
+                  same date and time, False otherwise.
+        """
+        if not isinstance(other, AbsoluteDate):
+            return False
+        return self.astropy_time == other.astropy_time
 
 class Cartesian3DPosition:
     """Handles 3D position information."""

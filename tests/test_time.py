@@ -97,6 +97,25 @@ class TestAbsoluteDate(unittest.TestCase):
             absolute_date.astropy_time.iso, "2024-01-15 15:29:09.600"
         )
 
+    def test_equality_operator(self):
+        """Test the equality operator for AbsoluteDate."""
+        date1 = AbsoluteDate(
+            Astropy_Time("2025-03-17T12:00:00", format="isot", scale="utc")
+        )
+        date2 = AbsoluteDate(
+            Astropy_Time("2025-03-17T12:00:00", format="isot", scale="utc")
+        )
+        date3 = AbsoluteDate(
+            Astropy_Time("2025-03-18T12:00:00", format="isot", scale="utc")
+        )
+
+        # Test equality
+        self.assertTrue(date1 == date2)
+        self.assertFalse(date1 == date3)
+
+        # Test comparison with a non-AbsoluteDate object
+        self.assertFalse(date1 == "not an AbsoluteDate")
+
 
 if __name__ == "__main__":
     unittest.main()

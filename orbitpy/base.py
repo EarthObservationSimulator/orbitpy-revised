@@ -25,3 +25,20 @@ class EnumBase(str, Enum):
                 return cls(key.upper())
             except:  # pylint: disable=bare-except
                 return None
+
+class ReferenceFrame(EnumBase):
+    """
+    Enumeration of recognized Reference frames.
+
+    Attributes:
+        GCRF (str): Geocentric Celestial Reference Frame. See:
+                    https://rhodesmill.org/skyfield/api-position.html#geocentric-position-relative-to-the-earth
+                    
+        ITRF (str): International Terrestrial Reference Frame. See:
+                    https://rhodesmill.org/skyfield/api-framelib.html#skyfield.framelib.itrs
+                    
+    """
+
+    GCRF = "GCRF"  # Geocentric Celestial Reference Frame
+    ITRF = "ITRF"  # International Terrestrial Reference Frame
+    # TEME = "TEME"  # True Equator Mean Equinox
