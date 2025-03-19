@@ -237,10 +237,10 @@ class CartesianState:
             "frame": self.frame.value,
         }
 
-    def to_skyfield_GCRS_position(self):
+    def to_skyfield_gcrf_position(self):
         """Convert the CartesianState object to a Skyfield position object.
-        The Skyfield position object contains the position, velocity, and time information
-        and is referenced in GCRF.
+        The Skyfield "position" object contains the position, velocity, time 
+        information, and is referenced in GCRF.
 
         Returns:
             Skyfield position (state) object.
@@ -249,12 +249,18 @@ class CartesianState:
             ValueError: If the frame is not GCRF.
         """
         if self.frame != ReferenceFrame.GCRF:
-            raise ValueError("Only CartesianState object in GCRF frame is supported for "
-                             "conversion to Skyfield GCRS position.")
+            raise ValueError(
+                "Only CartesianState object in GCRF frame is supported for "
+                "conversion to Skyfield GCRF position."
+            )
 
         skyfield_time = self.time.to_skyfield_time()
-        position_au = np.array(self.position.to_list()) / Skyfield_AU_KM  # convert to AU
-        velocity_au_per_d = (np.array(self.velocity.to_list()) / Skyfield_AU_KM) * 86400.0  # convert to AU/day
+        position_au = (
+            np.array(self.position.to_list()) / Skyfield_AU_KM
+        )  # convert to AU
+        velocity_au_per_d = (
+            np.array(self.velocity.to_list()) / Skyfield_AU_KM
+        ) * 86400.0  # convert to AU/day
         return skyfield_build_position(
             position_au=position_au,
             velocity_au_per_d=velocity_au_per_d,
@@ -262,7 +268,6 @@ class CartesianState:
             center=399,  # Geocentric
             target=None,
         )
-        
 
 
 class GeographicPosition:

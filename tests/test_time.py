@@ -114,14 +114,16 @@ class TestAbsoluteDate(unittest.TestCase):
 
         # Test comparison with a non-AbsoluteDate object
         self.assertFalse(date1 == "not an AbsoluteDate")
-    
+
     def test_to_astropy_time(self):
-        astropy_time = Astropy_Time("2025-03-17T12:00:00", format="isot", scale="utc")
+        astropy_time = Astropy_Time(
+            "2025-03-17T12:00:00", format="isot", scale="utc"
+        )
         absolute_date = AbsoluteDate(astropy_time)
-        
+
         # Convert to Astropy Time
         converted_time = absolute_date.to_astropy_time()
-        
+
         # Assert that the converted time matches the original Astropy Time
         self.assertEqual(converted_time, astropy_time)
 
@@ -131,9 +133,12 @@ class TestAbsoluteDate(unittest.TestCase):
         )
         # Convert to Skyfield Time
         skyfield_time = absolute_date.to_skyfield_time()
-        
+
         # Assert that the Skyfield time matches the AbsoluteTime in UTC
-        self.assertEqual(skyfield_time.utc_strftime(format='%Y-%m-%d %H:%M:%S UTC'), '2025-03-17 12:00:00 UTC')
+        self.assertEqual(
+            skyfield_time.utc_strftime(format="%Y-%m-%d %H:%M:%S UTC"),
+            "2025-03-17 12:00:00 UTC",
+        )
 
 
 if __name__ == "__main__":

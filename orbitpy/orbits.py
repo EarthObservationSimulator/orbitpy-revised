@@ -12,7 +12,9 @@ import json
 import requests
 from typing import Dict, Tuple, Any, Optional
 
-from skyfield.elementslib import osculating_elements_of as skyfield_osculating_elements_of
+from skyfield.elementslib import (
+    osculating_elements_of as skyfield_osculating_elements_of,
+)
 
 from astropy.constants import GM_earth as astropy_GM_earth
 
@@ -224,6 +226,7 @@ class SpaceTrackAPI:
         self.session = None
         print("Logged out successfully.")
 
+
 class OsculatingElements:
     """
     Represents the state in terms of osculating (instantaneous)
@@ -258,7 +261,7 @@ class OsculatingElements:
             semi_major_axis (float): Semi-major axis in kilometers.
             eccentricity (float): Eccentricity (dimensionless).
             inclination (float): Inclination in degrees.
-            raan (float): Right Ascension of the Ascending Node 
+            raan (float): Right Ascension of the Ascending Node
                           (RAAN) in degrees.
             arg_of_perigee (float): Argument of Perigee in degrees.
             true_anomaly (float): True Anomaly in degrees.
@@ -292,7 +295,8 @@ class OsculatingElements:
                 - "semi_major_axis" (float): Semi-major axis in kilometers.
                 - "eccentricity" (float): Eccentricity (dimensionless).
                 - "inclination" (float): Inclination in degrees.
-                - "raan" (float): Right Ascension of the Ascending Node (RAAN) in degrees.
+                - "raan" (float): Right Ascension of the Ascending Node 
+                                  (RAAN) in degrees.
                 - "arg_of_perigee" (float): Argument of Perigee in degrees.
                 - "true_anomaly" (float): True Anomaly in degrees.
                 - "inertial_frame" (str): The inertial reference frame.
@@ -301,7 +305,7 @@ class OsculatingElements:
             OsculatingElements: The `OsculatingElements` state object.
 
         Raises:
-            ValueError: If the inertial_frame is not :class:`ReferenceFrame.GCRF`.
+            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.GCRF`
         """
         time = AbsoluteDate.from_dict(dict_in["time"])
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
@@ -335,32 +339,39 @@ class OsculatingElements:
             "true_anomaly": self.true_anomaly,
             "inertial_frame": self.inertial_frame.value,
         }
-    
+
     @staticmethod
-    def from_cartesian_state(cartesian_state: CartesianState, GM_body: Optional[float] = astropy_GM_earth.value*1e-9) -> "OsculatingElements":
+    def from_cartesian_state(
+        cartesian_state: CartesianState,
+        gm_body_km3_s2: Optional[float] = astropy_GM_earth.value * 1e-9,
+    ) -> "OsculatingElements":
         """
         Initialize an OsculatingElements object from a CartesianState object.
 
         Args:
-            cartesian_state (CartesianState): The Cartesian state of the spacecraft.
-            GM_body (float, optional): Gravitational parameter in km^3/s^2.
-                                         Defaults to GM_earth.
+            cartesian_state (CartesianState): Cartesian state of the spacecraft.
+            gm_body_km3_s2 (float, optional): Gravitational parameter 
+                                              in km^3/s^2.
+                                              Defaults to GM_earth.
 
         Returns:
-            OsculatingElements: The osculating elements derived from the Cartesian state.
+            OsculatingElements: The osculating elements derived from 
+                                the Cartesian state.
 
         Raises:
-            ValueError: If the CartesianState frame is not :class:`ReferenceFrame.GCRF`.
+            ValueError: If the CartesianState frame is not 
+                        :class:`ReferenceFrame.GCRF`.
         """
         if cartesian_state.frame != ReferenceFrame.GCRF:
             raise ValueError("Only GCRF is supported.")
 
-        skyfield_position = cartesian_state.to_skyfield_GCRS_position()
+        skyfield_position = cartesian_state.to_skyfield_gcrf_position()
 
-        #  The reference frame by default is the ICRF. GCRF is not rotated with respect to ICRF.
-        elements = skyfield_osculating_elements_of(skyfield_position, 
-                                                   reference_frame=None, 
-                                                   gm_km3_s2=GM_body)
+        #  The reference frame by default is the ICRF.
+        # And GCRF is not rotated with respect to ICRF.
+        elements = skyfield_osculating_elements_of(
+            skyfield_position, reference_frame=None, gm_km3_s2=gm_body_km3_s2
+        )
 
         # Create and return the OsculatingElements object
         return OsculatingElements(

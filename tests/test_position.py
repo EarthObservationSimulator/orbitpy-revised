@@ -208,13 +208,15 @@ class TestCartesianState(unittest.TestCase):
         self.assertEqual(dict_out["position"], self.position.to_list())
         self.assertEqual(dict_out["velocity"], self.velocity.to_list())
         self.assertEqual(dict_out["frame"], "GCRF")
-    
-    def test_to_skyfield_GCRS_position(self):
+
+    def test_to_skyfield_gcrf_position(self):
         # Create a CartesianState object
-        state = CartesianState(self.time, self.position, self.velocity, self.frame)
+        state = CartesianState(
+            self.time, self.position, self.velocity, self.frame
+        )
 
         # Convert to Skyfield GCRS position
-        skyfield_position = state.to_skyfield_GCRS_position()
+        skyfield_position = state.to_skyfield_gcrf_position()
 
         # Validate the Skyfield position object
         # Check that the position matches the CartesianState position
@@ -242,22 +244,36 @@ class TestCartesianState(unittest.TestCase):
         # Check that the time matches the CartesianState time
         self.assertEqual(
             skyfield_position.t.utc_iso(),
-            '2025-03-10T14:30:00Z',
+            "2025-03-10T14:30:00Z",
         )
-    
-    def test_to_skyfield_GCRS_position_invalid_frame(self):
+
+    def test_to_skyfield_gcrf_position_invalid_frame(self):
         """Test that ValueError is raised when frame is not GCRF."""
         # Create a CartesianState object with a non-GCRF frame
-        position = Cartesian3DPosition(self.position.x, self.position.y, self.position.z, ReferenceFrame.ITRF)
-        velocity = Cartesian3DVelocity(self.velocity.vx, self.velocity.vy, self.velocity.vz, ReferenceFrame.ITRF)
-        state = CartesianState(self.time, position, velocity, ReferenceFrame.ITRF)
+        position = Cartesian3DPosition(
+            self.position.x,
+            self.position.y,
+            self.position.z,
+            ReferenceFrame.ITRF,
+        )
+        velocity = Cartesian3DVelocity(
+            self.velocity.vx,
+            self.velocity.vy,
+            self.velocity.vz,
+            ReferenceFrame.ITRF,
+        )
+        state = CartesianState(
+            self.time, position, velocity, ReferenceFrame.ITRF
+        )
 
         # Check that ValueError is raised
         with self.assertRaises(ValueError) as context:
-            state.to_skyfield_GCRS_position()
+            state.to_skyfield_gcrf_position()
 
-        self.assertTrue("Only CartesianState object in GCRF frame is supported for "
-                        "conversion to Skyfield GCRS position." in str(context.exception))
+        self.assertTrue(
+            "Only CartesianState object in GCRF frame is supported for "
+            "conversion to Skyfield GCRF position." in str(context.exception)
+        )
 
 
 class TestGeographicPosition(unittest.TestCase):

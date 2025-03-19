@@ -139,7 +139,7 @@ class AbsoluteDate:
             other (object): The object to compare with.
 
         Returns:
-            bool: True if the two AbsoluteDate objects represent the 
+            bool: True if the two AbsoluteDate objects represent the
                   same date and time, False otherwise.
         """
         if not isinstance(other, AbsoluteDate):
@@ -153,7 +153,7 @@ class AbsoluteDate:
             astropy.time.Time: Astropy Time object.
         """
         return self.astropy_time
-    
+
     def to_skyfield_time(self) -> Skyfield_Time:
         """Convert the AbsoluteDate object to a Skyfield Time object.
 

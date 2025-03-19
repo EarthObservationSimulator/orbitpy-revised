@@ -4,7 +4,12 @@ import unittest
 import random
 
 from orbitpy.time import AbsoluteDate
-from orbitpy.position import ReferenceFrame, Cartesian3DPosition, Cartesian3DVelocity, CartesianState
+from orbitpy.position import (
+    ReferenceFrame,
+    Cartesian3DPosition,
+    Cartesian3DVelocity,
+    CartesianState,
+)
 from orbitpy.orbits import OrbitalMeanElementsMessage, OsculatingElements
 
 
@@ -114,6 +119,7 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
             "TLE lines are missing in the OMM", str(context.exception)
         )
 
+
 class TestOsculatingElements(unittest.TestCase):
     """Unit tests for the OsculatingElements class."""
 
@@ -130,12 +136,14 @@ class TestOsculatingElements(unittest.TestCase):
             "time_scale": "utc",
         }
         self.time = AbsoluteDate.from_dict(self.time_dict)
-        self.semi_major_axis = round(random.uniform(7000, 9000), 6)  # in kilometers
+        self.semi_major_axis = round(
+            random.uniform(7000, 9000), 6
+        )  # in kilometers
         self.eccentricity = round(random.uniform(0, 1), 6)
-        self.inclination =  round(random.uniform(0, 180), 6) # in degrees
+        self.inclination = round(random.uniform(0, 180), 6)  # in degrees
         self.raan = round(random.uniform(0, 360), 6)  # in degrees
         self.arg_of_perigee = round(random.uniform(0, 360), 6)  # in degrees
-        self.true_anomaly = round(random.uniform(0, 360), 6) # in degrees
+        self.true_anomaly = round(random.uniform(0, 360), 6)  # in degrees
         self.inertial_frame = ReferenceFrame.GCRF
 
     def test_initialization(self):
@@ -172,7 +180,10 @@ class TestOsculatingElements(unittest.TestCase):
                 self.true_anomaly,
                 ReferenceFrame.ITRF,  # Invalid frame
             )
-        self.assertTrue("Only GCRF inertial reference frame is supported." in str(context.exception))
+        self.assertTrue(
+            "Only GCRF inertial reference frame is supported."
+            in str(context.exception)
+        )
 
     def test_from_dict(self):
         """Test constructing OsculatingElements from a dictionary."""
@@ -197,7 +208,8 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(state.inertial_frame, self.inertial_frame)
 
     def test_from_dict_invalid_frame(self):
-        """Test constructing OsculatingElements from a dictionary with an invalid frame."""
+        """Test constructing OsculatingElements from a 
+        dictionary with an invalid frame."""
         dict_in = {
             "time": self.time_dict,
             "semi_major_axis": self.semi_major_axis,
@@ -210,7 +222,10 @@ class TestOsculatingElements(unittest.TestCase):
         }
         with self.assertRaises(ValueError) as context:
             OsculatingElements.from_dict(dict_in)
-        self.assertTrue("Only GCRF inertial reference frame is supported." in str(context.exception))
+        self.assertTrue(
+            "Only GCRF inertial reference frame is supported."
+            in str(context.exception)
+        )
 
     def test_to_dict(self):
         """Test converting OsculatingElements to a dictionary."""
@@ -233,21 +248,29 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(dict_out["arg_of_perigee"], self.arg_of_perigee)
         self.assertEqual(dict_out["true_anomaly"], self.true_anomaly)
         self.assertEqual(dict_out["inertial_frame"], self.inertial_frame.value)
-    
+
     def test_from_cartesian_state(self):
         """Test constructing OsculatingElements from a CartesianState object."""
         # Create a CartesianState object
         # velocity is chosen to make it a circular orbit, 90 deg inclination
         position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.GCRF)
-        velocity = Cartesian3DVelocity(0.0, 0.0, 7.54605329011, ReferenceFrame.GCRF) 
-        cartesian_state = CartesianState(self.time, position, velocity, ReferenceFrame.GCRF)
+        velocity = Cartesian3DVelocity(
+            0.0, 0.0, 7.54605329011, ReferenceFrame.GCRF
+        )
+        cartesian_state = CartesianState(
+            self.time, position, velocity, ReferenceFrame.GCRF
+        )
 
         # Convert to OsculatingElements
-        osculating_elements = OsculatingElements.from_cartesian_state(cartesian_state)
+        osculating_elements = OsculatingElements.from_cartesian_state(
+            cartesian_state
+        )
 
         # Validate the OsculatingElements object
         self.assertEqual(osculating_elements.time, cartesian_state.time)
-        self.assertEqual(osculating_elements.inertial_frame, ReferenceFrame.GCRF)
+        self.assertEqual(
+            osculating_elements.inertial_frame, ReferenceFrame.GCRF
+        )
         self.assertAlmostEqual(osculating_elements.eccentricity, 0.0, places=5)
         self.assertAlmostEqual(osculating_elements.inclination, 90.0)
         self.assertAlmostEqual(osculating_elements.raan, 0.0)
