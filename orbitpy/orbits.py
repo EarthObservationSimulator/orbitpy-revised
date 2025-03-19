@@ -4,11 +4,20 @@
 
 Collection of classes and functions relating to
 represention of spacecraft orbits.
+Spacecraft state may also be represented in terms of Cartesian state
+by using the :class:orbitpy.position.CartesianState class.
 """
 
 import json
 import requests
 from typing import Dict, Tuple, Any, Optional
+
+from skyfield.elementslib import osculating_elements_of as skyfield_osculating_elements_of
+
+from astropy.constants import GM_earth as astropy_GM_earth
+
+from orbitpy.position import ReferenceFrame, CartesianState
+from orbitpy.time import AbsoluteDate
 
 
 class OrbitalMeanElementsMessage:
@@ -82,12 +91,12 @@ class OrbitalMeanElementsMessage:
 class SpaceTrackAPI:
     """
     A class to interface with Space-Track.org and retrieve satellite orbit data
-    *created* before and closest to a specified target date. Note that the data 
+    *created* before and closest to a specified target date. Note that the data
     has some latency from the time of the satellite's state measurement.
 
     *CREATION_DATE* is not the same as *EPOCH* in the OMM.
 
-    Initialize SpaceTrackAPI instance with credentials from a JSON file 
+    Initialize SpaceTrackAPI instance with credentials from a JSON file
     in the following format:
     {
         "username": "xxxx",
@@ -102,7 +111,7 @@ class SpaceTrackAPI:
         Initialize the SpaceTrackAPI instance with credentials.
 
         Args:
-            credentials_filepath (str): Path to the JSON file containing 
+            credentials_filepath (str): Path to the JSON file containing
                                         Space-Track credentials.
 
         Raises:
@@ -123,7 +132,7 @@ class SpaceTrackAPI:
             self.session: Optional[requests.Session] = None
         except FileNotFoundError as exc:
             raise FileNotFoundError(
-                f'Credentials file not found: {credentials_filepath}'
+                f"Credentials file not found: {credentials_filepath}"
             ) from exc
         except json.JSONDecodeError as exc:
             raise ValueError(
@@ -156,29 +165,31 @@ class SpaceTrackAPI:
         self, norad_id: int, target_datetime: str
     ) -> Optional[Dict[str, Any]]:
         """
-        Retrieve the closest available OMM data *created* before the 
+        Retrieve the closest available OMM data *created* before the
         specified target datetime for the given satellite.
 
         Args:
             norad_id (int): NORAD catalog ID of the satellite.
-            target_datetime (str): Target datetime in ISO 8601 format 
+            target_datetime (str): Target datetime in ISO 8601 format
                                    (e.g., "2024-04-08T19:28:18").
 
         Returns:
-            Optional[Dict[str, Any]]: The OMM data as a dictionary, 
+            Optional[Dict[str, Any]]: The OMM data as a dictionary,
                                       or None if no data is found.
 
         Raises:
-            RuntimeError: If the request fails or the 
+            RuntimeError: If the request fails or the
                           session is not initialized.
         """
         if not self.session:
             raise RuntimeError("Session not initialized. Please login first.")
 
-        omm_url = f"{self.BASE_URL}/basicspacedata/query/class/omm/" +\
-                  f"NORAD_CAT_ID/{norad_id}/CREATION_DATE/" +\
-                  f"<{target_datetime}/sorderby/EPOCH%20desc/" +\
-                  "limit/1/format/json"
+        omm_url = (
+            f"{self.BASE_URL}/basicspacedata/query/class/omm/"
+            + f"NORAD_CAT_ID/{norad_id}/CREATION_DATE/"
+            + f"<{target_datetime}/sorderby/EPOCH%20desc/"
+            + "limit/1/format/json"
+        )
 
         response = self.session.get(omm_url)
 
@@ -212,3 +223,153 @@ class SpaceTrackAPI:
         self.session.cookies.clear()
         self.session = None
         print("Logged out successfully.")
+
+class OsculatingElements:
+    """
+    Represents the state in terms of osculating (instantaneous)
+    Keplerian elements in a specified inertial frame.
+
+    - Time
+    - Semi-major axis
+    - Eccentricity
+    - Inclination
+    - Right Ascension of the Ascending Node
+    - Argument of Perigee
+    - True Anomaly
+    - Inertial Frame
+    """
+
+    def __init__(
+        self,
+        time: AbsoluteDate,
+        semi_major_axis: float,
+        eccentricity: float,
+        inclination: float,
+        raan: float,
+        arg_of_perigee: float,
+        true_anomaly: float,
+        inertial_frame: ReferenceFrame,
+    ) -> None:
+        """
+        Initialize the `OsculatingElements` object.
+
+        Args:
+            time (AbsoluteDate): The epoch of the state.
+            semi_major_axis (float): Semi-major axis in kilometers.
+            eccentricity (float): Eccentricity (dimensionless).
+            inclination (float): Inclination in degrees.
+            raan (float): Right Ascension of the Ascending Node 
+                          (RAAN) in degrees.
+            arg_of_perigee (float): Argument of Perigee in degrees.
+            true_anomaly (float): True Anomaly in degrees.
+            inertial_frame (ReferenceFrame): The inertial reference frame.
+
+        Raises:
+            ValueError: If the inertial_frame is not ReferenceFrame.GCRF.
+        """
+        if inertial_frame != ReferenceFrame.GCRF:
+            raise ValueError("Only GCRF inertial reference frame is supported.")
+
+        self.time = time
+        self.semi_major_axis = semi_major_axis
+        self.eccentricity = eccentricity
+        self.inclination = inclination
+        self.raan = raan
+        self.arg_of_perigee = arg_of_perigee
+        self.true_anomaly = true_anomaly
+        self.inertial_frame = inertial_frame
+
+    @staticmethod
+    def from_dict(dict_in: Dict[str, Any]) -> "OsculatingElements":
+        """
+        Construct a `OsculatingElements` object from a dictionary.
+
+        Args:
+            dict_in (dict): Dictionary containing the state information.
+                The dictionary should contain the following key-value pairs:
+                - "time" (dict): Dictionary with the date-time information.
+                        See :class:`orbitpy.util.AbsoluteDate.from_dict()`.
+                - "semi_major_axis" (float): Semi-major axis in kilometers.
+                - "eccentricity" (float): Eccentricity (dimensionless).
+                - "inclination" (float): Inclination in degrees.
+                - "raan" (float): Right Ascension of the Ascending Node (RAAN) in degrees.
+                - "arg_of_perigee" (float): Argument of Perigee in degrees.
+                - "true_anomaly" (float): True Anomaly in degrees.
+                - "inertial_frame" (str): The inertial reference frame.
+
+        Returns:
+            OsculatingElements: The `OsculatingElements` state object.
+
+        Raises:
+            ValueError: If the inertial_frame is not :class:`ReferenceFrame.GCRF`.
+        """
+        time = AbsoluteDate.from_dict(dict_in["time"])
+        inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
+        if inertial_frame != ReferenceFrame.GCRF:
+            raise ValueError("Only GCRF inertial reference frame is supported.")
+        return OsculatingElements(
+            time=time,
+            semi_major_axis=dict_in["semi_major_axis"],
+            eccentricity=dict_in["eccentricity"],
+            inclination=dict_in["inclination"],
+            raan=dict_in["raan"],
+            arg_of_perigee=dict_in["arg_of_perigee"],
+            true_anomaly=dict_in["true_anomaly"],
+            inertial_frame=inertial_frame,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the `OsculatingElements` object to a dictionary.
+
+        Returns:
+            dict: Dictionary containing the state information.
+        """
+        return {
+            "time": self.time.to_dict(),
+            "semi_major_axis": self.semi_major_axis,
+            "eccentricity": self.eccentricity,
+            "inclination": self.inclination,
+            "raan": self.raan,
+            "arg_of_perigee": self.arg_of_perigee,
+            "true_anomaly": self.true_anomaly,
+            "inertial_frame": self.inertial_frame.value,
+        }
+    
+    @staticmethod
+    def from_cartesian_state(cartesian_state: CartesianState, GM_body: Optional[float] = astropy_GM_earth.value*1e-9) -> "OsculatingElements":
+        """
+        Initialize an OsculatingElements object from a CartesianState object.
+
+        Args:
+            cartesian_state (CartesianState): The Cartesian state of the spacecraft.
+            GM_body (float, optional): Gravitational parameter in km^3/s^2.
+                                         Defaults to GM_earth.
+
+        Returns:
+            OsculatingElements: The osculating elements derived from the Cartesian state.
+
+        Raises:
+            ValueError: If the CartesianState frame is not :class:`ReferenceFrame.GCRF`.
+        """
+        if cartesian_state.frame != ReferenceFrame.GCRF:
+            raise ValueError("Only GCRF is supported.")
+
+        skyfield_position = cartesian_state.to_skyfield_GCRS_position()
+
+        #  The reference frame by default is the ICRF. GCRF is not rotated with respect to ICRF.
+        elements = skyfield_osculating_elements_of(skyfield_position, 
+                                                   reference_frame=None, 
+                                                   gm_km3_s2=GM_body)
+
+        # Create and return the OsculatingElements object
+        return OsculatingElements(
+            time=cartesian_state.time,
+            semi_major_axis=elements.semi_major_axis.km,
+            eccentricity=elements.eccentricity,
+            inclination=elements.inclination.degrees,
+            raan=elements.longitude_of_ascending_node.degrees,
+            arg_of_perigee=elements.argument_of_periapsis.degrees,
+            true_anomaly=elements.true_anomaly.degrees,
+            inertial_frame=ReferenceFrame.GCRF,
+        )

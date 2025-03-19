@@ -7,3 +7,4 @@ __pycache__/
 # Ignore temporary files and folders
 docs/build/
 htmlcov/
+.coverage

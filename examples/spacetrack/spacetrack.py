@@ -1,10 +1,10 @@
 """
-Script to retrieve the *closest* available satellite orbit data (OMM) 
-from Space-Track.org *created* *before* a specified target date. 
-Note that the data has some latency from the time of measurement of 
+Script to retrieve the *closest* available satellite orbit data (OMM)
+from Space-Track.org *created* *before* a specified target date.
+Note that the data has some latency from the time of measurement of
 the satellite's state.
 
-The SpaceTrackAPI instance is initialized with credentials from a JSON file 
+The SpaceTrackAPI instance is initialized with credentials from a JSON file
 in the following format:
 {
     "username": "your_username",
@@ -52,5 +52,5 @@ if __name__ == "__main__":
 
         # Log out from Space-Track.org
         api.logout()
-    except Exception as e: # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         print(f"Error: {e}")
