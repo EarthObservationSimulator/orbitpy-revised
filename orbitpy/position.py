@@ -6,9 +6,11 @@ Collection of classes and functions for handling position information.
 """
 
 from typing import Dict, Any, List, Optional
+import numpy as np
 
 from skyfield.api import wgs84 as skyfield_wgs84
 from skyfield.positionlib import build_position as skyfield_build_position
+from skyfield.constants import AU_KM as Skyfield_AU_KM
 
 from .base import ReferenceFrame
 from .time import AbsoluteDate
@@ -234,6 +236,33 @@ class CartesianState:
             "velocity": self.velocity.to_list(),
             "frame": self.frame.value,
         }
+
+    def to_skyfield_GCRS_position(self):
+        """Convert the CartesianState object to a Skyfield position object.
+        The Skyfield position object contains the position, velocity, and time information
+        and is referenced in GCRF.
+
+        Returns:
+            Skyfield position (state) object.
+
+        Raises:
+            ValueError: If the frame is not GCRF.
+        """
+        if self.frame != ReferenceFrame.GCRF:
+            raise ValueError("Only CartesianState object in GCRF frame is supported for "
+                             "conversion to Skyfield GCRS position.")
+
+        skyfield_time = self.time.to_skyfield_time()
+        position_au = np.array(self.position.to_list()) / Skyfield_AU_KM  # convert to AU
+        velocity_au_per_d = (np.array(self.velocity.to_list()) / Skyfield_AU_KM) * 86400.0  # convert to AU/day
+        return skyfield_build_position(
+            position_au=position_au,
+            velocity_au_per_d=velocity_au_per_d,
+            t=skyfield_time,
+            center=399,  # Geocentric
+            target=None,
+        )
+        
 
 
 class GeographicPosition:

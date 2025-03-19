@@ -5,12 +5,13 @@
 Collection of classes and functions for handling time information.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 
 from astropy.time import Time as Astropy_Time
-from skyfield.api import wgs84 as skyfield_wgs84
+from skyfield.api import load as Skyfield_Load
+from skyfield.timelib import Time as Skyfield_Time
 
-from .base import EnumBase, ReferenceFrame
+from .base import EnumBase
 
 
 class TimeFormat(EnumBase):
@@ -144,3 +145,21 @@ class AbsoluteDate:
         if not isinstance(other, AbsoluteDate):
             return False
         return self.astropy_time == other.astropy_time
+
+    def to_astropy_time(self) -> Astropy_Time:
+        """Convert the AbsoluteDate object to an Astropy Time object.
+
+        Returns:
+            astropy.time.Time: Astropy Time object.
+        """
+        return self.astropy_time
+    
+    def to_skyfield_time(self) -> Skyfield_Time:
+        """Convert the AbsoluteDate object to a Skyfield Time object.
+
+        Returns:
+            skyfield.time.Time: Skyfield Time object.
+        """
+        ts = Skyfield_Load.timescale()
+        skyfield_time = ts.from_astropy(self.astropy_time)
+        return skyfield_time
