@@ -19,6 +19,7 @@ pip install sphinx-rtd-theme
 pip install pylint
 pip install black
 pip install coverage
+pip install skyfield
 pip install astropy
 ```
 
