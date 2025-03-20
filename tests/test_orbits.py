@@ -8,8 +8,8 @@ from orbitpy.position import (
     ReferenceFrame,
     Cartesian3DPosition,
     Cartesian3DVelocity,
-    CartesianState,
 )
+from orbitpy.state import CartesianState
 from orbitpy.orbits import OrbitalMeanElementsMessage, OsculatingElements
 
 
@@ -208,7 +208,7 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(state.inertial_frame, self.inertial_frame)
 
     def test_from_dict_invalid_frame(self):
-        """Test constructing OsculatingElements from a 
+        """Test constructing OsculatingElements from a
         dictionary with an invalid frame."""
         dict_in = {
             "time": self.time_dict,

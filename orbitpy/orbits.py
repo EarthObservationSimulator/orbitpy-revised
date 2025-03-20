@@ -18,7 +18,8 @@ from skyfield.elementslib import (
 
 from astropy.constants import GM_earth as astropy_GM_earth
 
-from orbitpy.position import ReferenceFrame, CartesianState
+from orbitpy.position import ReferenceFrame
+from orbitpy.state import CartesianState
 from orbitpy.time import AbsoluteDate
 
 
@@ -295,7 +296,7 @@ class OsculatingElements:
                 - "semi_major_axis" (float): Semi-major axis in kilometers.
                 - "eccentricity" (float): Eccentricity (dimensionless).
                 - "inclination" (float): Inclination in degrees.
-                - "raan" (float): Right Ascension of the Ascending Node 
+                - "raan" (float): Right Ascension of the Ascending Node
                                   (RAAN) in degrees.
                 - "arg_of_perigee" (float): Argument of Perigee in degrees.
                 - "true_anomaly" (float): True Anomaly in degrees.
@@ -350,16 +351,16 @@ class OsculatingElements:
 
         Args:
             cartesian_state (CartesianState): Cartesian state of the spacecraft.
-            gm_body_km3_s2 (float, optional): Gravitational parameter 
+            gm_body_km3_s2 (float, optional): Gravitational parameter
                                               in km^3/s^2.
                                               Defaults to GM_earth.
 
         Returns:
-            OsculatingElements: The osculating elements derived from 
+            OsculatingElements: The osculating elements derived from
                                 the Cartesian state.
 
         Raises:
-            ValueError: If the CartesianState frame is not 
+            ValueError: If the CartesianState frame is not
                         :class:`ReferenceFrame.GCRF`.
         """
         if cartesian_state.frame != ReferenceFrame.GCRF:
