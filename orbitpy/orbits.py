@@ -41,6 +41,37 @@ class OrbitalMeanElementsMessage:
         except json.JSONDecodeError as e:
             raise ValueError("Invalid JSON format for OMM.") from e
 
+    @classmethod
+    def from_dict(
+        cls,
+        omm_dict: Dict[str, Any]
+    ) -> "OrbitalMeanElementsMessage":
+        """
+        Initialize the OMM object with a dictionary.
+
+        Args:
+            omm_dict (Dict[str, Any]): The OMM as a dictionary.
+
+        Returns:
+            OrbitalMeanElementsMessage: The OMM object.
+        """
+        # convert the dictionary to a JSON string
+        omm_json = json.dumps(omm_dict)
+        return cls(omm_json)
+
+    @classmethod
+    def from_json(cls, omm_json: str) -> "OrbitalMeanElementsMessage":
+        """
+        Initialize the OMM object with a JSON string.
+
+        Args:
+            omm_json (str): The OMM in JSON format.
+
+        Returns:
+            OrbitalMeanElementsMessage: The OMM object.
+        """
+        return cls(omm_json)
+
     def get_field_as_str(self, field_name: str) -> str:
         """
         Retrieve the value of a specific field in the OMM as a string.

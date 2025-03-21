@@ -108,8 +108,8 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
     def test_get_tle_as_tuple_missing_line(self):
         """Test error handling when one of the TLE lines is missing."""
         missing_tle_omm_json = """
-        {
-            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992"
+{
+            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992"  
         }
         """
         omm = OrbitalMeanElementsMessage(missing_tle_omm_json)
@@ -117,6 +117,59 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
             omm.get_tle_as_tuple()
         self.assertIn(
             "TLE lines are missing in the OMM", str(context.exception)
+        )
+
+    def test_from_dict(self):
+        """Test constructing OrbitalMeanElementsMessage from a dictionary."""
+        omm_dict = {
+            "OBJECT_NAME": "CYGFM03",
+            "EPOCH": "2024-01-15T11:50:47.395968",
+            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+            "TLE_LINE2": "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827"  # pylint: disable=line-too-long
+        }
+
+        # Create an OrbitalMeanElementsMessage object from the dictionary
+        omm = OrbitalMeanElementsMessage.from_dict(omm_dict)
+
+        # Validate the object
+        self.assertIsInstance(omm, OrbitalMeanElementsMessage)
+        self.assertEqual(omm.get_field_as_str("OBJECT_NAME"), "CYGFM03")
+        self.assertEqual(
+            omm.get_field_as_str("TLE_LINE1"),
+            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+        )
+        self.assertEqual(
+            omm.get_field_as_str("TLE_LINE2"),
+            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827", # pylint: disable=line-too-long
+        )
+
+    def test_from_json(self):
+        """Test constructing OrbitalMeanElementsMessage from a JSON string."""
+        omm_json = """
+        {
+            "OBJECT_NAME": "CYGFM03",
+            "EPOCH": "2024-01-15T11:50:47.395968",
+            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",
+            "TLE_LINE2": "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827"
+        }
+        """
+
+        # Create an OrbitalMeanElementsMessage object from the JSON string
+        omm = OrbitalMeanElementsMessage.from_json(omm_json)
+
+        # Validate the object
+        self.assertIsInstance(omm, OrbitalMeanElementsMessage)
+        self.assertEqual(omm.get_field_as_str("OBJECT_NAME"), "CYGFM03")
+        self.assertEqual(
+            omm.get_field_as_str("EPOCH"), "2024-01-15T11:50:47.395968"
+        )
+        self.assertEqual(
+            omm.get_field_as_str("TLE_LINE1"),
+            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+        )
+        self.assertEqual(
+            omm.get_field_as_str("TLE_LINE2"),
+            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827", # pylint: disable=line-too-long
         )
 
 
