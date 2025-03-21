@@ -314,8 +314,8 @@ class OsculatingElements:
         self.true_anomaly = true_anomaly
         self.inertial_frame = inertial_frame
 
-    @staticmethod
-    def from_dict(dict_in: Dict[str, Any]) -> "OsculatingElements":
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, Any]) -> "OsculatingElements":
         """
         Construct a `OsculatingElements` object from a dictionary.
 
@@ -343,7 +343,7 @@ class OsculatingElements:
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
         if inertial_frame != ReferenceFrame.GCRF:
             raise ValueError("Only GCRF inertial reference frame is supported.")
-        return OsculatingElements(
+        return cls(
             time=time,
             semi_major_axis=dict_in["semi_major_axis"],
             eccentricity=dict_in["eccentricity"],
@@ -372,8 +372,9 @@ class OsculatingElements:
             "inertial_frame": self.inertial_frame.value,
         }
 
-    @staticmethod
+    @classmethod
     def from_cartesian_state(
+        cls,
         cartesian_state: CartesianState,
         gm_body_km3_s2: Optional[float] = astropy_GM_earth.value * 1e-9,
     ) -> "OsculatingElements":
@@ -406,7 +407,7 @@ class OsculatingElements:
         )
 
         # Create and return the OsculatingElements object
-        return OsculatingElements(
+        return cls(
             time=cartesian_state.time,
             semi_major_axis=elements.semi_major_axis.km,
             eccentricity=elements.eccentricity,

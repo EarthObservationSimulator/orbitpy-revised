@@ -48,8 +48,8 @@ class AbsoluteDate:
         """
         self.astropy_time = astropy_time
 
-    @staticmethod
-    def from_dict(dict_in: Dict[str, Any]) -> "AbsoluteDate":
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, Any]) -> "AbsoluteDate":
         """Construct an AbsoluteDate object from a dictionary.
 
         Args:
@@ -96,7 +96,7 @@ class AbsoluteDate:
             )
         else:
             raise ValueError(f"Unsupported date-time format: {time_format}")
-        return AbsoluteDate(astropy_time=astropy_time)
+        return cls(astropy_time=astropy_time)
 
     def to_dict(
         self, time_format_str: str = "GREGORIAN_DATE"
