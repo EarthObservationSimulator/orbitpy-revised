@@ -2,6 +2,7 @@
 
 import unittest
 import random
+import numpy as np
 
 from astropy.coordinates import EarthLocation as Astropy_EarthLocation
 import astropy.units as astropy_u
@@ -24,18 +25,14 @@ class TestCartesian3DPosition(unittest.TestCase):
 
     def test_initialization(self):
         pos = Cartesian3DPosition(self.x, self.y, self.z, ReferenceFrame.GCRF)
-        self.assertEqual(pos.x, self.x)
-        self.assertEqual(pos.y, self.y)
-        self.assertEqual(pos.z, self.z)
+        np.testing.assert_array_equal(pos.coords, [self.x, self.y, self.z])
         self.assertEqual(pos.frame, ReferenceFrame.GCRF)
 
     def test_from_list(self):
         pos = Cartesian3DPosition.from_list(
             [self.x, self.y, self.z], ReferenceFrame.ITRF
         )
-        self.assertEqual(pos.x, self.x)
-        self.assertEqual(pos.y, self.y)
-        self.assertEqual(pos.z, self.z)
+        np.testing.assert_array_equal(pos.coords, [self.x, self.y, self.z])
         self.assertEqual(pos.frame, ReferenceFrame.ITRF)
 
     def test_to_list(self):
@@ -45,9 +42,7 @@ class TestCartesian3DPosition(unittest.TestCase):
     def test_from_dict(self):
         dict_in = {"x": self.x, "y": self.y, "z": self.z, "frame": "GCRF"}
         pos = Cartesian3DPosition.from_dict(dict_in)
-        self.assertEqual(pos.x, self.x)
-        self.assertEqual(pos.y, self.y)
-        self.assertEqual(pos.z, self.z)
+        np.testing.assert_array_equal(pos.coords, [self.x, self.y, self.z])
         self.assertEqual(pos.frame, ReferenceFrame.GCRF)
 
     def test_to_dict(self):
@@ -71,18 +66,14 @@ class TestCartesian3DVelocity(unittest.TestCase):
         vel = Cartesian3DVelocity(
             self.vx, self.vy, self.vz, ReferenceFrame.GCRF
         )
-        self.assertEqual(vel.vx, self.vx)
-        self.assertEqual(vel.vy, self.vy)
-        self.assertEqual(vel.vz, self.vz)
+        np.testing.assert_array_equal(vel.coords, [self.vx, self.vy, self.vz])
         self.assertEqual(vel.frame, ReferenceFrame.GCRF)
 
     def test_from_list(self):
         vel = Cartesian3DVelocity.from_list(
             [self.vx, self.vy, self.vz], ReferenceFrame.ITRF
         )
-        self.assertEqual(vel.vx, self.vx)
-        self.assertEqual(vel.vy, self.vy)
-        self.assertEqual(vel.vz, self.vz)
+        np.testing.assert_array_equal(vel.coords, [self.vx, self.vy, self.vz])
         self.assertEqual(vel.frame, ReferenceFrame.ITRF)
 
     def test_to_list(self):
@@ -94,9 +85,7 @@ class TestCartesian3DVelocity(unittest.TestCase):
     def test_from_dict(self):
         dict_in = {"vx": self.vx, "vy": self.vy, "vz": self.vz, "frame": "GCRF"}
         vel = Cartesian3DVelocity.from_dict(dict_in)
-        self.assertEqual(vel.vx, self.vx)
-        self.assertEqual(vel.vy, self.vy)
-        self.assertEqual(vel.vz, self.vz)
+        np.testing.assert_array_equal(vel.coords, [self.vx, self.vy, self.vz])
         self.assertEqual(vel.frame, ReferenceFrame.GCRF)
 
     def test_to_dict(self):
@@ -104,9 +93,7 @@ class TestCartesian3DVelocity(unittest.TestCase):
             self.vx, self.vy, self.vz, ReferenceFrame.ITRF
         )
         dict_out = vel.to_dict()
-        self.assertEqual(dict_out["vx"], self.vx)
-        self.assertEqual(dict_out["vy"], self.vy)
-        self.assertEqual(dict_out["vz"], self.vz)
+        np.testing.assert_array_equal(vel.coords, [self.vx, self.vy, self.vz])
         self.assertEqual(dict_out["frame"], "ITRF")
 
 

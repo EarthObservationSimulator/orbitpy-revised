@@ -2,6 +2,7 @@
 
 import unittest
 import random
+import numpy as np
 
 from orbitpy.position import Cartesian3DPosition, Cartesian3DVelocity
 from orbitpy.time import AbsoluteDate
@@ -48,8 +49,8 @@ class TestCartesianState(unittest.TestCase):
             self.time, self.position, self.velocity, self.frame
         )
         self.assertEqual(state.time, self.time)
-        self.assertEqual(state.position, self.position)
-        self.assertEqual(state.velocity, self.velocity)
+        np.testing.assert_array_equal(state.position.coords, self.position.coords)
+        np.testing.assert_array_equal(state.velocity.coords, self.velocity.coords)
         self.assertEqual(state.frame, self.frame)
 
     def test_mismatched_frames(self):
@@ -88,12 +89,8 @@ class TestCartesianState(unittest.TestCase):
         self.assertEqual(
             state.time.astropy_time.iso, self.time.astropy_time.iso
         )
-        self.assertEqual(state.position.x, self.position.x)
-        self.assertEqual(state.position.y, self.position.y)
-        self.assertEqual(state.position.z, self.position.z)
-        self.assertEqual(state.velocity.vx, self.velocity.vx)
-        self.assertEqual(state.velocity.vy, self.velocity.vy)
-        self.assertEqual(state.velocity.vz, self.velocity.vz)
+        np.testing.assert_array_equal(state.position.coords, self.position.coords)
+        np.testing.assert_array_equal(state.velocity.coords, self.velocity.coords)
         self.assertEqual(state.frame, self.frame)
 
     def test_to_dict(self):
@@ -118,24 +115,24 @@ class TestCartesianState(unittest.TestCase):
         # Validate the Skyfield position object
         # Check that the position matches the CartesianState position
         self.assertAlmostEqual(
-            skyfield_position.position.km[0], self.position.x, places=6
+            skyfield_position.position.km[0], self.position.coords[0], places=6
         )
         self.assertAlmostEqual(
-            skyfield_position.position.km[1], self.position.y, places=6
+            skyfield_position.position.km[1], self.position.coords[1], places=6
         )
         self.assertAlmostEqual(
-            skyfield_position.position.km[2], self.position.z, places=6
+            skyfield_position.position.km[2], self.position.coords[2], places=6
         )
 
         # Check that the velocity matches the CartesianState velocity
         self.assertAlmostEqual(
-            skyfield_position.velocity.km_per_s[0], self.velocity.vx, places=6
+            skyfield_position.velocity.km_per_s[0], self.velocity.coords[0], places=6
         )
         self.assertAlmostEqual(
-            skyfield_position.velocity.km_per_s[1], self.velocity.vy, places=6
+            skyfield_position.velocity.km_per_s[1], self.velocity.coords[1], places=6
         )
         self.assertAlmostEqual(
-            skyfield_position.velocity.km_per_s[2], self.velocity.vz, places=6
+            skyfield_position.velocity.km_per_s[2], self.velocity.coords[2], places=6
         )
 
         # Check that the time matches the CartesianState time
@@ -148,15 +145,15 @@ class TestCartesianState(unittest.TestCase):
         """Test that ValueError is raised when frame is not GCRF."""
         # Create a CartesianState object with a non-GCRF frame
         position = Cartesian3DPosition(
-            self.position.x,
-            self.position.y,
-            self.position.z,
+            self.position.coords[0],
+            self.position.coords[1],
+            self.position.coords[2],
             ReferenceFrame.ITRF,
         )
         velocity = Cartesian3DVelocity(
-            self.velocity.vx,
-            self.velocity.vy,
-            self.velocity.vz,
+            self.velocity.coords[0],
+            self.velocity.coords[1],
+            self.velocity.coords[2],
             ReferenceFrame.ITRF,
         )
         state = CartesianState(
