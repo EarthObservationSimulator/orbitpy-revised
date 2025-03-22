@@ -5,6 +5,7 @@
 Collection of classes and functions for handling position information.
 """
 
+import numpy as np
 from typing import Dict, Any, List, Optional
 
 from skyfield.api import wgs84 as skyfield_wgs84
@@ -22,9 +23,7 @@ class Cartesian3DPosition:
             raise ValueError("x, y, and z must be numeric values.")
         if frame is not None and not isinstance(frame, ReferenceFrame):
             raise ValueError("frame must be a ReferenceFrame object or None.")
-        self.x = x
-        self.y = y
-        self.z = z
+        self.coords = np.array([x, y, z])
         self.frame = frame
 
     @staticmethod
@@ -52,7 +51,7 @@ class Cartesian3DPosition:
         Returns:
             List[float]: List with the position coordinates in kilometers.
         """
-        return [self.x, self.y, self.z]
+        return self.coords.tolist()
 
     @staticmethod
     def from_dict(dict_in: Dict[str, Any]) -> "Cartesian3DPosition":
@@ -71,11 +70,8 @@ class Cartesian3DPosition:
         Returns:
             Cartesian3DPosition: Cartesian3DPosition object.
         """
-        x = dict_in["x"]
-        y = dict_in["y"]
-        z = dict_in["z"]
         frame = ReferenceFrame.get(dict_in["frame"])
-        return Cartesian3DPosition(x, y, z, frame)
+        return Cartesian3DPosition(dict_in["x"], dict_in["y"], dict_in["z"], frame)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the Cartesian3DPosition object to a dictionary.
@@ -84,9 +80,9 @@ class Cartesian3DPosition:
             dict: Dictionary with the position information.
         """
         return {
-            "x": self.x,
-            "y": self.y,
-            "z": self.z,
+            "x": self.coords[0],
+            "y": self.coords[1],
+            "z": self.coords[2],
             "frame": self.frame.value if self.frame else None,
         }
 
@@ -101,9 +97,7 @@ class Cartesian3DVelocity:
             raise ValueError("vx, vy, and vz must be numeric values.")
         if frame is not None and not isinstance(frame, ReferenceFrame):
             raise ValueError("frame must be a ReferenceFrame object or None.")
-        self.vx = vx
-        self.vy = vy
-        self.vz = vz
+        self.coords = np.array([vx, vy, vz])
         self.frame = frame
 
     @staticmethod
@@ -131,7 +125,7 @@ class Cartesian3DVelocity:
         Returns:
             List[float]: Velocity coordinates in kilometers-per-second.
         """
-        return [self.vx, self.vy, self.vz]
+        return self.coords.tolist()
 
     @staticmethod
     def from_dict(dict_in: Dict[str, Any]) -> "Cartesian3DVelocity":
@@ -150,11 +144,8 @@ class Cartesian3DVelocity:
         Returns:
             Cartesian3DVelocity: Cartesian3DVelocity object.
         """
-        vx = dict_in["vx"]
-        vy = dict_in["vy"]
-        vz = dict_in["vz"]
         frame = ReferenceFrame.get(dict_in["frame"])
-        return Cartesian3DVelocity(vx, vy, vz, frame)
+        return Cartesian3DVelocity(dict_in["vx"], dict_in["vy"], dict_in["vz"], frame)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the Cartesian3DVelocity object to a dictionary.
@@ -163,9 +154,9 @@ class Cartesian3DVelocity:
             dict: Dictionary with the velocity information.
         """
         return {
-            "vx": self.vx,
-            "vy": self.vy,
-            "vz": self.vz,
+            "vx": self.coords[0],
+            "vy": self.coords[1],
+            "vz": self.coords[2],
             "frame": self.frame.value if self.frame else None,
         }
 
