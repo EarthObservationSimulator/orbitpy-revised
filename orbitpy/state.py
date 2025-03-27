@@ -6,7 +6,6 @@ Collection of classes and functions for handling state vector information.
 """
 
 from typing import Dict, Any, Optional
-import numpy as np
 
 from skyfield.positionlib import build_position as skyfield_build_position
 from skyfield.constants import AU_KM as Skyfield_AU_KM
@@ -97,12 +96,8 @@ class CartesianState:
             )
 
         skyfield_time = self.time.to_skyfield_time()
-        position_au = (
-            np.array(self.position.to_list()) / Skyfield_AU_KM
-        )  # convert to AU
-        velocity_au_per_d = (
-            np.array(self.velocity.to_list()) / Skyfield_AU_KM
-        ) * 86400.0  # convert to AU/day
+        position_au = self.position.coords / Skyfield_AU_KM  # convert to AU
+        velocity_au_per_d = self.velocity.coords / Skyfield_AU_KM * 86400.0  # convert to AU/day
         return skyfield_build_position(
             position_au=position_au,
             velocity_au_per_d=velocity_au_per_d,
