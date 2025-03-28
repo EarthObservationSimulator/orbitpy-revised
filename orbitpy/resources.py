@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import uuid
 from uuid import uuid4
 
-from orbitpy.position import GeographicPosition
+from eosimutils.position import GeographicPosition
 
 
 class GroundStation:
