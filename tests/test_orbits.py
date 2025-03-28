@@ -3,13 +3,14 @@
 import unittest
 import random
 
-from orbitpy.time import AbsoluteDate
-from orbitpy.position import (
+from eosimutils.time import AbsoluteDate
+from eosimutils.position import (
     ReferenceFrame,
     Cartesian3DPosition,
     Cartesian3DVelocity,
 )
-from orbitpy.state import CartesianState
+from eosimutils.state import CartesianState
+
 from orbitpy.orbits import OrbitalMeanElementsMessage, OsculatingElements
 
 

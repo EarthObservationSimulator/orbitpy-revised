@@ -18,9 +18,9 @@ from skyfield.elementslib import (
 
 from astropy.constants import GM_earth as astropy_GM_earth
 
-from orbitpy.position import ReferenceFrame
-from orbitpy.state import CartesianState
-from orbitpy.time import AbsoluteDate
+from eosimutils.position import ReferenceFrame
+from eosimutils.state import CartesianState
+from eosimutils.time import AbsoluteDate
 
 
 class OrbitalMeanElementsMessage:
