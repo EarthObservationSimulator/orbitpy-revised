@@ -18,9 +18,9 @@ from skyfield.elementslib import (
 
 from astropy.constants import GM_earth as astropy_GM_earth
 
-from orbitpy.position import ReferenceFrame
-from orbitpy.state import CartesianState
-from orbitpy.time import AbsoluteDate
+from eosimutils.position import ReferenceFrame
+from eosimutils.state import CartesianState
+from eosimutils.time import AbsoluteDate
 
 
 class OrbitalMeanElementsMessage:
@@ -40,6 +40,37 @@ class OrbitalMeanElementsMessage:
             self.omm_dict: Dict[str, Any] = json.loads(omm_json)
         except json.JSONDecodeError as e:
             raise ValueError("Invalid JSON format for OMM.") from e
+
+    @classmethod
+    def from_dict(
+        cls,
+        omm_dict: Dict[str, Any]
+    ) -> "OrbitalMeanElementsMessage":
+        """
+        Initialize the OMM object with a dictionary.
+
+        Args:
+            omm_dict (Dict[str, Any]): The OMM as a dictionary.
+
+        Returns:
+            OrbitalMeanElementsMessage: The OMM object.
+        """
+        # convert the dictionary to a JSON string
+        omm_json = json.dumps(omm_dict)
+        return cls(omm_json)
+
+    @classmethod
+    def from_json(cls, omm_json: str) -> "OrbitalMeanElementsMessage":
+        """
+        Initialize the OMM object with a JSON string.
+
+        Args:
+            omm_json (str): The OMM in JSON format.
+
+        Returns:
+            OrbitalMeanElementsMessage: The OMM object.
+        """
+        return cls(omm_json)
 
     def get_field_as_str(self, field_name: str) -> str:
         """
@@ -283,8 +314,8 @@ class OsculatingElements:
         self.true_anomaly = true_anomaly
         self.inertial_frame = inertial_frame
 
-    @staticmethod
-    def from_dict(dict_in: Dict[str, Any]) -> "OsculatingElements":
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, Any]) -> "OsculatingElements":
         """
         Construct a `OsculatingElements` object from a dictionary.
 
@@ -312,7 +343,7 @@ class OsculatingElements:
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
         if inertial_frame != ReferenceFrame.GCRF:
             raise ValueError("Only GCRF inertial reference frame is supported.")
-        return OsculatingElements(
+        return cls(
             time=time,
             semi_major_axis=dict_in["semi_major_axis"],
             eccentricity=dict_in["eccentricity"],
@@ -341,8 +372,9 @@ class OsculatingElements:
             "inertial_frame": self.inertial_frame.value,
         }
 
-    @staticmethod
+    @classmethod
     def from_cartesian_state(
+        cls,
         cartesian_state: CartesianState,
         gm_body_km3_s2: Optional[float] = astropy_GM_earth.value * 1e-9,
     ) -> "OsculatingElements":
@@ -375,7 +407,7 @@ class OsculatingElements:
         )
 
         # Create and return the OsculatingElements object
-        return OsculatingElements(
+        return cls(
             time=cartesian_state.time,
             semi_major_axis=elements.semi_major_axis.km,
             eccentricity=elements.eccentricity,

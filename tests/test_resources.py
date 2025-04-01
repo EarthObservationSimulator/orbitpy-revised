@@ -4,7 +4,8 @@ import unittest
 import random
 import uuid
 
-from orbitpy.position import GeographicPosition
+from eosimutils.position import GeographicPosition
+
 from orbitpy.resources import GroundStation
 
 
