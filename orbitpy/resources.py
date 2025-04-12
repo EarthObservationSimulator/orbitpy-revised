@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import uuid
 from uuid import uuid4
 
-from eosimutils.position import GeographicPosition
+from eosimutils.state import GeographicPosition
 
 
 class GroundStation:

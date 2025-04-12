@@ -3,9 +3,9 @@
    :synopsis: Represention of spacecraft orbits.
 
 Collection of classes and functions relating to
-represention of spacecraft orbits.
+represention of spacecraft orbit state.
 Spacecraft state may also be represented in terms of Cartesian state
-by using the :class:orbitpy.position.CartesianState class.
+by using the :class:eosimutils.state.CartesianState class.
 """
 
 import json
@@ -16,12 +16,11 @@ from skyfield.elementslib import (
     osculating_elements_of as skyfield_osculating_elements_of,
 )
 
-from astropy.constants import GM_earth as astropy_GM_earth
-
-from eosimutils.position import ReferenceFrame
+from eosimutils.base import ReferenceFrame
 from eosimutils.state import CartesianState
 from eosimutils.time import AbsoluteDate
 
+GM_EARTH = 	398600.435507 # km^3/s^2
 
 class OrbitalMeanElementsMessage:
     """Handles an Orbital Mean-Elements Message (OMM)."""
@@ -300,10 +299,10 @@ class OsculatingElements:
             inertial_frame (ReferenceFrame): The inertial reference frame.
 
         Raises:
-            ValueError: If the inertial_frame is not ReferenceFrame.GCRF.
+            ValueError: If the inertial_frame is not ReferenceFrame.ICRF_EC.
         """
-        if inertial_frame != ReferenceFrame.GCRF:
-            raise ValueError("Only GCRF inertial reference frame is supported.")
+        if inertial_frame != ReferenceFrame.ICRF_EC:
+            raise ValueError("Only ICRF_EC inertial reference frame is supported.")
 
         self.time = time
         self.semi_major_axis = semi_major_axis
@@ -337,12 +336,12 @@ class OsculatingElements:
             OsculatingElements: The `OsculatingElements` state object.
 
         Raises:
-            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.GCRF`
+            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.ICRF_EC`
         """
         time = AbsoluteDate.from_dict(dict_in["time"])
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
-        if inertial_frame != ReferenceFrame.GCRF:
-            raise ValueError("Only GCRF inertial reference frame is supported.")
+        if inertial_frame != ReferenceFrame.ICRF_EC:
+            raise ValueError("Only ICRF_EC inertial reference frame is supported.")
         return cls(
             time=time,
             semi_major_axis=dict_in["semi_major_axis"],
@@ -376,7 +375,7 @@ class OsculatingElements:
     def from_cartesian_state(
         cls,
         cartesian_state: CartesianState,
-        gm_body_km3_s2: Optional[float] = astropy_GM_earth.value * 1e-9,
+        gm_body_km3_s2: Optional[float] = GM_EARTH,
     ) -> "OsculatingElements":
         """
         Initialize an OsculatingElements object from a CartesianState object.
@@ -393,19 +392,25 @@ class OsculatingElements:
 
         Raises:
             ValueError: If the CartesianState frame is not
-                        :class:`ReferenceFrame.GCRF`.
+                        :class:`ReferenceFrame.ICRF_EC`.
         """
-        if cartesian_state.frame != ReferenceFrame.GCRF:
-            raise ValueError("Only GCRF is supported.")
+        if cartesian_state.frame != ReferenceFrame.ICRF_EC:
+            raise ValueError("Only ICRF_EC is supported.")
 
         skyfield_position = cartesian_state.to_skyfield_gcrf_position()
 
-        #  The reference frame by default is the ICRF.
-        # And GCRF is not rotated with respect to ICRF.
+        # Oreitnation of ICRF_EC ~ GCRF (of Skyfield).
         elements = skyfield_osculating_elements_of(
             skyfield_position, reference_frame=None, gm_km3_s2=gm_body_km3_s2
         )
 
+        """ Spice equivalent. Skyfield is prefered since SPICE does not directly support true anomaly.
+        elements = spice.oscelt(cartesian_state.to_numpy(), cartesian_state.time.to_spice_ephemeris_time(), GM_EARTH)
+        perifocal_distance, eccentricity, inclination, longitude_of_ascending_node, argument_of_periapsis, mean_anomaly, epoch, gravitational_parameter = elements
+        semi_major_axis =  perifocal_distance / (1 - eccentricity)
+        true_anomaly = f(mean_anomaly, eccentricity)
+        """
+        
         # Create and return the OsculatingElements object
         return cls(
             time=cartesian_state.time,
@@ -415,5 +420,5 @@ class OsculatingElements:
             raan=elements.longitude_of_ascending_node.degrees,
             arg_of_perigee=elements.argument_of_periapsis.degrees,
             true_anomaly=elements.true_anomaly.degrees,
-            inertial_frame=ReferenceFrame.GCRF,
+            inertial_frame=ReferenceFrame.ICRF_EC,
         )
