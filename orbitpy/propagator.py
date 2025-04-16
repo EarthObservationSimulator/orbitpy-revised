@@ -20,6 +20,12 @@ class PropagatorFactory:
     This class allows registering propagator classes and retrieving instances
     of the appropriate propagator based on specifications.
 
+    example:
+        factory = PropagatorFactory()
+        factory.register_propagator("Custom_Propagator", CustomPropagator)
+        specs = {"propagator_type": "Custom_Propagator", "step_size": 60}
+        propagator = factory.get_propagator(specs)
+
     Attributes:
         _creators (Dict[str, Type]): A dictionary mapping propagator type labels to their respective classes.
     """

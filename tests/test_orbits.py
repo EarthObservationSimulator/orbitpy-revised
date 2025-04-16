@@ -15,8 +15,63 @@ from orbitpy.orbits import (
     TwoLineElementSet,
     OrbitalMeanElementsMessage,
     OsculatingElements,
+    OrbitFactory,
+    OrbitType,
 )
 
+class TestOrbitFactory(unittest.TestCase):
+    """Unit tests for the OrbitFactory class."""
+
+    def setUp(self):
+        """Set up test data for OrbitFactory."""
+        self.factory = OrbitFactory()
+        self.tle_dict = {
+            "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
+            "TLE_LINE0": "0 LANDSAT 9",
+            "TLE_LINE1": "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
+            "TLE_LINE2": "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801",
+        }
+
+    def test_get_orbit_tle(self):
+        """Test retrieving a TwoLineElementSet orbit object."""
+        orbit = self.factory.get_orbit(self.tle_dict)
+        self.assertIsInstance(orbit, TwoLineElementSet)
+        self.assertEqual(orbit.line0, self.tle_dict["TLE_LINE0"])
+        self.assertEqual(orbit.line1, self.tle_dict["TLE_LINE1"])
+        self.assertEqual(orbit.line2, self.tle_dict["TLE_LINE2"])
+
+    def test_get_orbit_invalid_type(self):
+        """Test error handling for an invalid orbit type."""
+        invalid_dict = {"orbit_type": "INVALID_TYPE"}
+        with self.assertRaises(ValueError) as context:
+            self.factory.get_orbit(invalid_dict)
+        self.assertIn("Orbit type \"INVALID_TYPE\" is not registered.", str(context.exception))
+
+    def test_get_orbit_missing_type(self):
+        """Test error handling for a missing orbit type key."""
+        missing_type_dict = {"TLE_LINE0": "0 TEST SATELLITE"}
+        with self.assertRaises(KeyError) as context:
+            self.factory.get_orbit(missing_type_dict)
+        self.assertIn("Orbit type key \"orbit_type\" not found in specifications dictionary.", str(context.exception))
+
+    def test_get_orbit_cartesian_state(self):
+        """Test retrieving a CartesianState orbit object."""
+        cartesian_state_dict = {
+            "orbit_type": OrbitType.CARTESIAN_STATE.value,
+            "time": {
+                "time_format": "Gregorian_Date",
+                "calendar_date": "2025-04-16T12:00:00",
+                "time_scale": "utc"
+            },
+            "position": [7000.0, 0.0, 0.0],
+            "velocity": [0.0, 7.546, 0.0],
+            "frame": "ICRF_EC"
+        }
+
+        orbit = self.factory.get_orbit(cartesian_state_dict)
+        self.assertIsInstance(orbit, CartesianState)
+        self.assertTrue((orbit.to_numpy() == [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]).all())
+        self.assertEqual(orbit.frame.value, "ICRF_EC")
 
 class TestTwoLineElementSet(unittest.TestCase):
     """Unit tests for the TwoLineElementSet class."""

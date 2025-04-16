@@ -10,18 +10,71 @@ by using the :class:eosimutils.state.CartesianState class.
 
 import json
 import requests
-from typing import Dict, Tuple, Any, Optional
+from typing import Dict, Tuple, Any, Optional, Type
 
 from skyfield.elementslib import (
     osculating_elements_of as skyfield_osculating_elements_of,
 )
 
-from eosimutils.base import ReferenceFrame
+from eosimutils.base import ReferenceFrame, EnumBase
 from eosimutils.state import CartesianState
 from eosimutils.time import AbsoluteDate
 
 GM_EARTH = 398600.435507  # km^3/s^2
 
+
+class OrbitType(EnumBase):
+    """Enumeration of supported orbit types."""
+    TWO_LINE_ELEMENT_SET = "TWO_LINE_ELEMENT_SET"
+    ORBITAL_MEAN_ELEMENTS_MESSAGE = "ORBITAL_MEAN_ELEMENTS_MESSAGE"
+    OSCULATING_ELEMENTS = "OSCULATING_ELEMENTS"
+    CARTESIAN_STATE = "CARTESIAN_STATE"
+
+class OrbitFactory:
+    """Factory class to register and create orbit objects."""
+
+    def __init__(self):
+        """Initializes the OrbitFactory and registers default orbit types."""
+        self._creators: Dict[str, Type] = {}
+        self.register_orbit(OrbitType.TWO_LINE_ELEMENT_SET.value, TwoLineElementSet)
+        self.register_orbit(OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value, OrbitalMeanElementsMessage)
+        self.register_orbit(OrbitType.OSCULATING_ELEMENTS.value, OsculatingElements)
+        self.register_orbit(OrbitType.CARTESIAN_STATE.value, CartesianState)
+
+    def register_orbit(self, orbit_type: str, creator: Type) -> None:
+        """Registers an orbit class with a specific type label.
+
+        Args:
+            orbit_type (str): The label for the orbit type.
+            creator (Type): The orbit class to register.
+        """
+        self._creators[orbit_type] = creator
+
+    def get_orbit(self, specs: Dict[str, Any]) -> Any:
+        """Retrieves an instance of the appropriate orbit object based on specifications.
+
+        Args:
+            specs (Dict[str, Any]): A dictionary containing orbit specifications.
+                Must include a valid orbit type in the "orbit_type" key.
+
+        Returns:
+            Any: An instance of the appropriate orbit class initialized with the given specifications.
+
+        Raises:
+            KeyError: If the "orbit_type" key is missing in the specifications dictionary.
+            ValueError: If the specified orbit type is not registered.
+        """
+        orbit_type_str = specs.get("orbit_type")
+        if orbit_type_str is None:
+            raise KeyError(
+                'Orbit type key "orbit_type" not found in specifications dictionary.'
+            )
+
+        if orbit_type_str not in self._creators:
+            raise ValueError(f'Orbit type "{orbit_type_str}" is not registered.')
+
+        creator = self._creators[orbit_type_str]
+        return creator.from_dict(specs)
 
 class TwoLineElementSet:
     """Handles a Two-Line Element Set (TLE).
