@@ -1,5 +1,5 @@
 """
-.. module:: orbitpy.orbits
+.. module:: orbitpy/orbits
    :synopsis: Represention of spacecraft orbits.
 
 Collection of classes and functions relating to
@@ -20,7 +20,81 @@ from eosimutils.base import ReferenceFrame
 from eosimutils.state import CartesianState
 from eosimutils.time import AbsoluteDate
 
-GM_EARTH = 	398600.435507 # km^3/s^2
+GM_EARTH = 398600.435507  # km^3/s^2
+
+
+class TwoLineElementSet:
+    """Handles a Two-Line Element Set (TLE).
+
+    Attributes:
+        line0 (Optional[str]): The zeroth line of the TLE (optional).
+        line1 (str): The first line of the TLE.
+        line2 (str): The second line of the TLE.
+    """
+
+    def __init__(self, line0: Optional[str], line1: str, line2: str) -> None:
+        """
+        Initialize the TLE object with two lines.
+
+        Args:
+            line0 (Optional[str]): The zeroth line of the TLE (optional).
+            line1 (str): The first line of the TLE.
+            line2 (str): The second line of the TLE.
+        """
+        self.line0 = line0
+        self.line1 = line1
+        self.line2 = line2
+
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, str]) -> "TwoLineElementSet":
+        """
+        Construct a TLE object from a dictionary.
+
+        Args:
+            dict_in (Dict[str, str]): Dictionary containing the TLE lines.
+                Expected keys:
+                - "TLE_LINE0" (Optional[str]): The zeroth line of the TLE.
+                - "TLE_LINE1" (str): The first line of the TLE.
+                - "TLE_LINE2" (str): The second line of the TLE.
+
+        Returns:
+            TwoLineElementSet: The TLE object.
+        """
+        line0 = dict_in.get("TLE_LINE0")
+        line1 = dict_in["TLE_LINE1"]
+        line2 = dict_in["TLE_LINE2"]
+        return cls(line0, line1, line2)
+
+    def to_dict(self) -> Dict[str, str]:
+        """
+        Convert the TLE object to a dictionary.
+
+        Returns:
+            Dict[str, str]: The TLE as a dictionary with the following keys:
+                - "TLE_LINE0" (Optional[str]): The zeroth line of the TLE.
+                - "TLE_LINE1" (str): The first line of the TLE.
+                - "TLE_LINE2" (str): The second line of the TLE.
+        """
+        return {
+            "TLE_LINE0": self.line0,
+            "TLE_LINE1": self.line1,
+            "TLE_LINE2": self.line2,
+        }
+
+    def get_tle_as_tuple(self) -> Tuple[str, str]:
+        """
+        Retrieve the two lines of the TLE as a tuple of strings.
+
+        Returns:
+            Tuple[str, str]: The two lines of the TLE.
+
+        Raises:
+            ValueError: If either TLE line1 or line2 is missing.
+        """
+        if self.line1 is None or self.line2 is None:
+            raise ValueError("TLE lines are missing.")
+        return self.line1, self.line2
+
 
 class OrbitalMeanElementsMessage:
     """Handles an Orbital Mean-Elements Message (OMM)."""
@@ -42,8 +116,7 @@ class OrbitalMeanElementsMessage:
 
     @classmethod
     def from_dict(
-        cls,
-        omm_dict: Dict[str, Any]
+        cls, omm_dict: Dict[str, Any]
     ) -> "OrbitalMeanElementsMessage":
         """
         Initialize the OMM object with a dictionary.
@@ -302,7 +375,9 @@ class OsculatingElements:
             ValueError: If the inertial_frame is not ReferenceFrame.ICRF_EC.
         """
         if inertial_frame != ReferenceFrame.ICRF_EC:
-            raise ValueError("Only ICRF_EC inertial reference frame is supported.")
+            raise ValueError(
+                "Only ICRF_EC inertial reference frame is supported."
+            )
 
         self.time = time
         self.semi_major_axis = semi_major_axis
@@ -341,7 +416,9 @@ class OsculatingElements:
         time = AbsoluteDate.from_dict(dict_in["time"])
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
         if inertial_frame != ReferenceFrame.ICRF_EC:
-            raise ValueError("Only ICRF_EC inertial reference frame is supported.")
+            raise ValueError(
+                "Only ICRF_EC inertial reference frame is supported."
+            )
         return cls(
             time=time,
             semi_major_axis=dict_in["semi_major_axis"],
@@ -404,13 +481,18 @@ class OsculatingElements:
             skyfield_position, reference_frame=None, gm_km3_s2=gm_body_km3_s2
         )
 
-        """ Spice equivalent. Skyfield is prefered since SPICE does not directly support true anomaly.
-        elements = spice.oscelt(cartesian_state.to_numpy(), cartesian_state.time.to_spice_ephemeris_time(), GM_EARTH)
-        perifocal_distance, eccentricity, inclination, longitude_of_ascending_node, argument_of_periapsis, mean_anomaly, epoch, gravitational_parameter = elements
-        semi_major_axis =  perifocal_distance / (1 - eccentricity)
-        true_anomaly = f(mean_anomaly, eccentricity)
-        """
-        
+        # Spice equivalent. Skyfield is preferred since SPICE does not directly
+        # support true anomaly.
+        # elements = spice.oscelt(
+        #    cartesian_state.to_numpy(),
+        #    cartesian_state.time.to_spice_ephemeris_time(),
+        #    GM_EARTH
+        # )
+        # perifocal_distance, eccentricity, inclination, longitude_of_ascending_node, \
+        # argument_of_periapsis, mean_anomaly, epoch, gravitational_parameter = elements  # pylint: disable=line-too-long
+        # semi_major_axis = perifocal_distance / (1 - eccentricity)
+        # true_anomaly = function(mean_anomaly, eccentricity)
+
         # Create and return the OsculatingElements object
         return cls(
             time=cartesian_state.time,

@@ -11,7 +11,61 @@ from eosimutils.state import (
     CartesianState,
 )
 
-from orbitpy.orbits import OrbitalMeanElementsMessage, OsculatingElements
+from orbitpy.orbits import (
+    TwoLineElementSet,
+    OrbitalMeanElementsMessage,
+    OsculatingElements,
+)
+
+
+class TestTwoLineElementSet(unittest.TestCase):
+    """Unit tests for the TwoLineElementSet class."""
+
+    def setUp(self):
+        """Set up test data for TwoLineElementSet."""
+        self.line0 = "0 LANDSAT 9"
+        self.line1 = "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997"
+        self.line2 = "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
+        self.tle_dict = {
+            "TLE_LINE0": self.line0,
+            "TLE_LINE1": self.line1,
+            "TLE_LINE2": self.line2,
+        }
+
+    def test_initialization(self):
+        """Test initialization of TwoLineElementSet."""
+        tle = TwoLineElementSet(self.line0, self.line1, self.line2)
+        self.assertEqual(tle.line0, self.line0)
+        self.assertEqual(tle.line1, self.line1)
+        self.assertEqual(tle.line2, self.line2)
+
+    def test_from_dict(self):
+        """Test constructing TwoLineElementSet from a dictionary."""
+        tle = TwoLineElementSet.from_dict(self.tle_dict)
+        self.assertEqual(tle.line0, self.line0)
+        self.assertEqual(tle.line1, self.line1)
+        self.assertEqual(tle.line2, self.line2)
+
+    def test_to_dict(self):
+        """Test converting TwoLineElementSet to a dictionary."""
+        tle = TwoLineElementSet(self.line0, self.line1, self.line2)
+        tle_dict = tle.to_dict()
+        self.assertEqual(tle_dict["TLE_LINE0"], self.line0)
+        self.assertEqual(tle_dict["TLE_LINE1"], self.line1)
+        self.assertEqual(tle_dict["TLE_LINE2"], self.line2)
+
+    def test_get_tle_as_tuple(self):
+        """Test retrieving the TLE as a tuple of strings."""
+        tle = TwoLineElementSet.from_dict(self.tle_dict)
+        tle_tuple = tle.get_tle_as_tuple()
+        self.assertEqual(tle_tuple, (self.line1, self.line2))
+
+    def test_get_tle_as_tuple_missing_lines(self):
+        """Test error handling when TLE lines are missing."""
+        tle = TwoLineElementSet(self.line0, None, self.line2)
+        with self.assertRaises(ValueError) as context:
+            tle.get_tle_as_tuple()
+        self.assertIn("TLE lines are missing.", str(context.exception))
 
 
 class TestOrbitalMeanElementsMessage(unittest.TestCase):
@@ -125,8 +179,8 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
         omm_dict = {
             "OBJECT_NAME": "CYGFM03",
             "EPOCH": "2024-01-15T11:50:47.395968",
-            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
-            "TLE_LINE2": "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827"  # pylint: disable=line-too-long
+            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",  # pylint: disable=line-too-long
+            "TLE_LINE2": "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827",  # pylint: disable=line-too-long
         }
 
         # Create an OrbitalMeanElementsMessage object from the dictionary
@@ -137,11 +191,11 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
         self.assertEqual(omm.get_field_as_str("OBJECT_NAME"), "CYGFM03")
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE1"),
-            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",  # pylint: disable=line-too-long
         )
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE2"),
-            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827", # pylint: disable=line-too-long
+            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827",  # pylint: disable=line-too-long
         )
 
     def test_from_json(self):
@@ -166,11 +220,11 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
         )
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE1"),
-            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",  # pylint: disable=line-too-long
         )
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE2"),
-            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827", # pylint: disable=line-too-long
+            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827",  # pylint: disable=line-too-long
         )
 
 
