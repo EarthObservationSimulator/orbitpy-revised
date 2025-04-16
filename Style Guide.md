@@ -48,4 +48,6 @@ Take cues from the above references, then use linters, auto-formatters, and LLMs
 - Seperate tests which take a long time into a seperate long-duration-test folder, to give the flexibility to seperately run the long tests.
 
 - Numpy arrays are used for storing numerical array-like data (e.g., 3d position, states, trajectories, etc.) 
-  At several places functions are built to have two versions: one which takes `eosimutils` objects and another which takes numpy arrays. 
+  At several places functions are built to have two versions: one which takes `eosimutils` objects and another which takes numpy arrays.
+
+- Use factory methods in modules such as orbits, propagator, etc. This allows for dynamic creation of propagators based on input specifications in a dictionary. It centralizes the registration and creation of propagator types, making the system extensible and maintainable.
