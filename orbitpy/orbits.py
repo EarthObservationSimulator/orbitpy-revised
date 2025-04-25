@@ -11,10 +11,14 @@ by using the :class:eosimutils.state.CartesianState class.
 import json
 import requests
 from typing import Dict, Tuple, Any, Optional, Type
+import numpy as np
 
 from skyfield.elementslib import (
     osculating_elements_of as skyfield_osculating_elements_of,
+    eccentric_anomaly as skyfield_eccentric_anomaly,
+    mean_anomaly as skyfield_mean_anomaly
 )
+import spiceypy as spice
 
 from eosimutils.base import ReferenceFrame, EnumBase
 from eosimutils.state import CartesianState
@@ -529,7 +533,9 @@ class OsculatingElements:
 
         skyfield_position = cartesian_state.to_skyfield_gcrf_position()
 
-        # Oreitnation of ICRF_EC ~ GCRF (of Skyfield).
+        # Orientation of ICRF_EC ~ GCRF (of Skyfield).
+        # (The reference frame by default in the skyfield_osculating_elements_of 
+        #  function is the ICRF.)
         elements = skyfield_osculating_elements_of(
             skyfield_position, reference_frame=None, gm_km3_s2=gm_body_km3_s2
         )
@@ -557,3 +563,48 @@ class OsculatingElements:
             true_anomaly=elements.true_anomaly.degrees,
             inertial_frame=ReferenceFrame.ICRF_EC,
         )
+
+    def to_cartesian_state(
+        self, gm_body_km3_s2: Optional[float] = GM_EARTH
+    ) -> CartesianState:
+        """
+        Convert the osculating elements to a CartesianState object.
+
+        Args:
+            gm_body_km3_s2 (float, optional): Gravitational parameter
+                                              in km^3/s^2.
+                                              Defaults to GM_EARTH.
+
+        Returns:
+            CartesianState: The Cartesian state derived from the
+                             osculating elements.
+        """
+        # Get the mean anomaly from the true anomaly
+        semi_latus_rectum_km = self.semi_major_axis * (1 - self.eccentricity ** 2)
+        eccentric_anomaly_rad = skyfield_eccentric_anomaly( np.deg2rad(self.true_anomaly),
+                                                            np.asarray(self.eccentricity),
+                                                            semi_latus_rectum_km)
+        mean_anomaly_rad = skyfield_mean_anomaly( eccentric_anomaly_rad, 
+                                                 np.asarray(self.eccentricity))
+
+
+        # Using SPICE since Skyfield does not support conversion to
+        # Cartesian coordinates.
+        et = self.time.to_spice_ephemeris_time()
+        elements = [self.semi_major_axis*(1 - self.eccentricity), 
+                    self.eccentricity, 
+                    np.deg2rad(self.inclination),
+                    np.deg2rad(self.raan), 
+                    np.deg2rad(self.arg_of_perigee), 
+                    mean_anomaly_rad, 
+                    et,
+                    gm_body_km3_s2
+                    ]
+        state_vec = spice.conics(elements, et)
+
+        return CartesianState.from_array(
+            array_in=state_vec,
+            time=self.time,
+            frame=self.inertial_frame,
+        )
+        

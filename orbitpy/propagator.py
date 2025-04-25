@@ -178,7 +178,7 @@ class SGP4Propagator:
             absolute_date_array = AbsoluteDateArray.from_dict(
                 {
                     "time_format": "Gregorian_Date",
-                    "times": propagate_time.utc_strftime(
+                    "calendar_date": propagate_time.utc_strftime(
                         format="%Y-%m-%dT%H:%M:%S"
                     ),
                     "time_scale": "utc",

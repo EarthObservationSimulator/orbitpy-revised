@@ -2,6 +2,7 @@
 
 import unittest
 import random
+import numpy as np
 
 from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame
@@ -434,6 +435,79 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertAlmostEqual(osculating_elements.raan, 0.0)
         self.assertAlmostEqual(osculating_elements.arg_of_perigee, 0.0)
         self.assertAlmostEqual(osculating_elements.true_anomaly, 0.0)
+    
+    def test_to_cartesian_state(self):
+        """Test converting OsculatingElements to a CartesianState object."""
+        # Create an OsculatingElements object
+        osculating_elements = OsculatingElements(
+            time=self.time,
+            semi_major_axis=7000.0,  # in kilometers
+            eccentricity=0.0,  # Circular orbit
+            inclination=90.0,  # Polar orbit
+            raan=0.0,  # Right Ascension of Ascending Node
+            arg_of_perigee=0.0,  # Argument of Perigee
+            true_anomaly=0.0,  # True Anomaly
+            inertial_frame=ReferenceFrame.ICRF_EC,
+        )
+
+        # Convert to CartesianState
+        cartesian_state = osculating_elements.to_cartesian_state()
+
+        # Validate the CartesianState object
+        self.assertIsInstance(cartesian_state, CartesianState)
+        self.assertEqual(cartesian_state.time, osculating_elements.time)
+        self.assertEqual(cartesian_state.frame, ReferenceFrame.ICRF_EC)
+
+        # Validate position and velocity
+        position = cartesian_state.position.to_numpy()
+        velocity = cartesian_state.velocity.to_numpy()
+
+        # Expected position and velocity for a circular polar orbit
+        expected_position = [7000.0, 0.0, 0.0]  # in kilometers
+        expected_velocity = [0.0, 0.0, 7.546]  # in kilometers per second
+
+        # Assert position and velocity values
+        np.testing.assert_almost_equal(position, expected_position, decimal=3)
+        np.testing.assert_almost_equal(velocity, expected_velocity, decimal=3)
+    
+    def test_cartesian_to_osculating_and_back(self):
+        """Test converting CartesianState to OsculatingElements and back to CartesianState."""
+        # Generate random CartesianState
+        position = Cartesian3DPosition(
+            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.ICRF_EC
+        )
+        velocity = Cartesian3DVelocity(
+            *np.random.uniform(-10, 10, size=3), ReferenceFrame.ICRF_EC
+        )
+        cartesian_state_original = CartesianState(
+            self.time, position, velocity, ReferenceFrame.ICRF_EC
+        )
+
+        # Convert to OsculatingElements
+        osculating_elements = OsculatingElements.from_cartesian_state(
+            cartesian_state_original
+        )
+
+        # Convert back to CartesianState
+        cartesian_state_converted = osculating_elements.to_cartesian_state()
+
+        # Validate that the original and converted CartesianState are approximately equal
+        np.testing.assert_almost_equal(
+            cartesian_state_original.position.to_numpy(),
+            cartesian_state_converted.position.to_numpy(),
+            decimal=3,
+        )
+        np.testing.assert_almost_equal(
+            cartesian_state_original.velocity.to_numpy(),
+            cartesian_state_converted.velocity.to_numpy(),
+            decimal=3,
+        )
+        self.assertEqual(
+            cartesian_state_original.frame, cartesian_state_converted.frame
+        )
+        self.assertEqual(
+            cartesian_state_original.time, cartesian_state_converted.time
+        )
 
 
 if __name__ == "__main__":

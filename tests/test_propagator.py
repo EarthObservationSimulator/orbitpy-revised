@@ -105,14 +105,14 @@ class TestSGP4Propagator(unittest.TestCase):
         self.step_size = 60  # seconds
         self.propagator = SGP4Propagator(step_size=self.step_size)
         self.tle = TwoLineElementSet(
-            line0="0 TEST SATELLITE",
-            line1="1 25544U 98067A   21275.48835648  .00001264  00000-0  29621-4 0  9993",
-            line2="2 25544  51.6453  21.5554 0002287  45.1234 315.6789 15.48912345678901",
+            line0="0 LANDSAT 9",
+            line1="1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
+            line2="2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801",
         )
         self.start_time = AbsoluteDate.from_dict(
             {
                 "time_format": "Gregorian_Date",
-                "calendar_date": "2025-03-17T12:00:00",
+                "calendar_date": "2025-04-17T12:00:00",
                 "time_scale": "utc",
             }
         )
