@@ -2,16 +2,136 @@
 
 import unittest
 import random
+import numpy as np
 
 from eosimutils.time import AbsoluteDate
-from eosimutils.position import (
-    ReferenceFrame,
+from eosimutils.base import ReferenceFrame
+from eosimutils.state import (
     Cartesian3DPosition,
     Cartesian3DVelocity,
+    CartesianState,
 )
-from eosimutils.state import CartesianState
 
-from orbitpy.orbits import OrbitalMeanElementsMessage, OsculatingElements
+from orbitpy.orbits import (
+    TwoLineElementSet,
+    OrbitalMeanElementsMessage,
+    OsculatingElements,
+    OrbitFactory,
+    OrbitType,
+)
+
+
+class TestOrbitFactory(unittest.TestCase):
+    """Unit tests for the OrbitFactory class."""
+
+    def setUp(self):
+        """Set up test data for OrbitFactory."""
+        self.factory = OrbitFactory()
+        self.tle_dict = {
+            "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
+            "TLE_LINE0": "0 LANDSAT 9",
+            "TLE_LINE1": "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
+            "TLE_LINE2": "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801",
+        }
+
+    def test_get_orbit_tle(self):
+        """Test retrieving a TwoLineElementSet orbit object."""
+        orbit = self.factory.get_orbit(self.tle_dict)
+        self.assertIsInstance(orbit, TwoLineElementSet)
+        self.assertEqual(orbit.line0, self.tle_dict["TLE_LINE0"])
+        self.assertEqual(orbit.line1, self.tle_dict["TLE_LINE1"])
+        self.assertEqual(orbit.line2, self.tle_dict["TLE_LINE2"])
+
+    def test_get_orbit_invalid_type(self):
+        """Test error handling for an invalid orbit type."""
+        invalid_dict = {"orbit_type": "INVALID_TYPE"}
+        with self.assertRaises(ValueError) as context:
+            self.factory.get_orbit(invalid_dict)
+        self.assertIn(
+            'Orbit type "INVALID_TYPE" is not registered.',
+            str(context.exception),
+        )
+
+    def test_get_orbit_missing_type(self):
+        """Test error handling for a missing orbit type key."""
+        missing_type_dict = {"TLE_LINE0": "0 TEST SATELLITE"}
+        with self.assertRaises(KeyError) as context:
+            self.factory.get_orbit(missing_type_dict)
+        self.assertIn(
+            'Orbit type key "orbit_type" not found in specifications dictionary.',
+            str(context.exception),
+        )
+
+    def test_get_orbit_cartesian_state(self):
+        """Test retrieving a CartesianState orbit object."""
+        cartesian_state_dict = {
+            "orbit_type": OrbitType.CARTESIAN_STATE.value,
+            "time": {
+                "time_format": "Gregorian_Date",
+                "calendar_date": "2025-04-16T12:00:00",
+                "time_scale": "utc",
+            },
+            "position": [7000.0, 0.0, 0.0],
+            "velocity": [0.0, 7.546, 0.0],
+            "frame": "ICRF_EC",
+        }
+
+        orbit = self.factory.get_orbit(cartesian_state_dict)
+        self.assertIsInstance(orbit, CartesianState)
+        self.assertTrue(
+            (orbit.to_numpy() == [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]).all()
+        )
+        self.assertEqual(orbit.frame.value, "ICRF_EC")
+
+
+class TestTwoLineElementSet(unittest.TestCase):
+    """Unit tests for the TwoLineElementSet class."""
+
+    def setUp(self):
+        """Set up test data for TwoLineElementSet."""
+        self.line0 = "0 LANDSAT 9"
+        self.line1 = "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997"
+        self.line2 = "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
+        self.tle_dict = {
+            "TLE_LINE0": self.line0,
+            "TLE_LINE1": self.line1,
+            "TLE_LINE2": self.line2,
+        }
+
+    def test_initialization(self):
+        """Test initialization of TwoLineElementSet."""
+        tle = TwoLineElementSet(self.line0, self.line1, self.line2)
+        self.assertEqual(tle.line0, self.line0)
+        self.assertEqual(tle.line1, self.line1)
+        self.assertEqual(tle.line2, self.line2)
+
+    def test_from_dict(self):
+        """Test constructing TwoLineElementSet from a dictionary."""
+        tle = TwoLineElementSet.from_dict(self.tle_dict)
+        self.assertEqual(tle.line0, self.line0)
+        self.assertEqual(tle.line1, self.line1)
+        self.assertEqual(tle.line2, self.line2)
+
+    def test_to_dict(self):
+        """Test converting TwoLineElementSet to a dictionary."""
+        tle = TwoLineElementSet(self.line0, self.line1, self.line2)
+        tle_dict = tle.to_dict()
+        self.assertEqual(tle_dict["TLE_LINE0"], self.line0)
+        self.assertEqual(tle_dict["TLE_LINE1"], self.line1)
+        self.assertEqual(tle_dict["TLE_LINE2"], self.line2)
+
+    def test_get_tle_as_tuple(self):
+        """Test retrieving the TLE as a tuple of strings."""
+        tle = TwoLineElementSet.from_dict(self.tle_dict)
+        tle_tuple = tle.get_tle_as_tuple()
+        self.assertEqual(tle_tuple, (self.line1, self.line2))
+
+    def test_get_tle_as_tuple_missing_lines(self):
+        """Test error handling when TLE lines are missing."""
+        tle = TwoLineElementSet(self.line0, None, self.line2)
+        with self.assertRaises(ValueError) as context:
+            tle.get_tle_as_tuple()
+        self.assertIn("TLE lines are missing.", str(context.exception))
 
 
 class TestOrbitalMeanElementsMessage(unittest.TestCase):
@@ -125,8 +245,8 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
         omm_dict = {
             "OBJECT_NAME": "CYGFM03",
             "EPOCH": "2024-01-15T11:50:47.395968",
-            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
-            "TLE_LINE2": "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827"  # pylint: disable=line-too-long
+            "TLE_LINE1": "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",  # pylint: disable=line-too-long
+            "TLE_LINE2": "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827",  # pylint: disable=line-too-long
         }
 
         # Create an OrbitalMeanElementsMessage object from the dictionary
@@ -137,11 +257,11 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
         self.assertEqual(omm.get_field_as_str("OBJECT_NAME"), "CYGFM03")
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE1"),
-            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",  # pylint: disable=line-too-long
         )
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE2"),
-            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827", # pylint: disable=line-too-long
+            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827",  # pylint: disable=line-too-long
         )
 
     def test_from_json(self):
@@ -166,11 +286,11 @@ class TestOrbitalMeanElementsMessage(unittest.TestCase):
         )
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE1"),
-            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992", # pylint: disable=line-too-long
+            "1 41891U 16078H   24015.49360412  .00012941  00000-0  51433-3 0  9992",  # pylint: disable=line-too-long
         )
         self.assertEqual(
             omm.get_field_as_str("TLE_LINE2"),
-            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827", # pylint: disable=line-too-long
+            "2 41891  34.9521 177.5021 0010251 257.9235 102.0330 15.24443449392827",  # pylint: disable=line-too-long
         )
 
 
@@ -181,12 +301,7 @@ class TestOsculatingElements(unittest.TestCase):
         """Set up test data for OsculatingElements."""
         self.time_dict = {
             "time_format": "Gregorian_Date",
-            "year": 2025,
-            "month": 3,
-            "day": 10,
-            "hour": 14,
-            "minute": 30,
-            "second": 0.0,
+            "calendar_date": "2025-03-10T14:30:00",
             "time_scale": "utc",
         }
         self.time = AbsoluteDate.from_dict(self.time_dict)
@@ -198,7 +313,7 @@ class TestOsculatingElements(unittest.TestCase):
         self.raan = round(random.uniform(0, 360), 6)  # in degrees
         self.arg_of_perigee = round(random.uniform(0, 360), 6)  # in degrees
         self.true_anomaly = round(random.uniform(0, 360), 6)  # in degrees
-        self.inertial_frame = ReferenceFrame.GCRF
+        self.inertial_frame = ReferenceFrame.ICRF_EC
 
     def test_initialization(self):
         """Test initialization of OsculatingElements."""
@@ -235,7 +350,7 @@ class TestOsculatingElements(unittest.TestCase):
                 ReferenceFrame.ITRF,  # Invalid frame
             )
         self.assertTrue(
-            "Only GCRF inertial reference frame is supported."
+            "Only ICRF_EC inertial reference frame is supported."
             in str(context.exception)
         )
 
@@ -249,7 +364,7 @@ class TestOsculatingElements(unittest.TestCase):
             "raan": self.raan,
             "arg_of_perigee": self.arg_of_perigee,
             "true_anomaly": self.true_anomaly,
-            "inertial_frame": "GCRF",
+            "inertial_frame": "ICRF_EC",
         }
         state = OsculatingElements.from_dict(dict_in)
         self.assertEqual(state.time, self.time)
@@ -277,7 +392,7 @@ class TestOsculatingElements(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             OsculatingElements.from_dict(dict_in)
         self.assertTrue(
-            "Only GCRF inertial reference frame is supported."
+            "Only ICRF_EC inertial reference frame is supported."
             in str(context.exception)
         )
 
@@ -307,12 +422,12 @@ class TestOsculatingElements(unittest.TestCase):
         """Test constructing OsculatingElements from a CartesianState object."""
         # Create a CartesianState object
         # velocity is chosen to make it a circular orbit, 90 deg inclination
-        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.GCRF)
+        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.ICRF_EC)
         velocity = Cartesian3DVelocity(
-            0.0, 0.0, 7.54605329011, ReferenceFrame.GCRF
+            0.0, 0.0, 7.54605329011, ReferenceFrame.ICRF_EC
         )
         cartesian_state = CartesianState(
-            self.time, position, velocity, ReferenceFrame.GCRF
+            self.time, position, velocity, ReferenceFrame.ICRF_EC
         )
 
         # Convert to OsculatingElements
@@ -323,13 +438,86 @@ class TestOsculatingElements(unittest.TestCase):
         # Validate the OsculatingElements object
         self.assertEqual(osculating_elements.time, cartesian_state.time)
         self.assertEqual(
-            osculating_elements.inertial_frame, ReferenceFrame.GCRF
+            osculating_elements.inertial_frame, ReferenceFrame.ICRF_EC
         )
         self.assertAlmostEqual(osculating_elements.eccentricity, 0.0, places=5)
         self.assertAlmostEqual(osculating_elements.inclination, 90.0)
         self.assertAlmostEqual(osculating_elements.raan, 0.0)
         self.assertAlmostEqual(osculating_elements.arg_of_perigee, 0.0)
         self.assertAlmostEqual(osculating_elements.true_anomaly, 0.0)
+
+    def test_to_cartesian_state(self):
+        """Test converting OsculatingElements to a CartesianState object."""
+        # Create an OsculatingElements object
+        osculating_elements = OsculatingElements(
+            time=self.time,
+            semi_major_axis=7000.0,  # in kilometers
+            eccentricity=0.0,  # Circular orbit
+            inclination=90.0,  # Polar orbit
+            raan=0.0,  # Right Ascension of Ascending Node
+            arg_of_perigee=0.0,  # Argument of Perigee
+            true_anomaly=0.0,  # True Anomaly
+            inertial_frame=ReferenceFrame.ICRF_EC,
+        )
+
+        # Convert to CartesianState
+        cartesian_state = osculating_elements.to_cartesian_state()
+
+        # Validate the CartesianState object
+        self.assertIsInstance(cartesian_state, CartesianState)
+        self.assertEqual(cartesian_state.time, osculating_elements.time)
+        self.assertEqual(cartesian_state.frame, ReferenceFrame.ICRF_EC)
+
+        # Validate position and velocity
+        position = cartesian_state.position.to_numpy()
+        velocity = cartesian_state.velocity.to_numpy()
+
+        # Expected position and velocity for a circular polar orbit
+        expected_position = [7000.0, 0.0, 0.0]  # in kilometers
+        expected_velocity = [0.0, 0.0, 7.546]  # in kilometers per second
+
+        # Assert position and velocity values
+        np.testing.assert_almost_equal(position, expected_position, decimal=3)
+        np.testing.assert_almost_equal(velocity, expected_velocity, decimal=3)
+
+    def test_cartesian_to_osculating_and_back(self):
+        """Test converting CartesianState to OsculatingElements and back to CartesianState."""
+        # Generate random CartesianState
+        position = Cartesian3DPosition(
+            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.ICRF_EC
+        )
+        velocity = Cartesian3DVelocity(
+            *np.random.uniform(-10, 10, size=3), ReferenceFrame.ICRF_EC
+        )
+        cartesian_state_original = CartesianState(
+            self.time, position, velocity, ReferenceFrame.ICRF_EC
+        )
+
+        # Convert to OsculatingElements
+        osculating_elements = OsculatingElements.from_cartesian_state(
+            cartesian_state_original
+        )
+
+        # Convert back to CartesianState
+        cartesian_state_converted = osculating_elements.to_cartesian_state()
+
+        # Validate that the original and converted CartesianState are approximately equal
+        np.testing.assert_almost_equal(
+            cartesian_state_original.position.to_numpy(),
+            cartesian_state_converted.position.to_numpy(),
+            decimal=3,
+        )
+        np.testing.assert_almost_equal(
+            cartesian_state_original.velocity.to_numpy(),
+            cartesian_state_converted.velocity.to_numpy(),
+            decimal=3,
+        )
+        self.assertEqual(
+            cartesian_state_original.frame, cartesian_state_converted.frame
+        )
+        self.assertEqual(
+            cartesian_state_original.time, cartesian_state_converted.time
+        )
 
 
 if __name__ == "__main__":

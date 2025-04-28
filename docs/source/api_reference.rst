@@ -43,51 +43,51 @@ API Reference
 ## 4. Mission-Level Analysis
 - **mission** - Scenario setup, execution, and high-level mission representation.  
 - **analysis** - Post-processing, data analysis, and visualization of results.  
-
-                                ┌───────────────────────────┐
-                                │      Core Utilities       │
-                                └───────────────────────────┘
+                                ┌───────────────────────────────┐
+                                │         Core Utilities         │
+                                │          (eosimutils)          │
+                                └───────────────────────────────┘
                                           │
-        ┌────────────────────────────────┴────────────────────────────────┐
-        │                         │                         │              │
-      base                      time                   position           (…)
- (General utils)    (Time representations & conv.)  (Frames & conv.)  (Future)
+        ┌─────────────────────────────────┴─────────────────────────────────────────────────────────────────┐
+        │                 │                       │                       │                  │              │
+      base              time                   state              timeseries         trajectory     orientation
+(General utilities)  (Time scales,       (Cartesian positions)    (Time-varying     (path data)      (Attitude/
+                     formats, conversions)                        data series)                        pointing)
 
-─────────────────────────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-                                ┌───────────────────────────┐
-                                │ Orbital & Spacecraft Comp │
-                                └───────────────────────────┘
-                                          │
-        ┌────────────────────────────────┴──────────────────────────────┐
-        │                         │                        │            │
-     orbits                  resources                   grid         (…)
+                                ┌────────────────────────────────────┐
+                                │     Orbital & Spacecraft Comp.     │
+                                └────────────────────────────────────┘
+                                              │
+                        ┌─────────────────────┴────────────────────────────────────────┐
+                        │                           │                                  │
+                     orbits                     resources                            grid
+     (representations & conversions)     (Spacecraft, ground stations, sensors)  (Spatial coverage grids)
 
- (Orbital states & trans.)  (Spacecraft, GS, sensors)  (Spatial grids)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-─────────────────────────────────────────────────────────────────────────────────
+                                ┌────────────────────────────────────┐
+                                │     Dynamics & Event Modeling      │
+                                └────────────────────────────────────┘
+                                              │
+             ┌──────────────┬──────────────┬──────────────┬──────────────┐
+             │              │              │              │              │
+        propagation      coverage        contact        eclipse     datametrics
+   (Orbit propagation) (Observation/  (Comms windows)  (Eclipse      (Instrument     
+                        GS coverage)                   predictions)  metrics)
 
-                                ┌───────────────────────────┐
-                                │  Dynamics & Event Models  │
-                                └───────────────────────────┘
-                                          │
-   ┌────────────────────┬───────────────┬───────────────┬──────────────┬──────────────┐
-   │                    │               │               │              │              │
- propagation        coverage         contact         eclipse      datametrics        (…)
-(Orbit propagation)  (Obs./GS cov.)  (Comm. windows) (Eclipse calc) (Metrics & geom.)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-─────────────────────────────────────────────────────────────────────────────────
+                                ┌────────────────────────────────────┐
+                                │     Mission-Level Analysis         │
+                                └────────────────────────────────────┘
+                                              │
+                            ┌─────────────────┴──────────────────┐
+                            │                                    │
+                         mission                             analysis
+        (Scenario definition & execution)   (Results post-processing, metrics, visualization)
 
-                                ┌───────────────────────────┐
-                                │  Mission-Level Analysis   │
-                                └───────────────────────────┘
-                                          │
-                        ┌─────────────────┴─────────────────┐
-                        │                                   │
-                     mission                             analysis
-         (Scenario setup & exec.)       (Post-processing, data analysis, viz.)
-
-─────────────────────────────────────────────────────────────────────────────────
 
 
 Please navigate below for detailed descriptions of OrbitPy's classes and functions. 
