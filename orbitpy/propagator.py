@@ -39,7 +39,7 @@ class PropagatorFactory:
         propagator = factory.get_propagator(specs)
 
     Attributes:
-        _creators (Dict[str, Type]): A dictionary mapping propagator type 
+        _creators (Dict[str, Type]): A dictionary mapping propagator type
                                      labels to their respective classes.
     """
 
@@ -67,7 +67,7 @@ class PropagatorFactory:
                 Must include a valid propagator type in the "propagator_type" key.
 
         Returns:
-            Any: An instance of the appropriate propagator class initialized 
+            Any: An instance of the appropriate propagator class initialized
                  with the given specifications.
 
         Raises:
@@ -103,7 +103,7 @@ class SGP4Propagator:
         """Initializes the SGP4Propagator.
 
         Args:
-            step_size (float, optional): Orbit propagation time-step in seconds. 
+            step_size (float, optional): Orbit propagation time-step in seconds.
                                          Default is 60 seconds.
         """
         self.step_size = float(step_size) if step_size is not None else 60.0
@@ -135,7 +135,7 @@ class SGP4Propagator:
         Args:
             t0 (AbsoluteDate): Start time for propagation.
             duration_days (float): Duration of propagation in days.
-            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage]): 
+            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage]):
                     Orbital specifications to be propagated.
                     This can be either a TLE set or an Orbital Mean Elements Message.
 

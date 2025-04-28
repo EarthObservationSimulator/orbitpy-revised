@@ -1,6 +1,6 @@
 """
-.. module:: orbitpy/orbits
-   :synopsis: Represention of spacecraft orbits.
+.. module:: orbitpy.orbits
+   :synopsis: Representation of spacecraft orbits.
 
 Collection of classes and functions relating to
 represention of spacecraft orbit state.
@@ -16,7 +16,7 @@ import numpy as np
 from skyfield.elementslib import (
     osculating_elements_of as skyfield_osculating_elements_of,
     eccentric_anomaly as skyfield_eccentric_anomaly,
-    mean_anomaly as skyfield_mean_anomaly
+    mean_anomaly as skyfield_mean_anomaly,
 )
 import spiceypy as spice
 
@@ -29,10 +29,12 @@ GM_EARTH = 398600.435507  # km^3/s^2
 
 class OrbitType(EnumBase):
     """Enumeration of supported orbit types."""
+
     TWO_LINE_ELEMENT_SET = "TWO_LINE_ELEMENT_SET"
     ORBITAL_MEAN_ELEMENTS_MESSAGE = "ORBITAL_MEAN_ELEMENTS_MESSAGE"
     OSCULATING_ELEMENTS = "OSCULATING_ELEMENTS"
     CARTESIAN_STATE = "CARTESIAN_STATE"
+
 
 class OrbitFactory:
     """Factory class to register and create orbit objects."""
@@ -40,9 +42,16 @@ class OrbitFactory:
     def __init__(self):
         """Initializes the OrbitFactory and registers default orbit types."""
         self._creators: Dict[str, Type] = {}
-        self.register_orbit(OrbitType.TWO_LINE_ELEMENT_SET.value, TwoLineElementSet)
-        self.register_orbit(OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value, OrbitalMeanElementsMessage)
-        self.register_orbit(OrbitType.OSCULATING_ELEMENTS.value, OsculatingElements)
+        self.register_orbit(
+            OrbitType.TWO_LINE_ELEMENT_SET.value, TwoLineElementSet
+        )
+        self.register_orbit(
+            OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
+            OrbitalMeanElementsMessage,
+        )
+        self.register_orbit(
+            OrbitType.OSCULATING_ELEMENTS.value, OsculatingElements
+        )
         self.register_orbit(OrbitType.CARTESIAN_STATE.value, CartesianState)
 
     def register_orbit(self, orbit_type: str, creator: Type) -> None:
@@ -62,7 +71,8 @@ class OrbitFactory:
                 Must include a valid orbit type in the "orbit_type" key.
 
         Returns:
-            Any: An instance of the appropriate orbit class initialized with the given specifications.
+            Any: An instance of the appropriate orbit class initialized with the 
+                 given specifications.
 
         Raises:
             KeyError: If the "orbit_type" key is missing in the specifications dictionary.
@@ -75,10 +85,13 @@ class OrbitFactory:
             )
 
         if orbit_type_str not in self._creators:
-            raise ValueError(f'Orbit type "{orbit_type_str}" is not registered.')
+            raise ValueError(
+                f'Orbit type "{orbit_type_str}" is not registered.'
+            )
 
         creator = self._creators[orbit_type_str]
         return creator.from_dict(specs)
+
 
 class TwoLineElementSet:
     """Handles a Two-Line Element Set (TLE).
@@ -534,7 +547,7 @@ class OsculatingElements:
         skyfield_position = cartesian_state.to_skyfield_gcrf_position()
 
         # Orientation of ICRF_EC ~ GCRF (of Skyfield).
-        # (The reference frame by default in the skyfield_osculating_elements_of 
+        # (The reference frame by default in the skyfield_osculating_elements_of
         #  function is the ICRF.)
         elements = skyfield_osculating_elements_of(
             skyfield_position, reference_frame=None, gm_km3_s2=gm_body_km3_s2
@@ -580,26 +593,29 @@ class OsculatingElements:
                              osculating elements.
         """
         # Get the mean anomaly from the true anomaly
-        semi_latus_rectum_km = self.semi_major_axis * (1 - self.eccentricity ** 2)
-        eccentric_anomaly_rad = skyfield_eccentric_anomaly( np.deg2rad(self.true_anomaly),
-                                                            np.asarray(self.eccentricity),
-                                                            semi_latus_rectum_km)
-        mean_anomaly_rad = skyfield_mean_anomaly( eccentric_anomaly_rad, 
-                                                 np.asarray(self.eccentricity))
-
+        semi_latus_rectum_km = self.semi_major_axis * (1 - self.eccentricity**2)
+        eccentric_anomaly_rad = skyfield_eccentric_anomaly(
+            np.deg2rad(self.true_anomaly),
+            np.asarray(self.eccentricity),
+            semi_latus_rectum_km,
+        )
+        mean_anomaly_rad = skyfield_mean_anomaly(
+            eccentric_anomaly_rad, np.asarray(self.eccentricity)
+        )
 
         # Using SPICE since Skyfield does not support conversion to
         # Cartesian coordinates.
         et = self.time.to_spice_ephemeris_time()
-        elements = [self.semi_major_axis*(1 - self.eccentricity), 
-                    self.eccentricity, 
-                    np.deg2rad(self.inclination),
-                    np.deg2rad(self.raan), 
-                    np.deg2rad(self.arg_of_perigee), 
-                    mean_anomaly_rad, 
-                    et,
-                    gm_body_km3_s2
-                    ]
+        elements = [
+            self.semi_major_axis * (1 - self.eccentricity),
+            self.eccentricity,
+            np.deg2rad(self.inclination),
+            np.deg2rad(self.raan),
+            np.deg2rad(self.arg_of_perigee),
+            mean_anomaly_rad,
+            et,
+            gm_body_km3_s2,
+        ]
         state_vec = spice.conics(elements, et)
 
         return CartesianState.from_array(
@@ -607,4 +623,3 @@ class OsculatingElements:
             time=self.time,
             frame=self.inertial_frame,
         )
-        

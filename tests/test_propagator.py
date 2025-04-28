@@ -29,10 +29,12 @@ class TestPropagatorFactory(unittest.TestCase):
 
         # Test the built-in propagators are registered
         self.assertIn(
-            "SGP4_PROPAGATOR", factory._creators  # pylint: disable=protected-access
+            "SGP4_PROPAGATOR",
+            factory._creators,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            factory._creators["SGP4_PROPAGATOR"], SGP4Propagator # pylint: disable=protected-access
+            factory._creators["SGP4_PROPAGATOR"], # pylint: disable=protected-access
+            SGP4Propagator,
         )
 
     def test_register_propagator(self):
@@ -44,10 +46,11 @@ class TestPropagatorFactory(unittest.TestCase):
 
         # Verify the new propagator is registered
         self.assertIn(
-            "New_Propagator", factory._creators # pylint: disable=protected-access
+            "New_Propagator",
+            factory._creators,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            factory._creators[ # pylint: disable=protected-access
+            factory._creators[  # pylint: disable=protected-access
                 "New_Propagator"
             ],
             TestPropagatorFactory.DummyNewPropagator,
@@ -55,10 +58,12 @@ class TestPropagatorFactory(unittest.TestCase):
 
         # Verify the built-in propagators remain registered
         self.assertIn(
-            "SGP4_PROPAGATOR", factory._creators # pylint: disable=protected-access
+            "SGP4_PROPAGATOR",
+            factory._creators,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            factory._creators["SGP4_PROPAGATOR"], SGP4Propagator # pylint: disable=protected-access
+            factory._creators["SGP4_PROPAGATOR"], # pylint: disable=protected-access
+            SGP4Propagator,
         )
 
     def test_get_propagator(self):

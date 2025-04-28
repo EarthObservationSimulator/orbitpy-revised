@@ -20,6 +20,7 @@ from orbitpy.orbits import (
     OrbitType,
 )
 
+
 class TestOrbitFactory(unittest.TestCase):
     """Unit tests for the OrbitFactory class."""
 
@@ -46,14 +47,20 @@ class TestOrbitFactory(unittest.TestCase):
         invalid_dict = {"orbit_type": "INVALID_TYPE"}
         with self.assertRaises(ValueError) as context:
             self.factory.get_orbit(invalid_dict)
-        self.assertIn("Orbit type \"INVALID_TYPE\" is not registered.", str(context.exception))
+        self.assertIn(
+            'Orbit type "INVALID_TYPE" is not registered.',
+            str(context.exception),
+        )
 
     def test_get_orbit_missing_type(self):
         """Test error handling for a missing orbit type key."""
         missing_type_dict = {"TLE_LINE0": "0 TEST SATELLITE"}
         with self.assertRaises(KeyError) as context:
             self.factory.get_orbit(missing_type_dict)
-        self.assertIn("Orbit type key \"orbit_type\" not found in specifications dictionary.", str(context.exception))
+        self.assertIn(
+            'Orbit type key "orbit_type" not found in specifications dictionary.',
+            str(context.exception),
+        )
 
     def test_get_orbit_cartesian_state(self):
         """Test retrieving a CartesianState orbit object."""
@@ -62,17 +69,20 @@ class TestOrbitFactory(unittest.TestCase):
             "time": {
                 "time_format": "Gregorian_Date",
                 "calendar_date": "2025-04-16T12:00:00",
-                "time_scale": "utc"
+                "time_scale": "utc",
             },
             "position": [7000.0, 0.0, 0.0],
             "velocity": [0.0, 7.546, 0.0],
-            "frame": "ICRF_EC"
+            "frame": "ICRF_EC",
         }
 
         orbit = self.factory.get_orbit(cartesian_state_dict)
         self.assertIsInstance(orbit, CartesianState)
-        self.assertTrue((orbit.to_numpy() == [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]).all())
+        self.assertTrue(
+            (orbit.to_numpy() == [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]).all()
+        )
         self.assertEqual(orbit.frame.value, "ICRF_EC")
+
 
 class TestTwoLineElementSet(unittest.TestCase):
     """Unit tests for the TwoLineElementSet class."""
@@ -435,7 +445,7 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertAlmostEqual(osculating_elements.raan, 0.0)
         self.assertAlmostEqual(osculating_elements.arg_of_perigee, 0.0)
         self.assertAlmostEqual(osculating_elements.true_anomaly, 0.0)
-    
+
     def test_to_cartesian_state(self):
         """Test converting OsculatingElements to a CartesianState object."""
         # Create an OsculatingElements object
@@ -469,7 +479,7 @@ class TestOsculatingElements(unittest.TestCase):
         # Assert position and velocity values
         np.testing.assert_almost_equal(position, expected_position, decimal=3)
         np.testing.assert_almost_equal(velocity, expected_velocity, decimal=3)
-    
+
     def test_cartesian_to_osculating_and_back(self):
         """Test converting CartesianState to OsculatingElements and back to CartesianState."""
         # Generate random CartesianState
