@@ -27,7 +27,7 @@ class TestPropagatorFactory(unittest.TestCase):
         # Clear registry before each test to avoid side effects
         PropagatorFactory._registry.clear() # pylint: disable=protected-access
         # Register SGP4Propagator for tests
-        PropagatorFactory.register_type("SGP4_PROPAGATOR")(SGP4Propagator) # pylint: disable=protected-access
+        PropagatorFactory.register_type("SGP4_PROPAGATOR")(SGP4Propagator)
 
     def test___init__(self):
         """Test initialization of PropagatorFactory."""

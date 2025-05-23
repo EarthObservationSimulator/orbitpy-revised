@@ -50,6 +50,8 @@ Take cues from the above references, then use linters, auto-formatters, and LLMs
 - Numpy arrays are used for storing numerical array-like data (e.g., 3d position, states, trajectories, etc.) 
   At several places functions are built to have two versions: one which takes `eosimutils` objects and another which takes numpy arrays.
 
-- Use factory methods in modules such as orbits, propagator, etc. This allows for dynamic creation of propagators based on input specifications in a dictionary. It centralizes the registration and creation of propagator types, making the system extensible and maintainable.
+- Use factory methods in modules such as orbits, propagator, etc. This allows for dynamic creation of propagators based on input specifications in a dictionary. It centralizes the registration and creation of propagator types, making the system extensible and maintainable. Use identical implementation for all Factory classes with a class-level registry and decorator pattern.
 
 - Use randomized tests wherever possible. Save seed for randomized test when it fails.
+
+- Specify the expected dictionary key names with explicit suffixes when indicating a particular type (e.g., `orientation_type`, `orbit_type`), and avoid using the generic key name `type` on its own.

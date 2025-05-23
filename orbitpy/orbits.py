@@ -10,7 +10,7 @@ by using the :class:eosimutils.state.CartesianState class.
 
 import json
 import requests
-from typing import Dict, Tuple, Any, Optional, Type
+from typing import Dict, Tuple, Any, Optional, Type, Callable
 import numpy as np
 
 from skyfield.elementslib import (
@@ -39,40 +39,31 @@ class OrbitType(EnumBase):
 class OrbitFactory:
     """Factory class to register and create orbit objects."""
 
-    def __init__(self):
-        """Initializes the OrbitFactory and registers default orbit types."""
-        self._creators: Dict[str, Type] = {}
-        self.register_orbit(
-            OrbitType.TWO_LINE_ELEMENT_SET.value, TwoLineElementSet
-        )
-        self.register_orbit(
-            OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
-            OrbitalMeanElementsMessage,
-        )
-        self.register_orbit(
-            OrbitType.OSCULATING_ELEMENTS.value, OsculatingElements
-        )
-        self.register_orbit(OrbitType.CARTESIAN_STATE.value, CartesianState)
+    # Class-level registry for orbit types
+    _registry: Dict[str, Type] = {}
 
-    def register_orbit(self, orbit_type: str, creator: Type) -> None:
-        """Registers an orbit class with a specific type label.
-
-        Args:
-            orbit_type (str): The label for the orbit type.
-            creator (Type): The orbit class to register.
+    @classmethod
+    def register_type(cls, type_name: str) -> Callable[[Type], Type]:
         """
-        self._creators[orbit_type] = creator
+        Decorator to register an orbit class under a type name.
+        """
+        def decorator(orbit_class: Type) -> Type:
+            cls._registry[type_name] = orbit_class
+            return orbit_class
+        return decorator
 
-    def get_orbit(self, specs: Dict[str, Any]) -> Any:
-        """Retrieves an instance of the appropriate orbit object based on specifications.
+    @classmethod
+    def from_dict(cls, specs: Dict[str, Any]) -> object:
+        """
+        Retrieves an instance of the appropriate orbit class based on specifications.
 
         Args:
             specs (Dict[str, Any]): A dictionary containing orbit specifications.
                 Must include a valid orbit type in the "orbit_type" key.
 
         Returns:
-            Any: An instance of the appropriate orbit class initialized with the 
-                 given specifications.
+            object: An instance of the appropriate orbit class initialized with 
+                    the given specifications.
 
         Raises:
             KeyError: If the "orbit_type" key is missing in the specifications dictionary.
@@ -80,19 +71,14 @@ class OrbitFactory:
         """
         orbit_type_str = specs.get("orbit_type")
         if orbit_type_str is None:
-            raise KeyError(
-                'Orbit type key "orbit_type" not found in specifications dictionary.'
-            )
-
-        if orbit_type_str not in self._creators:
-            raise ValueError(
-                f'Orbit type "{orbit_type_str}" is not registered.'
-            )
-
-        creator = self._creators[orbit_type_str]
-        return creator.from_dict(specs)
+            raise KeyError('Orbit type key "orbit_type" not found in specifications dictionary.')
+        orbit_class = cls._registry.get(orbit_type_str)
+        if not orbit_class:
+            raise ValueError(f'Orbit type "{orbit_type_str}" is not registered.')
+        return orbit_class.from_dict(specs)
 
 
+@OrbitFactory.register_type(OrbitType.TWO_LINE_ELEMENT_SET.value)
 class TwoLineElementSet:
     """Handles a Two-Line Element Set (TLE).
 
@@ -166,6 +152,7 @@ class TwoLineElementSet:
         return self.line1, self.line2
 
 
+@OrbitFactory.register_type(OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value)
 class OrbitalMeanElementsMessage:
     """Handles an Orbital Mean-Elements Message (OMM)."""
 
@@ -401,6 +388,7 @@ class SpaceTrackAPI:
         print("Logged out successfully.")
 
 
+@OrbitFactory.register_type(OrbitType.OSCULATING_ELEMENTS.value)
 class OsculatingElements:
     """
     Represents the state in terms of osculating (instantaneous)
