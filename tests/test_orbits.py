@@ -4,8 +4,8 @@ import unittest
 import random
 import numpy as np
 
+from eosimutils.base import ReferenceFrame
 from eosimutils.time import AbsoluteDate
-from eosimutils.frames import ReferenceFrame
 from eosimutils.state import (
     Cartesian3DPosition,
     Cartesian3DVelocity,
@@ -93,7 +93,7 @@ class TestOrbitFactory(unittest.TestCase):
         self.assertTrue(
             (orbit.to_numpy() == [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]).all()
         )
-        self.assertEqual(orbit.frame.value, "ICRF_EC")
+        self.assertEqual(orbit.frame.to_string(), "ICRF_EC")
 
     def test_register_type(self):
         """Test registering a new orbit type using register_type."""
@@ -333,7 +333,7 @@ class TestOsculatingElements(unittest.TestCase):
         self.raan = round(random.uniform(0, 360), 6)  # in degrees
         self.arg_of_perigee = round(random.uniform(0, 360), 6)  # in degrees
         self.true_anomaly = round(random.uniform(0, 360), 6)  # in degrees
-        self.inertial_frame = ReferenceFrame.ICRF_EC
+        self.inertial_frame = ReferenceFrame.get("ICRF_EC")
 
     def test_initialization(self):
         """Test initialization of OsculatingElements."""
@@ -367,7 +367,7 @@ class TestOsculatingElements(unittest.TestCase):
                 self.raan,
                 self.arg_of_perigee,
                 self.true_anomaly,
-                ReferenceFrame.ITRF,  # Invalid frame
+                ReferenceFrame.get("ITRF"),  # Invalid frame
             )
         self.assertTrue(
             "Only ICRF_EC inertial reference frame is supported."
@@ -436,18 +436,18 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(dict_out["raan"], self.raan)
         self.assertEqual(dict_out["arg_of_perigee"], self.arg_of_perigee)
         self.assertEqual(dict_out["true_anomaly"], self.true_anomaly)
-        self.assertEqual(dict_out["inertial_frame"], self.inertial_frame.value)
+        self.assertEqual(dict_out["inertial_frame"], self.inertial_frame.to_string())
 
     def test_from_cartesian_state(self):
         """Test constructing OsculatingElements from a CartesianState object."""
         # Create a CartesianState object
         # velocity is chosen to make it a circular orbit, 90 deg inclination
-        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.ICRF_EC)
+        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.get("ICRF_EC"))
         velocity = Cartesian3DVelocity(
-            0.0, 0.0, 7.54605329011, ReferenceFrame.ICRF_EC
+            0.0, 0.0, 7.54605329011, ReferenceFrame.get("ICRF_EC")
         )
         cartesian_state = CartesianState(
-            self.time, position, velocity, ReferenceFrame.ICRF_EC
+            self.time, position, velocity, ReferenceFrame.get("ICRF_EC")
         )
 
         # Convert to OsculatingElements
@@ -458,7 +458,7 @@ class TestOsculatingElements(unittest.TestCase):
         # Validate the OsculatingElements object
         self.assertEqual(osculating_elements.time, cartesian_state.time)
         self.assertEqual(
-            osculating_elements.inertial_frame, ReferenceFrame.ICRF_EC
+            osculating_elements.inertial_frame, ReferenceFrame.get("ICRF_EC")
         )
         self.assertAlmostEqual(osculating_elements.eccentricity, 0.0, places=5)
         self.assertAlmostEqual(osculating_elements.inclination, 90.0)
@@ -477,7 +477,7 @@ class TestOsculatingElements(unittest.TestCase):
             raan=0.0,  # Right Ascension of Ascending Node
             arg_of_perigee=0.0,  # Argument of Perigee
             true_anomaly=0.0,  # True Anomaly
-            inertial_frame=ReferenceFrame.ICRF_EC,
+            inertial_frame=ReferenceFrame.get("ICRF_EC"),
         )
 
         # Convert to CartesianState
@@ -486,7 +486,7 @@ class TestOsculatingElements(unittest.TestCase):
         # Validate the CartesianState object
         self.assertIsInstance(cartesian_state, CartesianState)
         self.assertEqual(cartesian_state.time, osculating_elements.time)
-        self.assertEqual(cartesian_state.frame, ReferenceFrame.ICRF_EC)
+        self.assertEqual(cartesian_state.frame, ReferenceFrame.get("ICRF_EC"))
 
         # Validate position and velocity
         position = cartesian_state.position.to_numpy()
@@ -504,13 +504,13 @@ class TestOsculatingElements(unittest.TestCase):
         """Test converting CartesianState to OsculatingElements and back to CartesianState."""
         # Generate random CartesianState
         position = Cartesian3DPosition(
-            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.ICRF_EC
+            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.get("ICRF_EC")
         )
         velocity = Cartesian3DVelocity(
-            *np.random.uniform(-10, 10, size=3), ReferenceFrame.ICRF_EC
+            *np.random.uniform(-10, 10, size=3), ReferenceFrame.get("ICRF_EC")
         )
         cartesian_state_original = CartesianState(
-            self.time, position, velocity, ReferenceFrame.ICRF_EC
+            self.time, position, velocity, ReferenceFrame.get("ICRF_EC")
         )
 
         # Convert to OsculatingElements

@@ -11,8 +11,7 @@ from skyfield.api import (
     load as Skyfield_load,
 )
 
-from eosimutils.base import EnumBase
-from eosimutils.frames import ReferenceFrame
+from eosimutils.base import EnumBase, ReferenceFrame
 from eosimutils.time import AbsoluteDate, AbsoluteDateArray
 from eosimutils.trajectory import StateSeries
 
@@ -199,7 +198,7 @@ class SGP4Propagator:
             # Define the reference frame. GCRS of Skyfield is considered
             # equivalent to ReferenceFrame.ICRF_EC
             # See: https://rhodesmill.org/skyfield/earth-satellites.html#generating-a-satellite-position # pylint: disable=line-too-long
-            reference_frame = ReferenceFrame.ICRF_EC
+            reference_frame = ReferenceFrame.get("ICRF_EC")
 
             # Instantiate the StateSeries object
             state_series = StateSeries(
