@@ -186,9 +186,9 @@ class SGP4Propagator:
             )
 
             # Define the reference frame. GCRS of Skyfield is considered
-            # equivalent to ReferenceFrame.ICRF_EC
+            # equivalent to ReferenceFrame.get("ICRF_EC")
             # See: https://rhodesmill.org/skyfield/earth-satellites.html#generating-a-satellite-position # pylint: disable=line-too-long
-            reference_frame = ReferenceFrame.ICRF_EC
+            reference_frame = ReferenceFrame.get("ICRF_EC")
 
             # Instantiate the StateSeries object
             state_series = StateSeries(

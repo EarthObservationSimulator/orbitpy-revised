@@ -442,9 +442,9 @@ class OsculatingElements:
             inertial_frame (ReferenceFrame): The inertial reference frame.
 
         Raises:
-            ValueError: If the inertial_frame is not ReferenceFrame.ICRF_EC.
+            ValueError: If the inertial_frame is not ReferenceFrame.get("ICRF_EC").
         """
-        if inertial_frame != ReferenceFrame.ICRF_EC:
+        if inertial_frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError(
                 "Only ICRF_EC inertial reference frame is supported."
             )
@@ -481,11 +481,11 @@ class OsculatingElements:
             OsculatingElements: The `OsculatingElements` state object.
 
         Raises:
-            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.ICRF_EC`
+            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.get("ICRF_EC")`
         """
         time = AbsoluteDate.from_dict(dict_in["time"])
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
-        if inertial_frame != ReferenceFrame.ICRF_EC:
+        if inertial_frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError(
                 "Only ICRF_EC inertial reference frame is supported."
             )
@@ -515,7 +515,7 @@ class OsculatingElements:
             "raan": self.raan,
             "arg_of_perigee": self.arg_of_perigee,
             "true_anomaly": self.true_anomaly,
-            "inertial_frame": self.inertial_frame.value,
+            "inertial_frame": self.inertial_frame,
         }
 
     @classmethod
@@ -539,9 +539,9 @@ class OsculatingElements:
 
         Raises:
             ValueError: If the CartesianState frame is not
-                        :class:`ReferenceFrame.ICRF_EC`.
+                        :class:`ReferenceFrame.get("ICRF_EC")`.
         """
-        if cartesian_state.frame != ReferenceFrame.ICRF_EC:
+        if cartesian_state.frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError("Only ICRF_EC is supported.")
 
         skyfield_position = cartesian_state.to_skyfield_gcrf_position()
@@ -574,7 +574,7 @@ class OsculatingElements:
             raan=elements.longitude_of_ascending_node.degrees,
             arg_of_perigee=elements.argument_of_periapsis.degrees,
             true_anomaly=elements.true_anomaly.degrees,
-            inertial_frame=ReferenceFrame.ICRF_EC,
+            inertial_frame=ReferenceFrame.get("ICRF_EC"),
         )
 
     def to_cartesian_state(
