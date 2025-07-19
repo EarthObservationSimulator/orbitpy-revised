@@ -8,7 +8,7 @@ from typing import Type, Dict, Any, Union, Optional, Callable
 import math
 import numpy as np
 
-from eosimutils.base import EnumBase
+from eosimutils.base import EnumBase, SurfaceType, EARTH_RADIUS, EARTH_POLAR_RADIUS
 from eosimutils.state import Cartesian3DPosition, Cartesian3DPositionArray
 from eosimutils.fieldofview import CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView
 from eosimutils.framegraph import FrameGraph
@@ -94,14 +94,14 @@ class PointCoverage:
 
     @classmethod
     def from_dict(cls, specs: Dict[str, Any]) -> "PointCoverage":
-        # Implement actual initialization logic as needed
+        # Not yet implemented
         return cls()
     
     def calculate_coverage(self, 
                            target_point_array: Cartesian3DPositionArray, 
                            fov: Union[CircularFieldOfView, RectangularFieldOfView],
                            frame_graph: FrameGraph,
-                           times: AbsoluteDateArray, buff_size=100) -> DiscreteCoverageTP:
+                           times: AbsoluteDateArray, surface: SurfaceType = SurfaceType.WGS84, buff_size=100) -> DiscreteCoverageTP:
         """Calculates the coverage over an array of target points given a field of view.
 
         Args:
@@ -115,6 +115,8 @@ class PointCoverage:
         Returns:
             DiscreteCoverageTP: An object containing the coverage results for each time point.
         """
+
+        num_pts = target_point_array.positions.shape[0]
         
         fov_frame = fov.frame
         target_frame = target_point_array.frame
@@ -136,12 +138,21 @@ class PointCoverage:
         FOV_to_TARGET_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
 
         # Setup horizon source
-        EARTH_RADIUS = 6.3781363e+03
-        earth_sphere = gte.Sphere3d(gte.Vector3d.Zero(), EARTH_RADIUS)
-        sphere_source = kcl.ConstantSourceSphere3d(earth_sphere)
-        horizon_source = kcl.PolarHalfspaceSource(sphere_source, pos_fov_TARGET_source, buff_size)
-
-        variables = [horizon_source]
+        if surface == SurfaceType.SPHERE:
+            earth_sphere = gte.Sphere3d(gte.Vector3d.Zero(), EARTH_RADIUS)
+            sphere_source = kcl.ConstantSourceSphere3d(earth_sphere)
+            horizon_source = kcl.PolarHalfspaceSourceSphere3d(sphere_source, pos_fov_TARGET_source, buff_size)
+            variables = [horizon_source]
+        elif surface == SurfaceType.WGS84:
+            extents = gte.Vector3d([EARTH_RADIUS,EARTH_RADIUS,EARTH_POLAR_RADIUS])
+            earth_ellipsoid = gte.Ellipsoid3d(gte.Vector3d.Zero(), extents)
+            ellipsoid_source = kcl.ConstantSourceEllipsoid3d(earth_ellipsoid)
+            horizon_source = kcl.PolarHalfspaceSourceEllipsoid3d(ellipsoid_source, pos_fov_TARGET_source, buff_size)
+            variables = [horizon_source]
+        elif surface == SurfaceType.NONE:
+            variables = []
+        else:
+            raise ValueError(f"Unsupported surface type: {surface}")
 
         if isinstance(fov, CircularFieldOfView):
             deg2rad = math.pi / 180.0
@@ -150,7 +161,9 @@ class PointCoverage:
             boresight_FOV_source = kcl.ConstantSourceVector3d(boresight_FOV_gte)
             boresight_TARGET_source = kcl.TransformedVector3dSource(boresight_FOV_source,FOV_to_TARGET_source,buff_size)
             angle_source = kcl.ConstantSourced(half_angle_rad)
-            fov_source = kcl.PosDirConeSource(pos_fov_TARGET_source,boresight_FOV_source,angle_source,buff_size)
+            #fov_source = kcl.VectorAngleConeSource(pos_fov_TARGET_source,angle_source,buff_size)
+
+            fov_source = kcl.PosDirConeSource(pos_fov_TARGET_source,boresight_TARGET_source,angle_source,buff_size)
             fov_viewer = kcl.ViewerCone3d(fov_source)
             variables.append(boresight_TARGET_source)
             variables.append(fov_source)
@@ -159,7 +172,7 @@ class PointCoverage:
             deg2rad = math.pi / 180.0
             up_angle_rad = fov.ref_angle*2.0*deg2rad # convert half angle to full to match kcl
             right_angle_rad = fov.cross_angle*2.0*deg2rad # convert half angle to full to match kcl
-            right_FOV = np.cross(fov.ref_vector, fov.boresight)
+            right_FOV = np.cross(fov.boresight, fov.ref_vector)
             right_FOV_gte = gte.Vector3d(right_FOV)
             up_FOV_gte = gte.Vector3d(fov.ref_vector)
             up_FOV_source = kcl.ConstantSourceVector3d(up_FOV_gte)
@@ -212,4 +225,4 @@ class PointCoverage:
         # Prepare coverage output
         coverage = [cov_source.get(i) for i in range(len(times))]
 
-        return DiscreteCoverageTP(times,coverage)
+        return DiscreteCoverageTP(times,coverage,num_pts)
