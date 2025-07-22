@@ -43,18 +43,19 @@ API Reference
 ## 4. Mission-Level Analysis
 - **mission** - Scenario setup, execution, and high-level mission representation.  
 - **analysis** - Post-processing, data analysis, and visualization of results.  
-                                ┌───────────────────────────────┐
-                                │         Core Utilities         │
-                                │          (eosimutils)          │
-                                └───────────────────────────────┘
-                                          │
-        ┌─────────────────────────────────┴─────────────────────────────────────────────────────────────────┐
-        │                 │                       │                       │                  │              │
-      base              time                   state              timeseries         trajectory     orientation
-(General utilities)  (Time scales,       (Cartesian positions)    (Time-varying     (path data)      (Attitude/
-                     formats, conversions)                        data series)                        pointing)
+                                              ┌───────────────────────────────┐
+                                              │         Core Utilities        │
+                                              │          (eosimutils)         │
+                                              └───────────────────────────────┘
+                                                            │
+        ┌───────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────┐
+        │                 │                       │                       │                  │              │               │            │              │
+      base              time                   state              timeseries         trajectory       orientation      framegraph    standardframes  fieldofview
+(General utilities)  (Time scales,       (Cartesian positions)    (Time-varying     (path data)        (Attitude/        (frame       (LVLH frame)     (FOVs)  
+                formats, conversions)                              data series)                          pointing)  transformations)      
 
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+miscellaneous: spicekernels, plotting, thirdpartyutils
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
                                 ┌────────────────────────────────────┐
                                 │     Orbital & Spacecraft Comp.     │
@@ -74,8 +75,8 @@ API Reference
              ┌──────────────┬──────────────┬──────────────┬──────────────┐
              │              │              │              │              │
         propagation      coverage        contact        eclipse     datametrics
-   (Orbit propagation) (Observation/  (Comms windows)  (Eclipse      (Instrument     
-                        GS coverage)                   predictions)  metrics)
+   (Orbit propagation) (Access        (Comms windows)  (Eclipse      (Instrument     
+                       opportunities)                   predictions)  metrics)
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ API Reference
                             ┌─────────────────┴──────────────────┐
                             │                                    │
                          mission                             analysis
-        (Scenario definition & execution)   (Results post-processing, metrics, visualization)
+        (Scenario definition & execution)       (Results post-processing, metrics)
 
 
 

@@ -12,6 +12,7 @@ import json
 import requests
 from typing import Dict, Tuple, Any, Optional, Type, Callable
 import numpy as np
+from datetime import datetime
 
 from skyfield.elementslib import (
     osculating_elements_of as skyfield_osculating_elements_of,
@@ -325,7 +326,7 @@ class SpaceTrackAPI:
             )
 
     def get_closest_omm(
-        self, norad_id: int, target_datetime: str
+        self, norad_id: int, target_date_time: str
     ) -> Optional[Dict[str, Any]]:
         """
         Retrieve the closest available OMM data *created* before the
@@ -347,23 +348,49 @@ class SpaceTrackAPI:
         if not self.session:
             raise RuntimeError("Session not initialized. Please login first.")
 
+        # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S
+        try:
+            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S") # datetime object
+        except ValueError:
+            print("Invalid target_date_time format. It should be a string in the format '%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00")
+            return None
+
+        tdt = tdt_datetime.strftime("%Y-%m-%dT%H:%M:%S") #ensure the format is correct
         omm_url = (
             f"{self.BASE_URL}/basicspacedata/query/class/omm/"
             + f"NORAD_CAT_ID/{norad_id}/CREATION_DATE/"
-            + f"<{target_datetime}/sorderby/EPOCH%20desc/"
+            + f"<{tdt}/orderby/EPOCH%20desc/"
             + "limit/1/format/json"
         )
-
         response = self.session.get(omm_url)
 
         if response.status_code == 200:
-            closest_omm = response.json()
+            closest_omm = response.json()[0]  # The first OMM in the list
             if closest_omm:
-                return closest_omm[0]  # Return the first OMM in the list
+                retrieved_CD = closest_omm['CREATION_DATE']
+                retrieved_CD_datetime = datetime.strptime(
+                    retrieved_CD, "%Y-%m-%dT%H:%M:%S"
+                )  # Convert to datetime object
+
+                # Ensure the retrieved CREATION_DATE is before the target date-time
+                if retrieved_CD_datetime > tdt_datetime:
+                    raise ValueError(
+                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is after the "
+                        f"target date-time {tdt}. Something is wrong."
+                    )
+
+                # Check if the retrieved CREATION_DATE is more than 1 day before the target date-time
+                if (tdt_datetime - retrieved_CD_datetime).days > 1:
+                    raise ValueError(
+                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is more than 1 day "
+                        f"before the target date-time {tdt}. Something is wrong."
+                    )
+
+                return closest_omm
             else:
                 print(
                     f"OMM not found for NORAD ID {norad_id}"
-                    f"at {target_datetime}."
+                    f"at {target_date_time}."
                     "It is possible the satellite has been launched after the "
                     "specified target date-time."
                 )

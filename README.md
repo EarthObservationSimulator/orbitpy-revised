@@ -71,7 +71,7 @@ Each class/function must adhere to the following:
    - Validation data is sourced from other mission simulators (e.g., GMAT or STK) or real-world datasets (e.g., CYGNSS data).  
 
 3. **Code Style & Standards**  
-   - Follow a well-defined **Styling README** (to be created).  
+   - Follow a well-defined **Styling README**.  
    - Use Python **type hints** and follow PEP 8/PEP 257 where applicable.  
 
 4. **File Handling & Data Structures**  
