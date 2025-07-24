@@ -27,7 +27,7 @@ Take cues from the above references, then use linters, auto-formatters, and LLMs
 
 - Use Google style docstrings.  https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html. The following configuration option in the `conf.py` enables Sphinx to parse Google style dosctrings:  `napoleon_google_docstring = True`
 
-- All OrbitPy objects (classes) intended for use by external users must support initialization and serialization using Python dictionaries. Each class should provide `from_dict(...)` and `to_dict(...)` methods to allow instantiation from dictionary inputs and export their state or data back into a dictionary format.
+- All OrbitPy objects (classes) intended for use by external users must support initialization and serialization using Python dictionaries. Each class should provide `from_dict(...)` and `to_dict(...)` methods to allow instantiation from dictionary inputs and export their state or data back into a dictionary format. Use the `JsonSerializer` class provided by the `eosimutils.base` module to save and retreive objects (with `to_dict(.)` and `from_dict(.)` functions) to/from JSON.
 
 - Only classes and functions which are most commonly utiized in Earth Observation mission simulations will be developed.
 
