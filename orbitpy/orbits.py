@@ -365,7 +365,19 @@ class SpaceTrackAPI:
         response = self.session.get(omm_url)
 
         if response.status_code == 200:
-            closest_omm = response.json()[0]  # The first OMM in the list
+            omm_list = response.json()
+            
+            if not omm_list:
+                print(
+                    f"OMM not found for NORAD ID {norad_id}"
+                    f" at {target_date_time}."
+                    " It is possible the satellite id is wrong"
+                    " or has been launched after the "
+                    "specified target date-time."
+                )
+                return None
+            
+            closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
                 retrieved_CD = closest_omm['CREATION_DATE']
                 retrieved_CD_datetime = datetime.strptime(
@@ -391,8 +403,6 @@ class SpaceTrackAPI:
                 print(
                     f"OMM not found for NORAD ID {norad_id}"
                     f"at {target_date_time}."
-                    "It is possible the satellite has been launched after the "
-                    "specified target date-time."
                 )
                 return None
         else:

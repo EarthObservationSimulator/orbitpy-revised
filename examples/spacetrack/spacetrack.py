@@ -46,7 +46,7 @@ if __name__ == "__main__":
     else:
         print(
             f"No OMM data found for NORAD ID {norad_id}"
-            f"at {target_date_time}."
+            f" before {target_date_time}."
         )
 
     # Log out from Space-Track.org
