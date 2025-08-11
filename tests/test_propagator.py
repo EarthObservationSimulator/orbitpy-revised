@@ -25,7 +25,7 @@ class TestPropagatorFactory(unittest.TestCase):
 
     def setUp(self):
         # Clear registry before each test to avoid side effects
-        PropagatorFactory._registry.clear() # pylint: disable=protected-access
+        PropagatorFactory._registry.clear()  # pylint: disable=protected-access
         # Register SGP4Propagator for tests
         PropagatorFactory.register_type("SGP4_PROPAGATOR")(SGP4Propagator)
 
@@ -33,50 +33,64 @@ class TestPropagatorFactory(unittest.TestCase):
         """Test initialization of PropagatorFactory."""
         self.assertIn(
             "SGP4_PROPAGATOR",
-            PropagatorFactory._registry, # pylint: disable=protected-access
+            PropagatorFactory._registry,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            PropagatorFactory._registry["SGP4_PROPAGATOR"], # pylint: disable=protected-access
+            PropagatorFactory._registry[
+                "SGP4_PROPAGATOR"
+            ],  # pylint: disable=protected-access
             SGP4Propagator,
         )
 
     def test_register_type(self):
         """Test registering a new propagator in the factory using register_type."""
-        PropagatorFactory.register_type("New_Propagator")(TestPropagatorFactory.DummyNewPropagator)
+        PropagatorFactory.register_type("New_Propagator")(
+            TestPropagatorFactory.DummyNewPropagator
+        )
         self.assertIn(
             "New_Propagator",
-            PropagatorFactory._registry, # pylint: disable=protected-access
+            PropagatorFactory._registry,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            PropagatorFactory._registry["New_Propagator"], # pylint: disable=protected-access
+            PropagatorFactory._registry[
+                "New_Propagator"
+            ],  # pylint: disable=protected-access
             TestPropagatorFactory.DummyNewPropagator,
         )
         # Built-in propagator remains
         self.assertIn(
             "SGP4_PROPAGATOR",
-            PropagatorFactory._registry, # pylint: disable=protected-access
+            PropagatorFactory._registry,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            PropagatorFactory._registry["SGP4_PROPAGATOR"], # pylint: disable=protected-access
+            PropagatorFactory._registry[
+                "SGP4_PROPAGATOR"
+            ],  # pylint: disable=protected-access
             SGP4Propagator,
         )
 
     def test_from_dict(self):
         """Test retrieving propagators based on specifications."""
-        PropagatorFactory.register_type("New_Propagator")(TestPropagatorFactory.DummyNewPropagator)
+        PropagatorFactory.register_type("New_Propagator")(
+            TestPropagatorFactory.DummyNewPropagator
+        )
         specs = {"propagator_type": "SGP4_PROPAGATOR", "step_size": 60}
         sgp4_prop = PropagatorFactory.from_dict(specs)
         self.assertIsInstance(sgp4_prop, SGP4Propagator)
         specs = {"propagator_type": "New_Propagator"}
         new_prop = PropagatorFactory.from_dict(specs)
-        self.assertIsInstance(new_prop, TestPropagatorFactory.DummyNewPropagator)
+        self.assertIsInstance(
+            new_prop, TestPropagatorFactory.DummyNewPropagator
+        )
 
     def test_from_dict_invalid_type(self):
         """Test error handling for invalid propagator type."""
         with self.assertRaises(KeyError):
             PropagatorFactory.from_dict({})
         with self.assertRaises(ValueError):
-            PropagatorFactory.from_dict({"propagator_type": "Invalid_Propagator"})
+            PropagatorFactory.from_dict(
+                {"propagator_type": "Invalid_Propagator"}
+            )
 
 
 class TestSGP4Propagator(unittest.TestCase):

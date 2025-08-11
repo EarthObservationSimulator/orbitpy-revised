@@ -34,12 +34,22 @@ class TestOrbitFactory(unittest.TestCase):
 
     def setUp(self):
         # Clear registry before each test to avoid side effects
-        OrbitFactory._registry.clear() # pylint: disable=protected-access
+        OrbitFactory._registry.clear()  # pylint: disable=protected-access
         # Register built-in orbits for tests
-        OrbitFactory.register_type(OrbitType.TWO_LINE_ELEMENT_SET.value)(TwoLineElementSet)
-        OrbitFactory.register_type(OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value)(OrbitalMeanElementsMessage) # pylint: disable=line-too-long
-        OrbitFactory.register_type(OrbitType.OSCULATING_ELEMENTS.value)(OsculatingElements)
-        OrbitFactory.register_type(OrbitType.CARTESIAN_STATE.value)(CartesianState)
+        OrbitFactory.register_type(OrbitType.TWO_LINE_ELEMENT_SET.value)(
+            TwoLineElementSet
+        )
+        OrbitFactory.register_type(
+            OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value
+        )(
+            OrbitalMeanElementsMessage
+        )  # pylint: disable=line-too-long
+        OrbitFactory.register_type(OrbitType.OSCULATING_ELEMENTS.value)(
+            OsculatingElements
+        )
+        OrbitFactory.register_type(OrbitType.CARTESIAN_STATE.value)(
+            CartesianState
+        )
         self.tle_dict = {
             "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
             "TLE_LINE0": "0 LANDSAT 9",
@@ -436,13 +446,17 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(dict_out["raan"], self.raan)
         self.assertEqual(dict_out["arg_of_perigee"], self.arg_of_perigee)
         self.assertEqual(dict_out["true_anomaly"], self.true_anomaly)
-        self.assertEqual(dict_out["inertial_frame"], self.inertial_frame.to_string())
+        self.assertEqual(
+            dict_out["inertial_frame"], self.inertial_frame.to_string()
+        )
 
     def test_from_cartesian_state(self):
         """Test constructing OsculatingElements from a CartesianState object."""
         # Create a CartesianState object
         # velocity is chosen to make it a circular orbit, 90 deg inclination
-        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.get("ICRF_EC"))
+        position = Cartesian3DPosition(
+            7000.0, 0.0, 0.0, ReferenceFrame.get("ICRF_EC")
+        )
         velocity = Cartesian3DVelocity(
             0.0, 0.0, 7.54605329011, ReferenceFrame.get("ICRF_EC")
         )
@@ -504,7 +518,8 @@ class TestOsculatingElements(unittest.TestCase):
         """Test converting CartesianState to OsculatingElements and back to CartesianState."""
         # Generate random CartesianState
         position = Cartesian3DPosition(
-            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.get("ICRF_EC")
+            *np.random.uniform(-10000, 10000, size=3),
+            ReferenceFrame.get("ICRF_EC")
         )
         velocity = Cartesian3DVelocity(
             *np.random.uniform(-10, 10, size=3), ReferenceFrame.get("ICRF_EC")

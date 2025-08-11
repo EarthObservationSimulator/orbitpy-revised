@@ -6,6 +6,9 @@ install:
 test:
 	coverage run -m unittest discover -s tests
 
+slowtest:
+	coverage run -m unittest discover -s slowtests
+
 lint:
 	pylint --rcfile=pylintrc orbitpy tests examples # Use the pylintrc file from the Google Python Style Guide 
 
