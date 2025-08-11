@@ -4,7 +4,7 @@
 
 """
 
-from typing import Type, Dict, Any, Union, Optional, Callable
+from typing import Type, Dict, Any, Union, Callable
 import math
 import numpy as np
 
@@ -16,14 +16,14 @@ from eosimutils.base import (
     EARTH_RADIUS,
     EARTH_POLAR_RADIUS,
 )
-from eosimutils.state import Cartesian3DPosition, Cartesian3DPositionArray
+from eosimutils.state import Cartesian3DPositionArray
 from eosimutils.fieldofview import (
     CircularFieldOfView,
     RectangularFieldOfView,
     PolygonFieldOfView,
 )
 from eosimutils.framegraph import FrameGraph
-from eosimutils.time import AbsoluteDate, AbsoluteDateArray
+from eosimutils.time import AbsoluteDateArray
 
 import kcl
 import GeometricTools as gte
@@ -149,13 +149,13 @@ class PointCoverage:
 
         # Get the position of the fov frame origin in the target frame
         # expressed in target frame coordinates
-        pos_fov_TARGET = frame_graph.get_pos_transform(
+        pos_fov_target = frame_graph.get_pos_transform(
             from_frame=target_frame, to_frame=fov_frame, t=times
         )
 
         # Create list source for the (target frame) fov position
-        pos_fov_TARGET_gte = [gte.Vector3d(p) for p in pos_fov_TARGET]
-        pos_fov_TARGET_source = kcl.ListSourceVector3d(pos_fov_TARGET_gte)
+        pos_fov_target_gte = [gte.Vector3d(p) for p in pos_fov_target]
+        pos_fov_target_source = kcl.ListSourceVector3d(pos_fov_target_gte)
 
         # Get the rotation from the fov frame to the target frame
         rot_fov_to_target, _ = frame_graph.get_orientation_transform(
@@ -166,14 +166,14 @@ class PointCoverage:
         fov_to_target_gte = [
             gte.Matrix3x3d(r.flatten()) for r in rot_fov_to_target.as_matrix()
         ]
-        FOV_to_TARGET_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
+        fov_to_target_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
 
         # Setup horizon source
         if surface == SurfaceType.SPHERE:
             earth_sphere = gte.Sphere3d(gte.Vector3d.Zero(), EARTH_RADIUS)
             sphere_source = kcl.ConstantSourceSphere3d(earth_sphere)
             horizon_source = kcl.PolarHalfspaceSourceSphere3d(
-                sphere_source, pos_fov_TARGET_source, buff_size
+                sphere_source, pos_fov_target_source, buff_size
             )
             variables = [horizon_source]
         elif surface == SurfaceType.WGS84:
@@ -183,7 +183,7 @@ class PointCoverage:
             earth_ellipsoid = gte.Ellipsoid3d(gte.Vector3d.Zero(), extents)
             ellipsoid_source = kcl.ConstantSourceEllipsoid3d(earth_ellipsoid)
             horizon_source = kcl.PolarHalfspaceSourceEllipsoid3d(
-                ellipsoid_source, pos_fov_TARGET_source, buff_size
+                ellipsoid_source, pos_fov_target_source, buff_size
             )
             variables = [horizon_source]
         elif surface == SurfaceType.NONE:
@@ -194,22 +194,22 @@ class PointCoverage:
         if isinstance(fov, CircularFieldOfView):
             deg2rad = math.pi / 180.0
             half_angle_rad = fov.diameter * 0.5 * deg2rad
-            boresight_FOV_gte = gte.Vector3d(fov.boresight)
-            boresight_FOV_source = kcl.ConstantSourceVector3d(boresight_FOV_gte)
-            boresight_TARGET_source = kcl.TransformedVector3dSource(
-                boresight_FOV_source, FOV_to_TARGET_source, buff_size
+            boresight_fov_gte = gte.Vector3d(fov.boresight)
+            boresight_fov_source = kcl.ConstantSourceVector3d(boresight_fov_gte)
+            boresight_target_source = kcl.TransformedVector3dSource(
+                boresight_fov_source, fov_to_target_source, buff_size
             )
             angle_source = kcl.ConstantSourced(half_angle_rad)
 
             fov_source = kcl.PosDirConeSource(
-                pos_fov_TARGET_source,
-                boresight_TARGET_source,
+                pos_fov_target_source,
+                boresight_target_source,
                 angle_source,
                 buff_size,
             )
             fov_viewer = kcl.ViewerCone3d(fov_source)
 
-            variables.append(boresight_TARGET_source)
+            variables.append(boresight_target_source)
             variables.append(fov_source)
 
         elif isinstance(fov, RectangularFieldOfView):
@@ -220,26 +220,26 @@ class PointCoverage:
             right_angle_rad = (
                 fov.cross_angle * 2.0 * deg2rad
             )  # convert half angle to full to match kcl
-            right_FOV = np.cross(fov.boresight, fov.ref_vector)
-            right_FOV_gte = gte.Vector3d(right_FOV)
-            up_FOV_gte = gte.Vector3d(fov.ref_vector)
-            up_FOV_source = kcl.ConstantSourceVector3d(up_FOV_gte)
-            right_FOV_source = kcl.ConstantSourceVector3d(right_FOV_gte)
+            right_fov = np.cross(fov.boresight, fov.ref_vector)
+            right_fov_gte = gte.Vector3d(right_fov)
+            up_fov_gte = gte.Vector3d(fov.ref_vector)
+            up_fov_source = kcl.ConstantSourceVector3d(up_fov_gte)
+            right_fov_source = kcl.ConstantSourceVector3d(right_fov_gte)
 
-            # Transform up and right vectors from FOV frame to TARGET frame
-            up_TARGET_source = kcl.TransformedVector3dSource(
-                up_FOV_source, FOV_to_TARGET_source, buff_size
+            # Transform up and right vectors from fov frame to target frame
+            up_target_source = kcl.TransformedVector3dSource(
+                up_fov_source, fov_to_target_source, buff_size
             )
-            right_TARGET_source = kcl.TransformedVector3dSource(
-                right_FOV_source, FOV_to_TARGET_source, buff_size
+            right_target_source = kcl.TransformedVector3dSource(
+                right_fov_source, fov_to_target_source, buff_size
             )
 
             right_angle_source = kcl.ConstantSourced(right_angle_rad)
             up_angle_source = kcl.ConstantSourced(up_angle_rad)
             fov_source = kcl.VectorAngleRectViewSource(
-                pos_fov_TARGET_source,
-                up_TARGET_source,
-                right_TARGET_source,
+                pos_fov_target_source,
+                up_target_source,
+                right_target_source,
                 up_angle_source,
                 right_angle_source,
                 buff_size,
@@ -248,8 +248,8 @@ class PointCoverage:
             fov_viewer = kcl.ViewerRectView3d(fov_source)
 
             # Add variables
-            variables.append(up_TARGET_source)
-            variables.append(right_TARGET_source)
+            variables.append(up_target_source)
+            variables.append(right_target_source)
             variables.append(fov_source)
 
         elif isinstance(fov, PolygonFieldOfView):

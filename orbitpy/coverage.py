@@ -322,7 +322,7 @@ class ContinuousCoverageGP:
         # parse file
         coverage_map = {}
         epoch = None
-        with open(file_path, "r") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             lines = f
             for line in lines:
                 parts = line.strip().split()

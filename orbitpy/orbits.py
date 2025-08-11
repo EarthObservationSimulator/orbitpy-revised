@@ -361,7 +361,8 @@ class SpaceTrackAPI:
             )  # datetime object
         except ValueError:
             print(
-                "Invalid target_date_time format. It should be a string in the format '%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
+                "Invalid target_date_time format. It should be a string in the format"
+                "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
             )
             return None
 
@@ -391,22 +392,23 @@ class SpaceTrackAPI:
 
             closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
-                retrieved_CD = closest_omm["CREATION_DATE"]
-                retrieved_CD_datetime = datetime.strptime(
-                    retrieved_CD, "%Y-%m-%dT%H:%M:%S"
+                retrieved_cd = closest_omm["CREATION_DATE"]
+                retrieved_cd_datetime = datetime.strptime(
+                    retrieved_cd, "%Y-%m-%dT%H:%M:%S"
                 )  # Convert to datetime object
 
                 # Ensure the retrieved CREATION_DATE is before the target date-time
-                if retrieved_CD_datetime > tdt_datetime:
+                if retrieved_cd_datetime > tdt_datetime:
                     raise ValueError(
-                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is after the "
+                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is after the "
                         f"target date-time {tdt}. Something is wrong."
                     )
 
-                # Check if the retrieved CREATION_DATE is more than 1 day before the target date-time
-                if (tdt_datetime - retrieved_CD_datetime).days > 1:
+                # Check if the retrieved CREATION_DATE is more than 1 day before the target
+                # date-time
+                if (tdt_datetime - retrieved_cd_datetime).days > 1:
                     raise ValueError(
-                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is more than 1 day "
+                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is more than 1 day "
                         f"before the target date-time {tdt}. Something is wrong."
                     )
 

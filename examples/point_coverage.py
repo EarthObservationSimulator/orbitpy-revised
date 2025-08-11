@@ -1,5 +1,6 @@
+"""Example for the coveragecalculator module."""
+
 from time import perf_counter as timer
-import csv
 
 import orbitpy.coveragecalculator
 from orbitpy.propagator import PropagatorFactory
@@ -15,24 +16,24 @@ from eosimutils.state import Cartesian3DPositionArray
 import numpy as np
 
 
-def random_points_on_sphere(N, R=EARTH_RADIUS):
+def random_points_on_sphere(n, r=EARTH_RADIUS):
     """
-    Generate N random points uniformly on the surface of a sphere with radius R.
+    Generate n random points uniformly on the surface of a sphere with radius R.
 
     Parameters:
-        N (int): Number of points.
+        n (int): Number of points.
         R (float): Radius of the sphere.
 
     Returns:
-        np.ndarray: An (N x 3) array of 3D points on the sphere.
+        np.ndarray: An (n x 3) array of 3D points on the sphere.
     """
-    phi = np.random.uniform(0, 2 * np.pi, N)
-    cos_theta = np.random.uniform(-1, 1, N)
+    phi = np.random.uniform(0, 2 * np.pi, n)
+    cos_theta = np.random.uniform(-1, 1, n)
     theta = np.arccos(cos_theta)
 
-    x = R * np.sin(theta) * np.cos(phi)
-    y = R * np.sin(theta) * np.sin(phi)
-    z = R * cos_theta
+    x = r * np.sin(theta) * np.cos(phi)
+    y = r * np.sin(theta) * np.sin(phi)
+    z = r * cos_theta
 
     return np.stack((x, y, z), axis=-1)
 
