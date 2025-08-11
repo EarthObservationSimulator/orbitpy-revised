@@ -1,9 +1,9 @@
 """
-.. module:: eosimutils.propagator
+.. module:: orbitpy.propagator
    :synopsis: Spacecraft propagator module for orbitpy.
 """
 
-from typing import Type, Dict, Any, Union
+from typing import Type, Dict, Any, Union, Optional, Callable
 import math
 
 from skyfield.api import (
@@ -33,33 +33,42 @@ class PropagatorFactory:
     of the appropriate propagator based on specifications.
 
     example:
+        class CustomPropagator:
+            @classmethod
+            def from_dict(cls, specs):
+                return cls()
         factory = PropagatorFactory()
-        factory.register_propagator("Custom_Propagator", CustomPropagator)
+        PropagatorFactory.register_type("Custom_Propagator")(CustomPropagator)
         specs = {"propagator_type": "Custom_Propagator", "step_size": 60}
-        propagator = factory.get_propagator(specs)
+        propagator = factory.from_dict(specs)
 
     Attributes:
-        _creators (Dict[str, Type]): A dictionary mapping propagator type
+        _registry (Dict[str, Type]): A dictionary mapping propagator type
                                      labels to their respective classes.
     """
 
+    # Registry for factory pattern
+    _registry: Dict[str, Type] = {}
+
     def __init__(self):
-        """Initializes the PropagatorFactory and registers default propagators."""
-        self._creators: Dict[str, Type] = {}
-        self.register_propagator(
-            PropagatorType.SGP4_PROPAGATOR.value, SGP4Propagator
-        )
+        pass
 
-    def register_propagator(self, propagator_type: str, creator: Type) -> None:
-        """Registers a propagator class with a specific type label.
-
-        Args:
-            propagator_type (str): The label for the propagator type.
-            creator (Type): The propagator class to register.
+    @classmethod
+    def register_type(
+        cls, type_name: str
+    ) -> Callable[[Type], Type]:
         """
-        self._creators[propagator_type] = creator
+        Decorator to register a propagator class under a type name.
+        """
 
-    def get_propagator(self, specs: Dict[str, Any]) -> Any:
+        def decorator(propagator_class: Type) -> Type:
+            cls._registry[type_name] = propagator_class
+            return propagator_class
+
+        return decorator
+
+    @classmethod
+    def from_dict(cls, specs: Dict[str, Any]) -> object:
         """Retrieves an instance of the appropriate propagator based on specifications.
 
         Args:
@@ -67,7 +76,7 @@ class PropagatorFactory:
                 Must include a valid propagator type in the "propagator_type" key.
 
         Returns:
-            Any: An instance of the appropriate propagator class initialized
+            object: An instance of the appropriate propagator class initialized
                  with the given specifications.
 
         Raises:
@@ -80,15 +89,17 @@ class PropagatorFactory:
                 'Propagator type key "propagator_type" not found in specifications dictionary.'
             )
 
-        if propagator_type_str not in self._creators:
+        propagator_class = cls._registry.get(propagator_type_str)
+
+        if not propagator_class:
             raise ValueError(
                 f'Propagator type "{propagator_type_str}" is not registered.'
             )
 
-        creator = self._creators[propagator_type_str]
-        return creator.from_dict(specs)
+        return propagator_class.from_dict(specs)
 
 
+@PropagatorFactory.register_type(PropagatorType.SGP4_PROPAGATOR.value)
 class SGP4Propagator:
     """A Simplified General Perturbations 4 (SGP4) orbit propagator class.
 
@@ -99,7 +110,7 @@ class SGP4Propagator:
         propagator_type (str): Type of propagator. Value is always 'SGP4_PROPAGATOR'.
     """
 
-    def __init__(self, step_size=None):
+    def __init__(self, step_size: Optional[float]=None):
         """Initializes the SGP4Propagator.
 
         Args:
@@ -107,10 +118,9 @@ class SGP4Propagator:
                                          Default is 60 seconds.
         """
         self.step_size = float(step_size) if step_size is not None else 60.0
-        self.propagator_type = "SGP4_PROPAGATOR"
 
     @classmethod
-    def from_dict(cls, specs):
+    def from_dict(cls, specs: Dict[str, Any]) -> "SGP4Propagator":
         """Parses an SGP4Propagator object from a dictionary.
 
         Args:
@@ -188,7 +198,7 @@ class SGP4Propagator:
             # Define the reference frame. GCRS of Skyfield is considered
             # equivalent to ReferenceFrame.ICRF_EC
             # See: https://rhodesmill.org/skyfield/earth-satellites.html#generating-a-satellite-position # pylint: disable=line-too-long
-            reference_frame = ReferenceFrame.ICRF_EC
+            reference_frame = ReferenceFrame.get("ICRF_EC")
 
             # Instantiate the StateSeries object
             state_series = StateSeries(

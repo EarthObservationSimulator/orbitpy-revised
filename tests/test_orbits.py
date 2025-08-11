@@ -4,8 +4,8 @@ import unittest
 import random
 import numpy as np
 
-from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame
+from eosimutils.time import AbsoluteDate
 from eosimutils.state import (
     Cartesian3DPosition,
     Cartesian3DVelocity,
@@ -24,9 +24,22 @@ from orbitpy.orbits import (
 class TestOrbitFactory(unittest.TestCase):
     """Unit tests for the OrbitFactory class."""
 
+    class DummyOrbit:
+        def __init__(self, specs):
+            self.specs = specs
+
+        @classmethod
+        def from_dict(cls, specs):
+            return TestOrbitFactory.DummyOrbit(specs)
+
     def setUp(self):
-        """Set up test data for OrbitFactory."""
-        self.factory = OrbitFactory()
+        # Clear registry before each test to avoid side effects
+        OrbitFactory._registry.clear() # pylint: disable=protected-access
+        # Register built-in orbits for tests
+        OrbitFactory.register_type(OrbitType.TWO_LINE_ELEMENT_SET.value)(TwoLineElementSet)
+        OrbitFactory.register_type(OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value)(OrbitalMeanElementsMessage) # pylint: disable=line-too-long
+        OrbitFactory.register_type(OrbitType.OSCULATING_ELEMENTS.value)(OsculatingElements)
+        OrbitFactory.register_type(OrbitType.CARTESIAN_STATE.value)(CartesianState)
         self.tle_dict = {
             "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
             "TLE_LINE0": "0 LANDSAT 9",
@@ -34,36 +47,36 @@ class TestOrbitFactory(unittest.TestCase):
             "TLE_LINE2": "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801",
         }
 
-    def test_get_orbit_tle(self):
-        """Test retrieving a TwoLineElementSet orbit object."""
-        orbit = self.factory.get_orbit(self.tle_dict)
+    def test_from_dict_tle(self):
+        """Test retrieving a TwoLineElementSet orbit object using from_dict."""
+        orbit = OrbitFactory.from_dict(self.tle_dict)
         self.assertIsInstance(orbit, TwoLineElementSet)
         self.assertEqual(orbit.line0, self.tle_dict["TLE_LINE0"])
         self.assertEqual(orbit.line1, self.tle_dict["TLE_LINE1"])
         self.assertEqual(orbit.line2, self.tle_dict["TLE_LINE2"])
 
-    def test_get_orbit_invalid_type(self):
-        """Test error handling for an invalid orbit type."""
+    def test_from_dict_invalid_type(self):
+        """Test error handling for an invalid orbit type using from_dict."""
         invalid_dict = {"orbit_type": "INVALID_TYPE"}
         with self.assertRaises(ValueError) as context:
-            self.factory.get_orbit(invalid_dict)
+            OrbitFactory.from_dict(invalid_dict)
         self.assertIn(
             'Orbit type "INVALID_TYPE" is not registered.',
             str(context.exception),
         )
 
-    def test_get_orbit_missing_type(self):
-        """Test error handling for a missing orbit type key."""
+    def test_from_dict_missing_type(self):
+        """Test error handling for a missing orbit type key using from_dict."""
         missing_type_dict = {"TLE_LINE0": "0 TEST SATELLITE"}
         with self.assertRaises(KeyError) as context:
-            self.factory.get_orbit(missing_type_dict)
+            OrbitFactory.from_dict(missing_type_dict)
         self.assertIn(
             'Orbit type key "orbit_type" not found in specifications dictionary.',
             str(context.exception),
         )
 
-    def test_get_orbit_cartesian_state(self):
-        """Test retrieving a CartesianState orbit object."""
+    def test_from_dict_cartesian_state(self):
+        """Test retrieving a CartesianState orbit object using from_dict."""
         cartesian_state_dict = {
             "orbit_type": OrbitType.CARTESIAN_STATE.value,
             "time": {
@@ -75,13 +88,20 @@ class TestOrbitFactory(unittest.TestCase):
             "velocity": [0.0, 7.546, 0.0],
             "frame": "ICRF_EC",
         }
-
-        orbit = self.factory.get_orbit(cartesian_state_dict)
+        orbit = OrbitFactory.from_dict(cartesian_state_dict)
         self.assertIsInstance(orbit, CartesianState)
         self.assertTrue(
             (orbit.to_numpy() == [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]).all()
         )
-        self.assertEqual(orbit.frame.value, "ICRF_EC")
+        self.assertEqual(orbit.frame.to_string(), "ICRF_EC")
+
+    def test_register_type(self):
+        """Test registering a new orbit type using register_type."""
+        OrbitFactory.register_type("Dummy_Orbit")(TestOrbitFactory.DummyOrbit)
+        dummy_dict = {"orbit_type": "Dummy_Orbit", "foo": "bar"}
+        orbit = OrbitFactory.from_dict(dummy_dict)
+        self.assertIsInstance(orbit, TestOrbitFactory.DummyOrbit)
+        self.assertEqual(orbit.specs["foo"], "bar")
 
 
 class TestTwoLineElementSet(unittest.TestCase):
@@ -313,7 +333,7 @@ class TestOsculatingElements(unittest.TestCase):
         self.raan = round(random.uniform(0, 360), 6)  # in degrees
         self.arg_of_perigee = round(random.uniform(0, 360), 6)  # in degrees
         self.true_anomaly = round(random.uniform(0, 360), 6)  # in degrees
-        self.inertial_frame = ReferenceFrame.ICRF_EC
+        self.inertial_frame = ReferenceFrame.get("ICRF_EC")
 
     def test_initialization(self):
         """Test initialization of OsculatingElements."""
@@ -347,7 +367,7 @@ class TestOsculatingElements(unittest.TestCase):
                 self.raan,
                 self.arg_of_perigee,
                 self.true_anomaly,
-                ReferenceFrame.ITRF,  # Invalid frame
+                ReferenceFrame.get("ITRF"),  # Invalid frame
             )
         self.assertTrue(
             "Only ICRF_EC inertial reference frame is supported."
@@ -416,18 +436,18 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(dict_out["raan"], self.raan)
         self.assertEqual(dict_out["arg_of_perigee"], self.arg_of_perigee)
         self.assertEqual(dict_out["true_anomaly"], self.true_anomaly)
-        self.assertEqual(dict_out["inertial_frame"], self.inertial_frame.value)
+        self.assertEqual(dict_out["inertial_frame"], self.inertial_frame.to_string())
 
     def test_from_cartesian_state(self):
         """Test constructing OsculatingElements from a CartesianState object."""
         # Create a CartesianState object
         # velocity is chosen to make it a circular orbit, 90 deg inclination
-        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.ICRF_EC)
+        position = Cartesian3DPosition(7000.0, 0.0, 0.0, ReferenceFrame.get("ICRF_EC"))
         velocity = Cartesian3DVelocity(
-            0.0, 0.0, 7.54605329011, ReferenceFrame.ICRF_EC
+            0.0, 0.0, 7.54605329011, ReferenceFrame.get("ICRF_EC")
         )
         cartesian_state = CartesianState(
-            self.time, position, velocity, ReferenceFrame.ICRF_EC
+            self.time, position, velocity, ReferenceFrame.get("ICRF_EC")
         )
 
         # Convert to OsculatingElements
@@ -438,7 +458,7 @@ class TestOsculatingElements(unittest.TestCase):
         # Validate the OsculatingElements object
         self.assertEqual(osculating_elements.time, cartesian_state.time)
         self.assertEqual(
-            osculating_elements.inertial_frame, ReferenceFrame.ICRF_EC
+            osculating_elements.inertial_frame, ReferenceFrame.get("ICRF_EC")
         )
         self.assertAlmostEqual(osculating_elements.eccentricity, 0.0, places=5)
         self.assertAlmostEqual(osculating_elements.inclination, 90.0)
@@ -457,7 +477,7 @@ class TestOsculatingElements(unittest.TestCase):
             raan=0.0,  # Right Ascension of Ascending Node
             arg_of_perigee=0.0,  # Argument of Perigee
             true_anomaly=0.0,  # True Anomaly
-            inertial_frame=ReferenceFrame.ICRF_EC,
+            inertial_frame=ReferenceFrame.get("ICRF_EC"),
         )
 
         # Convert to CartesianState
@@ -466,7 +486,7 @@ class TestOsculatingElements(unittest.TestCase):
         # Validate the CartesianState object
         self.assertIsInstance(cartesian_state, CartesianState)
         self.assertEqual(cartesian_state.time, osculating_elements.time)
-        self.assertEqual(cartesian_state.frame, ReferenceFrame.ICRF_EC)
+        self.assertEqual(cartesian_state.frame, ReferenceFrame.get("ICRF_EC"))
 
         # Validate position and velocity
         position = cartesian_state.position.to_numpy()
@@ -484,13 +504,13 @@ class TestOsculatingElements(unittest.TestCase):
         """Test converting CartesianState to OsculatingElements and back to CartesianState."""
         # Generate random CartesianState
         position = Cartesian3DPosition(
-            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.ICRF_EC
+            *np.random.uniform(-10000, 10000, size=3), ReferenceFrame.get("ICRF_EC")
         )
         velocity = Cartesian3DVelocity(
-            *np.random.uniform(-10, 10, size=3), ReferenceFrame.ICRF_EC
+            *np.random.uniform(-10, 10, size=3), ReferenceFrame.get("ICRF_EC")
         )
         cartesian_state_original = CartesianState(
-            self.time, position, velocity, ReferenceFrame.ICRF_EC
+            self.time, position, velocity, ReferenceFrame.get("ICRF_EC")
         )
 
         # Convert to OsculatingElements

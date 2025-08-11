@@ -10,8 +10,9 @@ by using the :class:eosimutils.state.CartesianState class.
 
 import json
 import requests
-from typing import Dict, Tuple, Any, Optional, Type
+from typing import Dict, Tuple, Any, Optional, Type, Callable
 import numpy as np
+from datetime import datetime
 
 from skyfield.elementslib import (
     osculating_elements_of as skyfield_osculating_elements_of,
@@ -39,40 +40,31 @@ class OrbitType(EnumBase):
 class OrbitFactory:
     """Factory class to register and create orbit objects."""
 
-    def __init__(self):
-        """Initializes the OrbitFactory and registers default orbit types."""
-        self._creators: Dict[str, Type] = {}
-        self.register_orbit(
-            OrbitType.TWO_LINE_ELEMENT_SET.value, TwoLineElementSet
-        )
-        self.register_orbit(
-            OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
-            OrbitalMeanElementsMessage,
-        )
-        self.register_orbit(
-            OrbitType.OSCULATING_ELEMENTS.value, OsculatingElements
-        )
-        self.register_orbit(OrbitType.CARTESIAN_STATE.value, CartesianState)
+    # Class-level registry for orbit types
+    _registry: Dict[str, Type] = {}
 
-    def register_orbit(self, orbit_type: str, creator: Type) -> None:
-        """Registers an orbit class with a specific type label.
-
-        Args:
-            orbit_type (str): The label for the orbit type.
-            creator (Type): The orbit class to register.
+    @classmethod
+    def register_type(cls, type_name: str) -> Callable[[Type], Type]:
         """
-        self._creators[orbit_type] = creator
+        Decorator to register an orbit class under a type name.
+        """
+        def decorator(orbit_class: Type) -> Type:
+            cls._registry[type_name] = orbit_class
+            return orbit_class
+        return decorator
 
-    def get_orbit(self, specs: Dict[str, Any]) -> Any:
-        """Retrieves an instance of the appropriate orbit object based on specifications.
+    @classmethod
+    def from_dict(cls, specs: Dict[str, Any]) -> object:
+        """
+        Retrieves an instance of the appropriate orbit class based on specifications.
 
         Args:
             specs (Dict[str, Any]): A dictionary containing orbit specifications.
                 Must include a valid orbit type in the "orbit_type" key.
 
         Returns:
-            Any: An instance of the appropriate orbit class initialized with the 
-                 given specifications.
+            object: An instance of the appropriate orbit class initialized with 
+                    the given specifications.
 
         Raises:
             KeyError: If the "orbit_type" key is missing in the specifications dictionary.
@@ -80,19 +72,14 @@ class OrbitFactory:
         """
         orbit_type_str = specs.get("orbit_type")
         if orbit_type_str is None:
-            raise KeyError(
-                'Orbit type key "orbit_type" not found in specifications dictionary.'
-            )
-
-        if orbit_type_str not in self._creators:
-            raise ValueError(
-                f'Orbit type "{orbit_type_str}" is not registered.'
-            )
-
-        creator = self._creators[orbit_type_str]
-        return creator.from_dict(specs)
+            raise KeyError('Orbit type key "orbit_type" not found in specifications dictionary.')
+        orbit_class = cls._registry.get(orbit_type_str)
+        if not orbit_class:
+            raise ValueError(f'Orbit type "{orbit_type_str}" is not registered.')
+        return orbit_class.from_dict(specs)
 
 
+@OrbitFactory.register_type(OrbitType.TWO_LINE_ELEMENT_SET.value)
 class TwoLineElementSet:
     """Handles a Two-Line Element Set (TLE).
 
@@ -166,6 +153,7 @@ class TwoLineElementSet:
         return self.line1, self.line2
 
 
+@OrbitFactory.register_type(OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value)
 class OrbitalMeanElementsMessage:
     """Handles an Orbital Mean-Elements Message (OMM)."""
 
@@ -338,7 +326,7 @@ class SpaceTrackAPI:
             )
 
     def get_closest_omm(
-        self, norad_id: int, target_datetime: str
+        self, norad_id: int, target_date_time: str
     ) -> Optional[Dict[str, Any]]:
         """
         Retrieve the closest available OMM data *created* before the
@@ -360,25 +348,61 @@ class SpaceTrackAPI:
         if not self.session:
             raise RuntimeError("Session not initialized. Please login first.")
 
+        # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S
+        try:
+            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S") # datetime object
+        except ValueError:
+            print("Invalid target_date_time format. It should be a string in the format '%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00")
+            return None
+
+        tdt = tdt_datetime.strftime("%Y-%m-%dT%H:%M:%S") #ensure the format is correct
         omm_url = (
             f"{self.BASE_URL}/basicspacedata/query/class/omm/"
             + f"NORAD_CAT_ID/{norad_id}/CREATION_DATE/"
-            + f"<{target_datetime}/sorderby/EPOCH%20desc/"
+            + f"<{tdt}/orderby/EPOCH%20desc/"
             + "limit/1/format/json"
         )
-
         response = self.session.get(omm_url)
 
         if response.status_code == 200:
-            closest_omm = response.json()
+            omm_list = response.json()
+            
+            if not omm_list:
+                print(
+                    f"OMM not found for NORAD ID {norad_id}"
+                    f" at {target_date_time}."
+                    " It is possible the satellite id is wrong"
+                    " or has been launched after the "
+                    "specified target date-time."
+                )
+                return None
+            
+            closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
-                return closest_omm[0]  # Return the first OMM in the list
+                retrieved_CD = closest_omm['CREATION_DATE']
+                retrieved_CD_datetime = datetime.strptime(
+                    retrieved_CD, "%Y-%m-%dT%H:%M:%S"
+                )  # Convert to datetime object
+
+                # Ensure the retrieved CREATION_DATE is before the target date-time
+                if retrieved_CD_datetime > tdt_datetime:
+                    raise ValueError(
+                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is after the "
+                        f"target date-time {tdt}. Something is wrong."
+                    )
+
+                # Check if the retrieved CREATION_DATE is more than 1 day before the target date-time
+                if (tdt_datetime - retrieved_CD_datetime).days > 1:
+                    raise ValueError(
+                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is more than 1 day "
+                        f"before the target date-time {tdt}. Something is wrong."
+                    )
+
+                return closest_omm
             else:
                 print(
                     f"OMM not found for NORAD ID {norad_id}"
-                    f"at {target_datetime}."
-                    "It is possible the satellite has been launched after the "
-                    "specified target date-time."
+                    f"at {target_date_time}."
                 )
                 return None
         else:
@@ -401,6 +425,7 @@ class SpaceTrackAPI:
         print("Logged out successfully.")
 
 
+@OrbitFactory.register_type(OrbitType.OSCULATING_ELEMENTS.value)
 class OsculatingElements:
     """
     Represents the state in terms of osculating (instantaneous)
@@ -444,7 +469,7 @@ class OsculatingElements:
         Raises:
             ValueError: If the inertial_frame is not ReferenceFrame.ICRF_EC.
         """
-        if inertial_frame != ReferenceFrame.ICRF_EC:
+        if inertial_frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError(
                 "Only ICRF_EC inertial reference frame is supported."
             )
@@ -481,11 +506,11 @@ class OsculatingElements:
             OsculatingElements: The `OsculatingElements` state object.
 
         Raises:
-            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.ICRF_EC`
+            ValueError: If the inertial_frame isn't :class:`ReferenceFrame.get("ICRF_EC")`
         """
         time = AbsoluteDate.from_dict(dict_in["time"])
         inertial_frame = ReferenceFrame.get(dict_in["inertial_frame"])
-        if inertial_frame != ReferenceFrame.ICRF_EC:
+        if inertial_frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError(
                 "Only ICRF_EC inertial reference frame is supported."
             )
@@ -515,7 +540,7 @@ class OsculatingElements:
             "raan": self.raan,
             "arg_of_perigee": self.arg_of_perigee,
             "true_anomaly": self.true_anomaly,
-            "inertial_frame": self.inertial_frame.value,
+            "inertial_frame": self.inertial_frame.to_string(),
         }
 
     @classmethod
@@ -539,9 +564,9 @@ class OsculatingElements:
 
         Raises:
             ValueError: If the CartesianState frame is not
-                        :class:`ReferenceFrame.ICRF_EC`.
+                        :class:`ReferenceFrame.get("ICRF_EC")`.
         """
-        if cartesian_state.frame != ReferenceFrame.ICRF_EC:
+        if cartesian_state.frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError("Only ICRF_EC is supported.")
 
         skyfield_position = cartesian_state.to_skyfield_gcrf_position()
@@ -574,7 +599,7 @@ class OsculatingElements:
             raan=elements.longitude_of_ascending_node.degrees,
             arg_of_perigee=elements.argument_of_periapsis.degrees,
             true_anomaly=elements.true_anomaly.degrees,
-            inertial_frame=ReferenceFrame.ICRF_EC,
+            inertial_frame=ReferenceFrame.get("ICRF_EC"),
         )
 
     def to_cartesian_state(
