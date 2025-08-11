@@ -1,14 +1,13 @@
 """
 .. module:: orbitpy.coverage
-   :synopsis: Coverage representations for storing output of coverage simulations
+   :synopsis: Coverage classes for storing output of coverage simulations
 """
-
 
 from typing import List, Dict, Any
 from math import ceil, floor
 import numpy as np
-from eosimutils.time import AbsoluteDateArray, AbsoluteDate
 
+from eosimutils.time import AbsoluteDateArray, AbsoluteDate
 
 class DiscreteCoverageTP:
     """
@@ -17,7 +16,7 @@ class DiscreteCoverageTP:
     Stored in "TP-first" format, a list of covered GP indices is given for each time point.
 
     Attributes:
-        time (AbsoluteDateArray): An array of absolute time points.
+        time (AbsoluteDateArray): An array of time points.
         coverage (List[List[int]]): For each time point, the list of accessed indices.
         n_grid_points (int): Total number of grid points.
     """
@@ -33,7 +32,7 @@ class DiscreteCoverageTP:
 
         Args:
             time (AbsoluteDateArray): Array of time points.
-            coverage (List[List[int]]): For each time point, one list of accessed indices.
+            coverage (List[List[int]]): For each time point, a list of accessed indices.
             n_grid_points (int): Total number of grid points.
         """
         self.time = time
@@ -46,7 +45,7 @@ class DiscreteCoverageTP:
 
         Returns:
             Dict[str, Any]: Dictionary containing
-                'time': dict from AbsoluteDateArray.to_dict(),
+                'time' : dict of an AbsoluteDateArray
                 'coverage': List[List[int]] of accessed indices per time point,
                 'n_grid_points': Total number of grid points.
         """
@@ -63,12 +62,12 @@ class DiscreteCoverageTP:
 
         Args:
             data (Dict[str, Any]): Dictionary with keys:
-                'time': dict representing an AbsoluteDateArray,
+                'time': dict of an AbsoluteDateArray,
                 'coverage': List[List[int]] of accessed indices per time point,
                 'n_grid_points': Total number of grid points.
 
         Returns:
-            DiscreteCoverageTP: The reconstructed instance.
+            DiscreteCoverageTP: The deserialized object.
         """
         time = AbsoluteDateArray.from_dict(data['time'])
         coverage = data['coverage']
@@ -108,10 +107,10 @@ class DiscreteCoverageGP:
     """
     Stores the results of a discrete-time coverage simulation.
 
-    Stored in "GP-first" format, a list of covered time indices is given for each grid point.
+    Stored in "GP-first" format: a list of covered time indices is given for each grid point.
 
     Attributes:
-        time (AbsoluteDateArray): Array of absolute time points.
+        time (AbsoluteDateArray): Array of time points.
         coverage (List[List[int]]): For each grid point, list of time indices
             at which that grid point is accessed.
     """
@@ -122,7 +121,7 @@ class DiscreteCoverageGP:
 
         Args:
             time (AbsoluteDateArray): Array of time points.
-            coverage (List[List[int]]): For each grid point, indices of time points.
+            coverage (List[List[int]]): For each grid point, indices of accessed time points.
         """
         self.time = time
         self.coverage = coverage
@@ -188,17 +187,24 @@ class DiscreteCoverageGP:
 
     def coverage_steps(self) -> np.ndarray:
         """
-        Returns a NumPy array where each entry is the total number of discrete coverage
-        steps for the corresponding grid point.
+        Returns a NumPy array where each entry is the total number of steps
+            covered for the corresponding grid point.
+
+        Returns:
+            np.ndarray: An integer numpy array of length equal to the number of grid points,
+                where each entry is the total number of time steps for which the corresponding grid
+                point is covered. 
         """
         return np.array([len(times) for times in self.coverage])
 
     @staticmethod
-    def symmetric_difference(
-        a: "DiscreteCoverageGP", b: "DiscreteCoverageGP"
-    ) -> "DiscreteCoverageGP":
+    def symmetric_difference(a: "DiscreteCoverageGP",
+        b: "DiscreteCoverageGP") -> "DiscreteCoverageGP":
         """
         Compute the symmetric difference between two DiscreteCoverageGP instances.
+
+        The symmetric difference of two lists of time steps will return those time steps which are
+        present in one list but not the other.
 
         Args:
             a (DiscreteCoverageGP): First coverage instance.
@@ -251,12 +257,14 @@ class ContinuousCoverageGP:
                     step: float,
                     num_points: int) -> DiscreteCoverageGP:
         """
-        Convert continuous coverage intervals to a discrete coverage representation.
+        Convert continuous coverage representation to a discrete coverage representation.
+
+        Uses a fixed step size for the discrete representation.
 
         Args:
-            start (AbsoluteDate): The starting time of the discrete grid.
-            step (float): Step size in seconds between consecutive time points.
-            num_points (int): Number of discrete time points.
+            start (AbsoluteDate): The time for the first point in the time grid.
+            step (float): Step size in seconds between consecutive points in the time grid.
+            num_points (int): Total number of time points.
 
         Returns:
             DiscreteCoverageGP: Space-first coverage with each grid point
@@ -294,7 +302,7 @@ class ContinuousCoverageGP:
             file_path (str): Path to the STK .cvaa file.
 
         Returns:
-            ContinuousCoverageGP: Coverage intervals per grid point.
+            ContinuousCoverageGP: Stores coverage intervals for each grid point.
         """
 
         # parse file
@@ -330,3 +338,30 @@ class ContinuousCoverageGP:
         max_idx = max(coverage_map.keys(), default=-1)
         coverage = [coverage_map.get(i, []) for i in range(max_idx + 1)]
         return cls(coverage=coverage)
+
+def get_integer_intervals(sorted_array: np.ndarray) -> list[tuple[int, int]]:
+    """
+    Convert a sorted numpy array of integers into a list of integer intervals.
+
+    For example, if the input array is [1,2,3,7,9,11,12,13], the output list will
+    be [(1,3), (7,7), (9,9), (11,13)]
+
+    Parameters:
+        sorted_array (np.ndarray): A 1D numpy array of sorted integers.
+
+    Returns:
+        List[Tuple[int, int]]: A list of (start, end) tuples representing intervals.
+    """
+    if sorted_array.size == 0:
+        return []
+
+    # Find the indices where the difference is not 1, i.e., gap in the sequence
+    diff = np.diff(sorted_array)
+    gap_indices = np.where(diff != 1)[0]
+
+    # Starts: first element + elements after gaps
+    starts = np.r_[sorted_array[0], sorted_array[gap_indices + 1]]
+    # Ends: elements at gaps + last element
+    ends = np.r_[sorted_array[gap_indices], sorted_array[-1]]
+
+    return list(zip(starts, ends))
