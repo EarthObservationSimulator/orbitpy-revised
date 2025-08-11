@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from math import ceil, floor
 import numpy as np
 
-from eosimutils.time import AbsoluteDateArray, AbsoluteDate
+from eosimutils.time import AbsoluteDateArray, AbsoluteDate, AbsoluteDateIntervalArray
 
 
 class DiscreteCoverageTP:
@@ -241,22 +241,20 @@ class ContinuousCoverageGP:
     """
     Stores the results of a continuous-time coverage simulation.
 
-    Stored in "GP-first" format, a list of coverage intervals is given for each grid point.
+    Stored in "GP-first" format, coverage intervals are stored per grid point.
 
     Attributes:
-        coverage (List[List[Tuple[AbsoluteDate, AbsoluteDate]]]):
-            For each grid point, a list of (start, end) coverage intervals.
+        coverage (List[AbsoluteDateIntervalArray]):
+            For each grid point, an AbsoluteDateIntervalArray of (start, end) coverage intervals.
     """
 
-    def __init__(
-        self, coverage: List[List[tuple[AbsoluteDate, AbsoluteDate]]]
-    ) -> None:
+    def __init__(self, coverage: List[AbsoluteDateIntervalArray]) -> None:
         """
         Initializes a ContinuousCoverageGP instance.
 
         Args:
-            coverage (List[List[Tuple[AbsoluteDate, AbsoluteDate]]]):
-                For each grid point, list of coverage intervals.
+            coverage (List[AbsoluteDateIntervalArray]):
+                For each grid point, an AbsoluteDateIntervalArray of coverage intervals.
         """
         self.coverage = coverage
 
@@ -278,27 +276,18 @@ class ContinuousCoverageGP:
                 mapped to the list of time indices covered.
         """
         # build time array
-        ephem = np.array(
-            [start.ephemeris_time + i * step for i in range(num_points)]
-        )
-        time_array = AbsoluteDateArray(ephem)
+        ephemer = np.array([start.ephemeris_time + i * step for i in range(num_points)])
+        time_array = AbsoluteDateArray(ephemer)
 
         # convert intervals to indices
         discrete_cov: List[List[int]] = []
-        # Iterate over each grid point's coverage intervals
+        t0 = start.ephemeris_time
         for gp_intervals in self.coverage:
             idxs: List[int] = []
-            # Iterate over each coverage interval for this grid point
-            for interval_start, interval_end in gp_intervals:
-                # compute index bounds
-                i0 = ceil(
-                    (interval_start.ephemeris_time - start.ephemeris_time)
-                    / step
-                )
-                i1 = floor(
-                    (interval_end.ephemeris_time - start.ephemeris_time) / step
-                )
-                # clamp and collect
+            starts_et, stops_et = gp_intervals.to_spice_ephemeris_time()
+            for s_et, e_et in zip(starts_et, stops_et):
+                i0 = int(ceil((s_et - t0) / step))
+                i1 = int(floor((e_et - t0) / step))
                 lo = max(0, i0)
                 hi = min(num_points - 1, i1)
                 if lo <= hi:
@@ -318,9 +307,7 @@ class ContinuousCoverageGP:
         Returns:
             ContinuousCoverageGP: Stores coverage intervals for each grid point.
         """
-
-        # parse file
-        coverage_map = {}
+        coverage_map: Dict[int, List[tuple[AbsoluteDate, AbsoluteDate]]] = {}
         epoch = None
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f
@@ -329,7 +316,6 @@ class ContinuousCoverageGP:
                 if not parts:
                     continue
                 if parts[0] == "EpochTime":
-                    # remainder is the calendar date string
                     epoch_str = line.split(None, 1)[1].strip()
                     epoch = AbsoluteDate.from_dict(
                         {
@@ -342,7 +328,7 @@ class ContinuousCoverageGP:
                     point_idx = int(parts[1])
                 elif parts[0] == "NumberOfAccesses":
                     num_acc = int(parts[1])
-                    intervals = []
+                    intervals: List[tuple[AbsoluteDate, AbsoluteDate]] = []
                     for _ in range(num_acc):
                         rec = next(lines).split()
                         start_off = float(rec[1])
@@ -350,9 +336,22 @@ class ContinuousCoverageGP:
                         intervals.append((epoch + start_off, epoch + end_off))
                     coverage_map[point_idx] = intervals
 
-        # build ordered list of intervals
+        # build ordered list of AbsoluteDateIntervalArray per grid point
         max_idx = max(coverage_map.keys(), default=-1)
-        coverage = [coverage_map.get(i, []) for i in range(max_idx + 1)]
+        coverage: List[AbsoluteDateIntervalArray] = []
+        for i in range(max_idx + 1):
+            ivs = coverage_map.get(i, [])
+            if ivs:
+                starts = np.array([s.ephemeris_time for (s, _) in ivs], dtype=float)
+                stops = np.array([e.ephemeris_time for (_, e) in ivs], dtype=float)
+            else:
+                starts = np.array([], dtype=float)
+                stops = np.array([], dtype=float)
+            coverage.append(
+                AbsoluteDateIntervalArray(
+                    AbsoluteDateArray(starts), AbsoluteDateArray(stops)
+                )
+            )
         return cls(coverage=coverage)
 
 
