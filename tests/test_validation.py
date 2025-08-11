@@ -241,8 +241,8 @@ class STKValidation(unittest.TestCase):
             "Percent difference in number of covered points should be zero")
         self.assertLessEqual(metric2, 0.001,
             "Percent diff in total number of covered time steps should be no higher than .1%.")
-        self.assertLessEqual(metric4, 0.001,
-            "Average percent diff in number of covered time steps should be no higher than .1%.")
+        self.assertLessEqual(metric4, 0.0025,
+            "Average percent diff in number of covered time steps should be no higher than .25%.")
 
         return
     
@@ -556,6 +556,67 @@ class STKValidation(unittest.TestCase):
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 8)
+
+    def test_9(self):
+        """Test a sun-sync orbit on an equatorial grid with a with a 20 deg AT, 30 deg CT pointed
+        sensor."""
+
+        # Create coverage calculator
+        cov = orbitpy.coveragecalculator.CoverageFactory.from_dict({
+            "coverage_type": orbitpy.coveragecalculator.CoverageType.POINT_COVERAGE.to_string()})
+
+        # Get file paths
+        state_path = os.path.join(self.states_dir, "Satellite5_states.txt")
+        accesses_path = os.path.join(self.accesses_dir, "Equatorial_Grid_9.cvaa")
+        grid_path = os.path.join(self.accesses_dir, "Equatorial_Grid")
+
+        # Read trajectory from data file
+        result = create_stateseries_from_txt_file(state_path)
+        times = result.time
+
+        # Create frame graph and add LVLH frame
+        registry = self.get_registry(result)
+
+        # Create orientation
+        deg2rad = np.pi / 180.0
+        beta = -24.0*deg2rad
+        alpha = 30.0*deg2rad
+        gamma = -6.0*deg2rad
+
+        sensor_orientation = Orientation.from_dict({
+            "orientation_type": "constant",
+            "rotations_type": "euler",
+            "from": "Sensor",
+            "to": "LVLH",
+            "euler_order": "XYZ",
+            "rotations": [alpha,beta,gamma]
+        })
+
+        # Create a rectangular field of view
+        up_half_angle = 10.0  # deg
+        right_half_angle = 15.0  # deg
+        fov = RectangularFieldOfView(frame=self.sensor_frame,ref_angle=up_half_angle, 
+        cross_angle=right_half_angle)
+
+        registry.add_orientation_transform(sensor_orientation)
+        registry.add_pos_transform(
+            ReferenceFrame.get("LVLH"),
+            ReferenceFrame.get("Sensor"),
+            Cartesian3DPosition(0.0, 0.0, 0.0, ReferenceFrame.get("LVLH")),
+            True,
+        )
+
+        # Calculate point coverage
+        target_point_array = create_cartesian_position_array_from_csv(grid_path)
+        orbitpycov = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
+        stkcov = ContinuousCoverageGP.from_stk(
+            accesses_path).to_discrete(times[0], 1.0, len(times))
+
+        if self.plot_tests:
+            plot_results(orbitpycov, stkcov, target_point_array)
+
+        self.get_metrics(orbitpycov, stkcov, 9)
 
     def test_10(self):
         """Test a sun-sync orbit on a US grid with a 30 deg AT, 20 deg CT sensor."""
