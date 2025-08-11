@@ -13,8 +13,8 @@ from .coverage import DiscreteCoverageTP
 from eosimutils.base import (
     EnumBase,
     SurfaceType,
-    EARTH_RADIUS,
-    EARTH_POLAR_RADIUS,
+    WGS84_EARTH_EQUATORIAL_RADIUS,
+    WGS84_EARTH_POLAR_RADIUS,
 )
 from eosimutils.state import Cartesian3DPositionArray
 from eosimutils.fieldofview import (
@@ -170,7 +170,7 @@ class PointCoverage:
 
         # Setup horizon source
         if surface == SurfaceType.SPHERE:
-            earth_sphere = gte.Sphere3d(gte.Vector3d.Zero(), EARTH_RADIUS)
+            earth_sphere = gte.Sphere3d(gte.Vector3d.Zero(), WGS84_EARTH_EQUATORIAL_RADIUS)
             sphere_source = kcl.ConstantSourceSphere3d(earth_sphere)
             horizon_source = kcl.PolarHalfspaceSourceSphere3d(
                 sphere_source, pos_fov_target_source, buff_size
@@ -178,7 +178,7 @@ class PointCoverage:
             variables = [horizon_source]
         elif surface == SurfaceType.WGS84:
             extents = gte.Vector3d(
-                [EARTH_RADIUS, EARTH_RADIUS, EARTH_POLAR_RADIUS]
+                [WGS84_EARTH_EQUATORIAL_RADIUS, WGS84_EARTH_EQUATORIAL_RADIUS, WGS84_EARTH_POLAR_RADIUS]
             )
             earth_ellipsoid = gte.Ellipsoid3d(gte.Vector3d.Zero(), extents)
             ellipsoid_source = kcl.ConstantSourceEllipsoid3d(earth_ellipsoid)
