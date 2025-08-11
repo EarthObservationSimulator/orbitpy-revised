@@ -54,9 +54,7 @@ class PropagatorFactory:
         pass
 
     @classmethod
-    def register_type(
-        cls, type_name: str
-    ) -> Callable[[Type], Type]:
+    def register_type(cls, type_name: str) -> Callable[[Type], Type]:
         """
         Decorator to register a propagator class under a type name.
         """
@@ -110,7 +108,7 @@ class SGP4Propagator:
         propagator_type (str): Type of propagator. Value is always 'SGP4_PROPAGATOR'.
     """
 
-    def __init__(self, step_size: Optional[float]=None):
+    def __init__(self, step_size: Optional[float] = None):
         """Initializes the SGP4Propagator.
 
         Args:

@@ -9,6 +9,7 @@ import numpy as np
 
 from eosimutils.time import AbsoluteDateArray, AbsoluteDate
 
+
 class DiscreteCoverageTP:
     """
     Stores the results of a discrete-time coverage simulation.
@@ -25,7 +26,7 @@ class DiscreteCoverageTP:
         self,
         time: AbsoluteDateArray,
         coverage: List[List[int]],
-        n_grid_points: int
+        n_grid_points: int,
     ) -> None:
         """
         Initializes a DiscreteCoverageTP instance.
@@ -50,13 +51,13 @@ class DiscreteCoverageTP:
                 'n_grid_points': Total number of grid points.
         """
         return {
-            'time': self.time.to_dict(),
-            'coverage': self.coverage,
-            'n_grid_points': self.n_grid_points
+            "time": self.time.to_dict(),
+            "coverage": self.coverage,
+            "n_grid_points": self.n_grid_points,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'DiscreteCoverageTP':
+    def from_dict(cls, data: Dict[str, Any]) -> "DiscreteCoverageTP":
         """
         Deserializes a DiscreteCoverageTP from a dictionary.
 
@@ -69,9 +70,9 @@ class DiscreteCoverageTP:
         Returns:
             DiscreteCoverageTP: The deserialized object.
         """
-        time = AbsoluteDateArray.from_dict(data['time'])
-        coverage = data['coverage']
-        n_grid_points = data['n_grid_points']
+        time = AbsoluteDateArray.from_dict(data["time"])
+        coverage = data["coverage"]
+        n_grid_points = data["n_grid_points"]
         return cls(time=time, coverage=coverage, n_grid_points=n_grid_points)
 
     @classmethod
@@ -91,7 +92,9 @@ class DiscreteCoverageTP:
         for grid_idx, times in enumerate(gp.coverage):
             for t_idx in times:
                 tp_cov[t_idx].append(grid_idx)
-        return cls(time=gp.time, coverage=tp_cov, n_grid_points=len(gp.coverage))
+        return cls(
+            time=gp.time, coverage=tp_cov, n_grid_points=len(gp.coverage)
+        )
 
     def to_gp(self) -> "DiscreteCoverageGP":
         """
@@ -115,7 +118,9 @@ class DiscreteCoverageGP:
             at which that grid point is accessed.
     """
 
-    def __init__(self, time: AbsoluteDateArray, coverage: List[List[int]]) -> None:
+    def __init__(
+        self, time: AbsoluteDateArray, coverage: List[List[int]]
+    ) -> None:
         """
         Initializes a DiscreteCoverageGP instance.
 
@@ -135,10 +140,7 @@ class DiscreteCoverageGP:
                 'time': dict from AbsoluteDateArray.to_dict(),
                 'coverage': List[List[int]] of time indices per grid point.
         """
-        return {
-            "time": self.time.to_dict(),
-            "coverage": self.coverage
-        }
+        return {"time": self.time.to_dict(), "coverage": self.coverage}
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DiscreteCoverageGP":
@@ -193,13 +195,14 @@ class DiscreteCoverageGP:
         Returns:
             np.ndarray: An integer numpy array of length equal to the number of grid points,
                 where each entry is the total number of time steps for which the corresponding grid
-                point is covered. 
+                point is covered.
         """
         return np.array([len(times) for times in self.coverage])
 
     @staticmethod
-    def symmetric_difference(a: "DiscreteCoverageGP",
-        b: "DiscreteCoverageGP") -> "DiscreteCoverageGP":
+    def symmetric_difference(
+        a: "DiscreteCoverageGP", b: "DiscreteCoverageGP"
+    ) -> "DiscreteCoverageGP":
         """
         Compute the symmetric difference between two DiscreteCoverageGP instances.
 
@@ -218,9 +221,13 @@ class DiscreteCoverageGP:
             ValueError: If the time arrays or number of grid points differ.
         """
         if len(a.time) != len(b.time):
-            raise ValueError("Time arrays must be the same size for symmetric difference")
+            raise ValueError(
+                "Time arrays must be the same size for symmetric difference"
+            )
         if len(a.coverage) != len(b.coverage):
-            raise ValueError("Both instances must have the same number of grid points")
+            raise ValueError(
+                "Both instances must have the same number of grid points"
+            )
 
         new_cov: List[List[int]] = []
         for cov_a, cov_b in zip(a.coverage, b.coverage):
@@ -241,8 +248,9 @@ class ContinuousCoverageGP:
             For each grid point, a list of (start, end) coverage intervals.
     """
 
-    def __init__(self,
-                 coverage: List[List[tuple[AbsoluteDate, AbsoluteDate]]]) -> None:
+    def __init__(
+        self, coverage: List[List[tuple[AbsoluteDate, AbsoluteDate]]]
+    ) -> None:
         """
         Initializes a ContinuousCoverageGP instance.
 
@@ -252,10 +260,9 @@ class ContinuousCoverageGP:
         """
         self.coverage = coverage
 
-    def to_discrete(self,
-                    start: AbsoluteDate,
-                    step: float,
-                    num_points: int) -> DiscreteCoverageGP:
+    def to_discrete(
+        self, start: AbsoluteDate, step: float, num_points: int
+    ) -> DiscreteCoverageGP:
         """
         Convert continuous coverage representation to a discrete coverage representation.
 
@@ -271,7 +278,9 @@ class ContinuousCoverageGP:
                 mapped to the list of time indices covered.
         """
         # build time array
-        ephem = np.array([start.ephemeris_time + i * step for i in range(num_points)])
+        ephem = np.array(
+            [start.ephemeris_time + i * step for i in range(num_points)]
+        )
         time_array = AbsoluteDateArray(ephem)
 
         # convert intervals to indices
@@ -282,8 +291,13 @@ class ContinuousCoverageGP:
             # Iterate over each coverage interval for this grid point
             for interval_start, interval_end in gp_intervals:
                 # compute index bounds
-                i0 = ceil((interval_start.ephemeris_time - start.ephemeris_time) / step)
-                i1 = floor((interval_end.ephemeris_time - start.ephemeris_time) / step)
+                i0 = ceil(
+                    (interval_start.ephemeris_time - start.ephemeris_time)
+                    / step
+                )
+                i1 = floor(
+                    (interval_end.ephemeris_time - start.ephemeris_time) / step
+                )
                 # clamp and collect
                 lo = max(0, i0)
                 hi = min(num_points - 1, i1)
@@ -308,7 +322,7 @@ class ContinuousCoverageGP:
         # parse file
         coverage_map = {}
         epoch = None
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             lines = f
             for line in lines:
                 parts = line.strip().split()
@@ -317,11 +331,13 @@ class ContinuousCoverageGP:
                 if parts[0] == "EpochTime":
                     # remainder is the calendar date string
                     epoch_str = line.split(None, 1)[1].strip()
-                    epoch = AbsoluteDate.from_dict({
-                        "time_format": "GREGORIAN_DATE",
-                        "calendar_date": epoch_str,
-                        "time_scale": "UTC"
-                    })
+                    epoch = AbsoluteDate.from_dict(
+                        {
+                            "time_format": "GREGORIAN_DATE",
+                            "calendar_date": epoch_str,
+                            "time_scale": "UTC",
+                        }
+                    )
                 elif parts[0] == "PointNumber":
                     point_idx = int(parts[1])
                 elif parts[0] == "NumberOfAccesses":
@@ -338,6 +354,7 @@ class ContinuousCoverageGP:
         max_idx = max(coverage_map.keys(), default=-1)
         coverage = [coverage_map.get(i, []) for i in range(max_idx + 1)]
         return cls(coverage=coverage)
+
 
 def get_integer_intervals(sorted_array: np.ndarray) -> list[tuple[int, int]]:
     """
