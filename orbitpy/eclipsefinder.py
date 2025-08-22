@@ -9,7 +9,7 @@ from typing import Union, Optional
 import spiceypy as spice
 import numpy as np
 
-from eosimutils.base import ReferenceFrame, EARTH_POLAR_RADIUS
+from eosimutils.base import ReferenceFrame, WGS84_EARTH_POLAR_RADIUS
 from eosimutils.spicekernels import load_spice_kernels
 from eosimutils.framegraph import FrameGraph
 from eosimutils.time import AbsoluteDate, AbsoluteDateArray
@@ -118,7 +118,7 @@ class EclipseFinder:
         """
 
         # Check if the object is inside Earth
-        if e2o[0] ** 2 + e2o[1] ** 2 + e2o[2] ** 2 < EARTH_POLAR_RADIUS**2:
+        if e2o[0] ** 2 + e2o[1] ** 2 + e2o[2] ** 2 < WGS84_EARTH_POLAR_RADIUS**2:
             # The object is inside the Earth, so it is eclipsed by the surface of Earth
             return True
 
@@ -128,7 +128,7 @@ class EclipseFinder:
         earth_to_sun, _ = spice.spkpos("SUN", et, "J2000", "LT+S", "EARTH")
 
         return not EclipseFinder.check_line_of_sight(
-            earth_to_sun, e2o, EARTH_POLAR_RADIUS
+            earth_to_sun, e2o, WGS84_EARTH_POLAR_RADIUS
         )
 
     @staticmethod

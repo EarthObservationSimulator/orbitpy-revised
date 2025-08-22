@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 import random
 
-from eosimutils.base import EARTH_POLAR_RADIUS
+from eosimutils.base import WGS84_EARTH_POLAR_RADIUS
 from eosimutils.time import AbsoluteDate, AbsoluteDateArray
 from eosimutils.state import (
     Cartesian3DPosition,
@@ -293,7 +293,7 @@ class TestEclipseFinder(unittest.TestCase):
         """Test eclipse detection for an object on the Earth's surface."""
         on_surface_position = Cartesian3DPosition.from_dict(
             {
-                "x": -(EARTH_POLAR_RADIUS + 1e-6),
+                "x": -(WGS84_EARTH_POLAR_RADIUS + 1e-6),
                 "y": 0.0,
                 "z": 0.0,
                 "frame": "ICRF_EC",
