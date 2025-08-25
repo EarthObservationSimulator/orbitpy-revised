@@ -2,8 +2,10 @@
 .. module:: orbitpy.utils
     :synopsis: Utilities to help with various calculations.
 """
+
 from typing import Union
 import numpy as np
+
 
 def normalize(v: Union[list[float], np.ndarray]) -> list[float]:
     """Normalize an input vector.
@@ -17,10 +19,11 @@ def normalize(v: Union[list[float], np.ndarray]) -> list[float]:
     v = np.array(v)
     norm = np.linalg.norm(v)
     if norm == 0:
-        raise Exception(
+        raise ZeroDivisionError(
             "Encountered division by zero in vector normalization function."
         )
     return v.tolist() / norm
+
 
 def check_line_of_sight(
     object1_pos: np.ndarray, object2_pos: np.ndarray, obstacle_radius: float
@@ -28,7 +31,7 @@ def check_line_of_sight(
     """
     Determine if line-of-sight exists between two objects with a spherical obstacle in between.
 
-    This method uses the algorithm described on Page 198 of "Fundamentals of Astrodynamics 
+    This method uses the algorithm described on Page 198 of "Fundamentals of Astrodynamics
     and Applications" by David A. Vallado (first algorithm).
 
     Args:
@@ -40,15 +43,15 @@ def check_line_of_sight(
         bool: True if line-of-sight exists, False otherwise.
 
     Note:
-        The frame of reference for describing the object positions must be centered at 
+        The frame of reference for describing the object positions must be centered at
         the spherical obstacle.
     """
-    obj1_unitVec = normalize(object1_pos)
-    obj2_unitVec = normalize(object2_pos)
+    obj1_unit_vec = normalize(object1_pos)
+    obj2_unit_vec = normalize(object2_pos)
 
     # This condition tends to give a numerical error, so solve for it independently.
     eps = 1e-9
-    x = np.dot(obj1_unitVec, obj2_unitVec)
+    x = np.dot(obj1_unit_vec, obj2_unit_vec)
 
     if (x > -1 - eps) and (x < -1 + eps):
         return False

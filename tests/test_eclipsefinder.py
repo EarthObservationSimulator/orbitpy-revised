@@ -16,6 +16,7 @@ from eosimutils.framegraph import FrameGraph
 
 from orbitpy.eclipsefinder import EclipseFinder
 
+
 class TestEclipseFinder(unittest.TestCase):
     """Unit tests for the EclipseFinder class."""
 
@@ -53,7 +54,7 @@ class TestEclipseFinder(unittest.TestCase):
         """Test eclipse detection for a single geographic position and single time.
         Below Geographic position is on the 0 deg longitude (UTC timezone)
         and at noon time in the summer (Northern Hemisphere).
-        Therefore the positions along a wide range of latitudes are 
+        Therefore the positions along a wide range of latitudes are
         expected to be in sunlight."""
 
         axis_tilt = 23.5  # degrees

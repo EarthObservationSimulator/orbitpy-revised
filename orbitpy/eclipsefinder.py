@@ -30,8 +30,6 @@ class EclipseFinder:
         """Initialize the EclipseFinder class."""
         pass
 
-    
-
     @staticmethod
     def _in_eclipse_single_item(et: float, e2o: np.ndarray) -> bool:
         """Check if the object is in eclipse at a single time point.
@@ -45,7 +43,7 @@ class EclipseFinder:
         Returns:
             bool: True if the object is in eclipse, False otherwise.
         """
-        # Get Sun position relative to Earth (in the J2000 frame ~ ICRF frame in SPICE) 
+        # Get Sun position relative to Earth (in the J2000 frame ~ ICRF frame in SPICE)
         # at the given time.
         # See `eosimutils.base.ReferenceFrame` for more details on the reference frame.
         earth_to_sun, _ = spice.spkpos("SUN", et, "J2000", "LT+S", "EARTH")
@@ -97,11 +95,11 @@ class EclipseFinder:
         """Run the eclipse detection algorithm with Earth (spherical model with the
         radius as the Polar radius) as the occluding body.
 
-        The method is simplistic, and evaluates the line-of-sight from the Sun (as a point-source) to
-        the object, with a spherical Earth as occluder.
+        The method is simplistic, and evaluates the line-of-sight from the Sun 
+        (as a point-source) to the object, with a spherical Earth as occluder.
         (The method does not evaluate the umbra, penumbra or antiumbra conditions.)
-        The polar-radius of Earth is used (largest dimension), instead of the equatorial 
-        or the mean radius to prevent errors in the checks involving testing presence of 
+        The polar-radius of Earth is used (largest dimension), instead of the equatorial
+        or the mean radius to prevent errors in the checks involving testing presence of
         objects inside the Earth.
 
         Either 'time' and 'position' or 'state' must be provided.
@@ -111,17 +109,18 @@ class EclipseFinder:
             https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/FORTRAN/spicelib/npedln.html
 
         Args:
-            frame_graph (FrameGraph): The frame graph containing transformations between reference frames.
-            time (Optional[Union[AbsoluteDate, AbsoluteDateArray]]): Time point or array of time points to 
-                                                            evaluate the eclipse condition (default is None).
-            position (Optional[Union[GeographicPosition, Cartesian3DPosition]]): The location's geographic or 
-                                                                        Cartesian position (default is None).
-            state (Optional[Union[StateSeries, PositionSeries, CartesianState]]): The state containing time(s) 
-                                                    and position(s) for eclipse evaluation (default is None).
+            frame_graph (FrameGraph): The frame graph containing transformations between 
+                                        reference frames.
+            time (Optional[Union[AbsoluteDate, AbsoluteDateArray]]): Time point or array
+                        of time points to evaluate the eclipse condition (default is None).
+            position (Optional[Union[GeographicPosition, Cartesian3DPosition]]): The location's
+                                    geographic or Cartesian position (default is None).
+            state (Optional[Union[StateSeries, PositionSeries, CartesianState]]): The state
+                    containing time(s) and position(s) for eclipse evaluation (default is None).
 
         Returns:
-            Union[bool, list[bool]]: (List of) True or False indicating whether the location is in eclipse 
-                                    at the specified times.
+            Union[bool, list[bool]]: (List of) True or False indicating whether the location
+                                                        is in eclipse at the specified times.
         """
         # Validate input arguments
         if (time is None or position is None) and state is None:
@@ -144,7 +143,7 @@ class EclipseFinder:
         load_spice_kernels()
 
         # Helper function to transform position vectors to the ICRF_EC frame
-        def in_ICRF_EC_frame(frame_graph, from_frame, input_pos_vector, times):
+        def in_icrf_ec_frame(frame_graph, from_frame, input_pos_vector, times):
             """Get the input position vector in the ICRF_EC frame."""
             to_frame = ReferenceFrame.get("ICRF_EC")
             rot_array, _ = frame_graph.get_orientation_transform(
@@ -192,7 +191,7 @@ class EclipseFinder:
                 )
 
         # Transform position vectors to the ICRF_EC frame
-        e2o_in_icrf_ec = in_ICRF_EC_frame(
+        e2o_in_icrf_ec = in_icrf_ec_frame(
             frame_graph, e2o_frame, e2o_vector, time
         )
         e2o_et = time.to_spice_ephemeris_time()
