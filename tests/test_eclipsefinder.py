@@ -16,9 +16,6 @@ from eosimutils.framegraph import FrameGraph
 
 from orbitpy.eclipsefinder import EclipseFinder
 
-# python -m unittest test_eclipsefinder.TestEclipseFinder.test_eclipse_geographic_position
-
-
 class TestEclipseFinder(unittest.TestCase):
     """Unit tests for the EclipseFinder class."""
 
@@ -55,7 +52,9 @@ class TestEclipseFinder(unittest.TestCase):
     def test_eclipse_geographic_position(self):
         """Test eclipse detection for a single geographic position and single time.
         Below Geographic position is on the 0 deg longitude (UTC timezone)
-        and at noon time in the summer (Northern Hemisphere)."""
+        and at noon time in the summer (Northern Hemisphere).
+        Therefore the positions along a wide range of latitudes are 
+        expected to be in sunlight."""
 
         axis_tilt = 23.5  # degrees
         time = AbsoluteDate.from_dict(
@@ -86,8 +85,8 @@ class TestEclipseFinder(unittest.TestCase):
 
     def test_eclipse_single_position_multiple_time(self):
         """Test eclipse detection for a single position and multiple times.
-        3 different times corresponding to day, day and night times are the
-        position is chosen for the test."""
+        3 different times corresponding to day, day and night times
+        (corresponding to a position) are chosen for the test."""
         # Multiple times
         multiple_times = AbsoluteDateArray.from_dict(
             {
@@ -123,7 +122,8 @@ class TestEclipseFinder(unittest.TestCase):
 
     def test_eclipse_with_cartesian_state(self):
         """Test eclipse detection with a CartesianState object.
-        The position is chosen such that it is above Earth and not in eclipse.
+        The position is chosen such that it is above Earth and not in eclipse
+        for any time.
         """
         random_date = f"2025-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}T \
             {random.randint(0, 23):02d}:{random.randint(0, 59):02d}:{random.randint(0, 59):02d}.000"

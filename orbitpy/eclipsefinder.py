@@ -1,7 +1,7 @@
 """
 .. module:: orbitpy.eclipsefinder
     :synopsis: Module to find eclipse times, i.e. the times at which a location
-                (corresponding to a satellite or ground station)
+                (corresponding to a satellite or a ground location)
                 is in the shadow of Earth.
 """
 
@@ -20,6 +20,8 @@ from eosimutils.state import (
 )
 from eosimutils.trajectory import StateSeries, PositionSeries
 
+from .utils import check_line_of_sight
+
 
 class EclipseFinder:
     """Class to calculate eclipse times for a location."""
@@ -28,80 +30,7 @@ class EclipseFinder:
         """Initialize the EclipseFinder class."""
         pass
 
-    @staticmethod
-    def normalize(v: Union[list[float], np.ndarray]) -> np.ndarray:
-        """Normalize an input vector.
-        Args:
-            v (Union[list[float], np.ndarray]): Input vector to be normalized.
-        Returns:
-            list[float]: Normalized vector.
-        Raises:
-            Exception: If the input vector has zero magnitude, resulting in division by zero.
-        """
-        v = np.array(v)
-        norm = np.linalg.norm(v)
-        if norm == 0:
-            raise Exception(
-                "Encountered division by zero in vector normalization function."
-            )
-        return v.tolist() / norm
-
-    @staticmethod
-    def check_line_of_sight(
-        object1_pos: np.ndarray, object2_pos: np.ndarray, obstacle_radius: float
-    ) -> bool:
-        """
-        Determine if line-of-sight exists between two objects with a spherical obstacle in between.
-
-        This method uses the algorithm described on Page 198 of "Fundamentals of Astrodynamics 
-        and Applications" by David A. Vallado (first algorithm).
-
-        Args:
-            object1_pos (np.ndarray): Position vector of the first object.
-            object2_pos (np.ndarray): Position vector of the second object.
-            obstacle_radius (float): Radius of the spherical obstacle.
-
-        Returns:
-            bool: True if line-of-sight exists, False otherwise.
-
-        Note:
-            The frame of reference for describing the object positions must be centered at 
-            the spherical obstacle.
-        """
-        obj1_unitVec = EclipseFinder.normalize(object1_pos)
-        obj2_unitVec = EclipseFinder.normalize(object2_pos)
-
-        # This condition tends to give a numerical error, so solve for it independently.
-        eps = 1e-9
-        x = np.dot(obj1_unitVec, obj2_unitVec)
-
-        if (x > -1 - eps) and (x < -1 + eps):
-            return False
-        else:
-            if x > 1:
-                x = 1
-            theta = np.arccos(x)
-
-        obj1_r = np.linalg.norm(object1_pos)
-        if obj1_r - obstacle_radius > 1e-5:
-            theta1 = np.arccos(obstacle_radius / obj1_r)
-        elif abs(obj1_r - obstacle_radius) < 1e-5:
-            theta1 = 0.0
-        else:
-            return False  # object1 is inside the obstacle
-
-        obj2_r = np.linalg.norm(object2_pos)
-        if obj2_r - obstacle_radius > 1e-5:
-            theta2 = np.arccos(obstacle_radius / obj2_r)
-        elif abs(obj2_r - obstacle_radius) < 1e-5:
-            theta2 = 0.0
-        else:
-            return False  # object2 is inside the obstacle
-
-        if theta1 + theta2 < theta:
-            return False
-        else:
-            return True
+    
 
     @staticmethod
     def _in_eclipse_single_item(et: float, e2o: np.ndarray) -> bool:
@@ -116,18 +45,12 @@ class EclipseFinder:
         Returns:
             bool: True if the object is in eclipse, False otherwise.
         """
-
-        # Check if the object is inside Earth
-        if e2o[0] ** 2 + e2o[1] ** 2 + e2o[2] ** 2 < WGS84_EARTH_POLAR_RADIUS**2:
-            # The object is inside the Earth, so it is eclipsed by the surface of Earth
-            return True
-
         # Get Sun position relative to Earth (in the J2000 frame ~ ICRF frame in SPICE) 
         # at the given time.
         # See `eosimutils.base.ReferenceFrame` for more details on the reference frame.
         earth_to_sun, _ = spice.spkpos("SUN", et, "J2000", "LT+S", "EARTH")
 
-        return not EclipseFinder.check_line_of_sight(
+        return not check_line_of_sight(
             earth_to_sun, e2o, WGS84_EARTH_POLAR_RADIUS
         )
 
@@ -140,7 +63,7 @@ class EclipseFinder:
 
         Args:
             et_array (np.ndarray): Array of ephemeris times (1D).
-            earth_to_obj_array (np.ndarray): Array of positions relative to Earth (Nx3).
+            earth_to_obj_array (np.ndarray): Array of 'N' positions relative to Earth (Nx3).
 
         Returns:
             np.ndarray: Boolean array indicating whether each object is in eclipse.
@@ -177,8 +100,9 @@ class EclipseFinder:
         The method is simplistic, and evaluates the line-of-sight from the Sun (as a point-source) to
         the object, with a spherical Earth as occluder.
         (The method does not evaluate the umbra, penumbra or antiumbra conditions.)
-        The polar-radius of Earth is used, instead of the equatorial or the mean radius to prevent errors
-        in the checks involving testing presence of objects inside the Earth.
+        The polar-radius of Earth is used (largest dimension), instead of the equatorial 
+        or the mean radius to prevent errors in the checks involving testing presence of 
+        objects inside the Earth.
 
         Either 'time' and 'position' or 'state' must be provided.
 
