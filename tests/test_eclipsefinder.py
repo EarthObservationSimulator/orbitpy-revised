@@ -21,7 +21,7 @@ class TestEclipseFinder(unittest.TestCase):
     """Unit tests for the EclipseFinder class."""
 
     def setUp(self):
-        """Set up common test data."""
+        """Set up eclipse finder object."""
         self.eclipse_finder = EclipseFinder()
         self.registry = (
             FrameGraph()
