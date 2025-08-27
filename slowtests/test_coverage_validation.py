@@ -283,7 +283,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array,fov=fov,frame_graph=registry,times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -320,7 +320,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -356,7 +356,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -393,7 +393,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -428,7 +428,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -465,7 +465,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -500,7 +500,7 @@ class STKValidation(unittest.TestCase):
         circ_coverage = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(circ_coverage, stkcov, target_point_array)
@@ -559,7 +559,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -620,7 +620,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -657,7 +657,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -717,7 +717,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -777,7 +777,7 @@ class STKValidation(unittest.TestCase):
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
-            accesses_path).to_discrete(times[0], 1.0, len(times))
+            accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)

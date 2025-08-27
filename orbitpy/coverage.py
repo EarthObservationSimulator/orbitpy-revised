@@ -13,6 +13,8 @@ from typing import List, Dict, Any
 from math import ceil, floor
 import numpy as np
 
+from eosimutils.state import Cartesian3DPositionArray
+
 from eosimutils.time import (
     AbsoluteDateArray,
     AbsoluteDate,
@@ -31,28 +33,28 @@ class DiscreteCoverageTP:
         coverage (List[List[int]]): For each time point, the list of accessed time-indices, where
             each time index corresponds to the (zero-indexed) position in the time array. Length of
             time and coverage must be identical.
-        n_grid_points (int): Total number of grid points.
+        grid_points (Cartesian3DPositionArray): The positions of the grid points.
     """
 
     def __init__(
         self,
         time: AbsoluteDateArray,
         coverage: List[List[int]],
-        n_grid_points: int,
+        grid_points: Cartesian3DPositionArray,
     ) -> None:
         """
         Initializes a DiscreteCoverageTP instance.
 
         Args:
             time (AbsoluteDateArray): Array of time points.
-            coverage (List[List[int]]): For each time point, the list of accessed time-indices, 
+            coverage (List[List[int]]): For each time point, the list of accessed time-indices,
                 where each time index corresponds to the (zero-indexed) position in the time array.
                 Length of time and coverage must be identical.
-            n_grid_points (int): Total number of grid points.
+            grid_points (Cartesian3DPositionArray): The positions of the grid points.
         """
         self.time = time
         self.coverage = coverage
-        self.n_grid_points = n_grid_points
+        self.grid_points = grid_points
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -62,12 +64,12 @@ class DiscreteCoverageTP:
             Dict[str, Any]: Dictionary containing
                 'time' : dict of an AbsoluteDateArray
                 'coverage': List[List[int]] of accessed indices per time point,
-                'n_grid_points': Total number of grid points.
+                'grid_points': Dictionary representation of grid points.
         """
         return {
             "time": self.time.to_dict(),
             "coverage": self.coverage,
-            "n_grid_points": self.n_grid_points,
+            "grid_points": self.grid_points.to_dict(),
         }
 
     @classmethod
@@ -79,15 +81,19 @@ class DiscreteCoverageTP:
             data (Dict[str, Any]): Dictionary with keys:
                 'time': dict of an AbsoluteDateArray,
                 'coverage': List[List[int]] of accessed indices per time point,
-                'n_grid_points': Total number of grid points.
+                'grid_points': Dictionary representation of grid points.
 
         Returns:
             DiscreteCoverageTP: The deserialized object.
         """
         time = AbsoluteDateArray.from_dict(data["time"])
         coverage = data["coverage"]
-        n_grid_points = data["n_grid_points"]
-        return cls(time=time, coverage=coverage, n_grid_points=n_grid_points)
+        grid_points = Cartesian3DPositionArray.from_dict(data["grid_points"])
+        return cls(
+            time=time,
+            coverage=coverage,
+            grid_points=grid_points,
+        )
 
     @classmethod
     def from_gp(cls, gp: "DiscreteCoverageGP") -> "DiscreteCoverageTP":
@@ -106,8 +112,11 @@ class DiscreteCoverageTP:
         for grid_idx, times in enumerate(gp.coverage):
             for t_idx in times:
                 tp_cov[t_idx].append(grid_idx)
+        grid_points = gp.grid_points
         return cls(
-            time=gp.time, coverage=tp_cov, n_grid_points=len(gp.coverage)
+            time=gp.time,
+            coverage=tp_cov,
+            grid_points=grid_points,
         )
 
     def to_gp(self) -> "DiscreteCoverageGP":
@@ -130,10 +139,14 @@ class DiscreteCoverageGP:
         time (AbsoluteDateArray): Array of time points.
         coverage (List[List[int]]): For each grid point, list of time indices corresponding to the
             the (zero-indexed) positions in the time array at which that grid point is accessed.
+        grid_points (Cartesian3DPositionArray): The positions of the grid points.
     """
 
     def __init__(
-        self, time: AbsoluteDateArray, coverage: List[List[int]]
+        self,
+        time: AbsoluteDateArray,
+        coverage: List[List[int]],
+        grid_points: Cartesian3DPositionArray,
     ) -> None:
         """
         Initializes a DiscreteCoverageGP instance.
@@ -141,9 +154,11 @@ class DiscreteCoverageGP:
         Args:
             time (AbsoluteDateArray): Array of time points.
             coverage (List[List[int]]): For each grid point, indices of accessed time points.
+            grid_points (Cartesian3DPositionArray): The positions of the grid points.
         """
         self.time = time
         self.coverage = coverage
+        self.grid_points = grid_points
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -153,8 +168,13 @@ class DiscreteCoverageGP:
             Dict[str, Any]: Dictionary with keys:
                 'time': dict from AbsoluteDateArray.to_dict(),
                 'coverage': List[List[int]] of time indices per grid point.
+                'grid_points': Dictionary representation of grid points.
         """
-        return {"time": self.time.to_dict(), "coverage": self.coverage}
+        return {
+            "time": self.time.to_dict(),
+            "coverage": self.coverage,
+            "grid_points": self.grid_points.to_dict(),
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DiscreteCoverageGP":
@@ -165,13 +185,15 @@ class DiscreteCoverageGP:
             data (Dict[str, Any]): Dictionary with keys:
                 'time': dict for AbsoluteDateArray,
                 'coverage': List[List[int]] of time indices per grid point.
+                'grid_points': Dictionary representation of grid points.
 
         Returns:
             DiscreteCoverageGP: The reconstructed instance.
         """
         time = AbsoluteDateArray.from_dict(data["time"])
         coverage = data["coverage"]
-        return cls(time=time, coverage=coverage)
+        grid_points = Cartesian3DPositionArray.from_dict(data["grid_points"])
+        return cls(time=time, coverage=coverage, grid_points=grid_points)
 
     @classmethod
     def from_tp(cls, tp: DiscreteCoverageTP) -> "DiscreteCoverageGP":
@@ -185,12 +207,13 @@ class DiscreteCoverageGP:
             DiscreteCoverageGP: Space-first coverage instance.
         """
         # use total grid points from TP
-        n_grids = tp.n_grid_points
+        n_grids = len(tp.grid_points.positions)
         gp_cov: List[List[int]] = [[] for _ in range(n_grids)]
         for t_idx, grids in enumerate(tp.coverage):
             for grid_idx in grids:
                 gp_cov[grid_idx].append(t_idx)
-        return cls(time=tp.time, coverage=gp_cov)
+        grid_points = tp.grid_points
+        return cls(time=tp.time, coverage=gp_cov, grid_points=grid_points)
 
     def to_tp(self) -> DiscreteCoverageTP:
         """
@@ -248,7 +271,10 @@ class DiscreteCoverageGP:
             diff = sorted(set(cov_a).symmetric_difference(cov_b))
             new_cov.append(diff)
 
-        return DiscreteCoverageGP(time=a.time, coverage=new_cov)
+        # Assumes a and b store the same grid_points
+        return DiscreteCoverageGP(
+            time=a.time, coverage=new_cov, grid_points=a.grid_points
+        )
 
 
 class ContinuousCoverageGP:
@@ -260,17 +286,24 @@ class ContinuousCoverageGP:
     Attributes:
         coverage (List[AbsoluteDateIntervalArray]):
             For each grid point, an AbsoluteDateIntervalArray of (start, end) coverage intervals.
+        grid_points (Cartesian3DPositionArray): The positions of the grid points.
     """
 
-    def __init__(self, coverage: List[AbsoluteDateIntervalArray]) -> None:
+    def __init__(
+        self,
+        coverage: List["AbsoluteDateIntervalArray"],
+        grid_points: Cartesian3DPositionArray,
+    ) -> None:
         """
         Initializes a ContinuousCoverageGP instance.
 
         Args:
             coverage (List[AbsoluteDateIntervalArray]):
                 For each grid point, an AbsoluteDateIntervalArray of coverage intervals.
+            grid_points (Cartesian3DPositionArray): The positions of the grid points.
         """
         self.coverage = coverage
+        self.grid_points = grid_points
 
     def to_discrete(
         self, start: AbsoluteDate, step: float, num_points: int
@@ -310,15 +343,22 @@ class ContinuousCoverageGP:
                     idxs.extend(range(lo, hi + 1))
             discrete_cov.append(idxs)
 
-        return DiscreteCoverageGP(time=time_array, coverage=discrete_cov)
+        return DiscreteCoverageGP(
+            time=time_array,
+            coverage=discrete_cov,
+            grid_points=self.grid_points,
+        )
 
     @classmethod
-    def from_stk(cls, file_path: str) -> "ContinuousCoverageGP":
+    def from_stk(
+        cls, file_path: str, grid_points: Cartesian3DPositionArray
+    ) -> "ContinuousCoverageGP":
         """
         Construct a ContinuousCoverageGP from an STK coverage report (.cvaa).
 
         Args:
             file_path (str): Path to the STK .cvaa file.
+            grid_points (Cartesian3DPositionArray): The positions of the grid points.
 
         Returns:
             ContinuousCoverageGP: Stores coverage intervals for each grid point.
@@ -372,7 +412,7 @@ class ContinuousCoverageGP:
                     AbsoluteDateArray(starts), AbsoluteDateArray(stops)
                 )
             )
-        return cls(coverage=coverage)
+        return cls(coverage=coverage, grid_points=grid_points)
 
 
 def get_integer_intervals(sorted_array: np.ndarray) -> list[tuple[int, int]]:

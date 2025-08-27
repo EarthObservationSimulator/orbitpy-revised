@@ -158,8 +158,6 @@ class PointCoverage:
             DiscreteCoverageTP: An object reporting the grid points covered at each time point.
         """
 
-        num_pts = target_point_array.positions.shape[0]
-
         fov_frame = fov.frame
         target_frame = target_point_array.frame
 
@@ -187,7 +185,7 @@ class PointCoverage:
         fov_to_target_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
 
         # Setup horizon source. A point and a ellipsoid/sphere are sufficient to define a polar
-        # plane, which divides the ellipsoid/sphere into a region visible from that point 
+        # plane, which divides the ellipsoid/sphere into a region visible from that point
         # and a region not visible (no LOS). The halfspace supported by that plane can be used
         # to check for visibility.
         if surface == SurfaceType.SPHERE:
@@ -197,7 +195,7 @@ class PointCoverage:
             # The sphere source is a constant source, since the sphere's
             # parameters remain the same for all time steps
             sphere_source = kcl.ConstantSourceSphere3d(earth_sphere)
-            
+
             # The horizon source is a Variable object, so it must be added to the
             # list of variables to be updated throughout the simulation.
             horizon_source = kcl.PolarHalfspaceSourceSphere3d(
@@ -233,8 +231,8 @@ class PointCoverage:
             deg2rad = math.pi / 180.0
             half_angle_rad = fov.diameter * 0.5 * deg2rad
             boresight_fov_gte = gte.Vector3d(fov.boresight)
-            
-            # First, define the boresight vector and cone angle in the FOV frame as a constant 
+
+            # First, define the boresight vector and cone angle in the FOV frame as a constant
             # source.
             boresight_fov_source = kcl.ConstantSourceVector3d(boresight_fov_gte)
             angle_source = kcl.ConstantSourced(half_angle_rad)
@@ -358,4 +356,4 @@ class PointCoverage:
         # Prepare coverage output
         coverage = [cov_source.get(i) for i in range(len(times))]
 
-        return DiscreteCoverageTP(times, coverage, num_pts)
+        return DiscreteCoverageTP(times, coverage, target_point_array)
