@@ -48,9 +48,11 @@ class OrbitFactory:
         """
         Decorator to register an orbit class under a type name.
         """
+
         def decorator(orbit_class: Type) -> Type:
             cls._registry[type_name] = orbit_class
             return orbit_class
+
         return decorator
 
     @classmethod
@@ -63,7 +65,7 @@ class OrbitFactory:
                 Must include a valid orbit type in the "orbit_type" key.
 
         Returns:
-            object: An instance of the appropriate orbit class initialized with 
+            object: An instance of the appropriate orbit class initialized with
                     the given specifications.
 
         Raises:
@@ -72,10 +74,14 @@ class OrbitFactory:
         """
         orbit_type_str = specs.get("orbit_type")
         if orbit_type_str is None:
-            raise KeyError('Orbit type key "orbit_type" not found in specifications dictionary.')
+            raise KeyError(
+                'Orbit type key "orbit_type" not found in specifications dictionary.'
+            )
         orbit_class = cls._registry.get(orbit_type_str)
         if not orbit_class:
-            raise ValueError(f'Orbit type "{orbit_type_str}" is not registered.')
+            raise ValueError(
+                f'Orbit type "{orbit_type_str}" is not registered.'
+            )
         return orbit_class.from_dict(specs)
 
 
@@ -350,12 +356,19 @@ class SpaceTrackAPI:
 
         # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S
         try:
-            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S") # datetime object
+            tdt_datetime = datetime.strptime(
+                target_date_time, "%Y-%m-%dT%H:%M:%S"
+            )  # datetime object
         except ValueError:
-            print("Invalid target_date_time format. It should be a string in the format '%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00")
+            print(
+                "Invalid target_date_time format. It should be a string in the format"
+                "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
+            )
             return None
 
-        tdt = tdt_datetime.strftime("%Y-%m-%dT%H:%M:%S") #ensure the format is correct
+        tdt = tdt_datetime.strftime(
+            "%Y-%m-%dT%H:%M:%S"
+        )  # ensure the format is correct
         omm_url = (
             f"{self.BASE_URL}/basicspacedata/query/class/omm/"
             + f"NORAD_CAT_ID/{norad_id}/CREATION_DATE/"
@@ -366,7 +379,7 @@ class SpaceTrackAPI:
 
         if response.status_code == 200:
             omm_list = response.json()
-            
+
             if not omm_list:
                 print(
                     f"OMM not found for NORAD ID {norad_id}"
@@ -376,25 +389,26 @@ class SpaceTrackAPI:
                     "specified target date-time."
                 )
                 return None
-            
+
             closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
-                retrieved_CD = closest_omm['CREATION_DATE']
-                retrieved_CD_datetime = datetime.strptime(
-                    retrieved_CD, "%Y-%m-%dT%H:%M:%S"
+                retrieved_cd = closest_omm["CREATION_DATE"]
+                retrieved_cd_datetime = datetime.strptime(
+                    retrieved_cd, "%Y-%m-%dT%H:%M:%S"
                 )  # Convert to datetime object
 
                 # Ensure the retrieved CREATION_DATE is before the target date-time
-                if retrieved_CD_datetime > tdt_datetime:
+                if retrieved_cd_datetime > tdt_datetime:
                     raise ValueError(
-                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is after the "
+                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is after the "
                         f"target date-time {tdt}. Something is wrong."
                     )
 
-                # Check if the retrieved CREATION_DATE is more than 1 day before the target date-time
-                if (tdt_datetime - retrieved_CD_datetime).days > 1:
+                # Check if the retrieved CREATION_DATE is more than 1 day before the target
+                # date-time
+                if (tdt_datetime - retrieved_cd_datetime).days > 1:
                     raise ValueError(
-                        f"The retrieved OMM CREATION_DATE {retrieved_CD} is more than 1 day "
+                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is more than 1 day "
                         f"before the target date-time {tdt}. Something is wrong."
                     )
 
@@ -467,7 +481,7 @@ class OsculatingElements:
             inertial_frame (ReferenceFrame): The inertial reference frame.
 
         Raises:
-            ValueError: If the inertial_frame is not ReferenceFrame.ICRF_EC.
+            ValueError: If the inertial_frame is not ReferenceFrame.get("ICRF_EC").
         """
         if inertial_frame != ReferenceFrame.get("ICRF_EC"):
             raise ValueError(
