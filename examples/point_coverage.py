@@ -67,16 +67,16 @@ start_time = AbsoluteDate.from_dict(
 duration_days = 1  # Propagate for 1 days (24 hours)
 
 print("Starting propagation...")
-result = sgp4_prop.execute(
+sat_state_series = sgp4_prop.execute(
     t0=start_time, duration_days=duration_days, orbit=tle
 )
 print("Finished propagation...")
 
-times = result.time
+times = sat_state_series.time
 
 # Create frame graph and add LVLH frame
 lvlh_frame = ReferenceFrame.add("LVLH")
-att_lvlh, pos_lvlh = get_lvlh(result, lvlh_frame)
+att_lvlh, pos_lvlh = get_lvlh(sat_state_series, lvlh_frame)
 registry = FrameGraph()
 registry.add_orientation_transform(att_lvlh)
 from_frame = ReferenceFrame.get("ICRF_EC")

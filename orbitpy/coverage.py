@@ -1,13 +1,23 @@
 """
 .. module:: orbitpy.coverage
    :synopsis: Coverage classes for storing output of coverage simulations
+
+This module provides classes for representing and manipulating coverage data. It supports coverage
+in discrete-time (boolean coverage status for each time point (TP) for each grid point (GP)) and
+continuous-time (coverage intervals with real-valued boundaries for each GP). Discrete coverage
+can be stored in a TP-first format (lists of accessed GPs for each TP) or a GP-first format
+(lists of accessed TPs for each GP).
 """
 
 from typing import List, Dict, Any
 from math import ceil, floor
 import numpy as np
 
-from eosimutils.time import AbsoluteDateArray, AbsoluteDate, AbsoluteDateIntervalArray
+from eosimutils.time import (
+    AbsoluteDateArray,
+    AbsoluteDate,
+    AbsoluteDateIntervalArray,
+)
 
 
 class DiscreteCoverageTP:
@@ -18,7 +28,9 @@ class DiscreteCoverageTP:
 
     Attributes:
         time (AbsoluteDateArray): An array of time points.
-        coverage (List[List[int]]): For each time point, the list of accessed indices.
+        coverage (List[List[int]]): For each time point, the list of accessed time-indices, where
+            each time index corresponds to the (zero-indexed) position in the time array. Length of
+            time and coverage must be identical.
         n_grid_points (int): Total number of grid points.
     """
 
@@ -33,7 +45,9 @@ class DiscreteCoverageTP:
 
         Args:
             time (AbsoluteDateArray): Array of time points.
-            coverage (List[List[int]]): For each time point, a list of accessed indices.
+            coverage (List[List[int]]): For each time point, the list of accessed time-indices, 
+                where each time index corresponds to the (zero-indexed) position in the time array.
+                Length of time and coverage must be identical.
             n_grid_points (int): Total number of grid points.
         """
         self.time = time
@@ -114,8 +128,8 @@ class DiscreteCoverageGP:
 
     Attributes:
         time (AbsoluteDateArray): Array of time points.
-        coverage (List[List[int]]): For each grid point, list of time indices
-            at which that grid point is accessed.
+        coverage (List[List[int]]): For each grid point, list of time indices corresponding to the
+            the (zero-indexed) positions in the time array at which that grid point is accessed.
     """
 
     def __init__(
@@ -276,7 +290,9 @@ class ContinuousCoverageGP:
                 mapped to the list of time indices covered.
         """
         # build time array
-        ephemer = np.array([start.ephemeris_time + i * step for i in range(num_points)])
+        ephemer = np.array(
+            [start.ephemeris_time + i * step for i in range(num_points)]
+        )
         time_array = AbsoluteDateArray(ephemer)
 
         # convert intervals to indices
@@ -342,8 +358,12 @@ class ContinuousCoverageGP:
         for i in range(max_idx + 1):
             ivs = coverage_map.get(i, [])
             if ivs:
-                starts = np.array([s.ephemeris_time for (s, _) in ivs], dtype=float)
-                stops = np.array([e.ephemeris_time for (_, e) in ivs], dtype=float)
+                starts = np.array(
+                    [s.ephemeris_time for (s, _) in ivs], dtype=float
+                )
+                stops = np.array(
+                    [e.ephemeris_time for (_, e) in ivs], dtype=float
+                )
             else:
                 starts = np.array([], dtype=float)
                 stops = np.array([], dtype=float)

@@ -125,6 +125,18 @@ class PointCoverage:
     ) -> DiscreteCoverageTP:
         """Calculates the coverage over an array of target points given a field of view.
 
+        Uses the coverage kinematics library (C++) for coverage calculation. The following
+        concepts are relevant to understanding the implementation:
+
+        Source<T>: An object which satisfies the Source interface defines a "get" method,
+        which takes the simulation time index as input and returns a reference to an object
+        of type T.
+
+        Variable: An object which satisfies the Variable interface represents a quantity which
+        must be updated over the course of the simulation. Variable objects define an "update"
+        method, which takes the simulation time index as input and updates the object for that
+        time step.
+
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
@@ -132,12 +144,16 @@ class PointCoverage:
                 coverage calculation.
             frame_graph (FrameGraph): The frame graph containing the necessary transformations
                 between frames.
-            times (AbsoluteDateArray): An array of time points for which the coverage is calculated
-                at discrete instances.
+            times (AbsoluteDateArray): An array of time points for which the coverage is to be
+                calculated at discrete instances.
             surface (SurfaceType): The type of surface to consider for coverage calculation.
-                Defaults to SurfaceType.SPHERE. Surface type will effect the horizon check.
-            buff_size (int): The size of the buffer for parallel computation. Should be at least
-                the number of cores for optimal parallel performance.
+                Defaults to SurfaceType.SPHERE. Surface type will affect the horizon check, which
+                checks that the points are not occluded by the surface. Points are not necessarily
+                required to be on the surface. Surface is assumed to be fixed to the frame of the
+                target points.
+            buff_size (int): Specifies the buffer size for parallel computation. For optimal
+                performance, it should be at least equal to the number of CPU cores available
+                on the executing machine.
         Returns:
             DiscreteCoverageTP: An object reporting the grid points covered at each time point.
         """
@@ -162,26 +178,48 @@ class PointCoverage:
             fov_frame, target_frame, times
         )
 
-        # Get the transformation from fov to target frame as a ListSource
+        # Get the transformation from fov to target frame as a Listsource
+        # A Listsource stores the data in a list for each simulation time step
+        # (it is not a variable and does not need to be added to the list of variables)
         fov_to_target_gte = [
             gte.Matrix3x3d(r.flatten()) for r in rot_fov_to_target.as_matrix()
         ]
         fov_to_target_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
 
-        # Setup horizon source
+        # Setup horizon source. A point and a ellipsoid/sphere are sufficient to define a polar
+        # plane, which divides the ellipsoid/sphere into a region visible from that point 
+        # and a region not visible (no LOS). The halfspace supported by that plane can be used
+        # to check for visibility.
         if surface == SurfaceType.SPHERE:
-            earth_sphere = gte.Sphere3d(gte.Vector3d.Zero(), WGS84_EARTH_EQUATORIAL_RADIUS)
+            earth_sphere = gte.Sphere3d(
+                gte.Vector3d.Zero(), WGS84_EARTH_EQUATORIAL_RADIUS
+            )
+            # The sphere source is a constant source, since the sphere's
+            # parameters remain the same for all time steps
             sphere_source = kcl.ConstantSourceSphere3d(earth_sphere)
+            
+            # The horizon source is a Variable object, so it must be added to the
+            # list of variables to be updated throughout the simulation.
             horizon_source = kcl.PolarHalfspaceSourceSphere3d(
                 sphere_source, pos_fov_target_source, buff_size
             )
             variables = [horizon_source]
         elif surface == SurfaceType.WGS84:
             extents = gte.Vector3d(
-                [WGS84_EARTH_EQUATORIAL_RADIUS, WGS84_EARTH_EQUATORIAL_RADIUS, WGS84_EARTH_POLAR_RADIUS]
+                [
+                    WGS84_EARTH_EQUATORIAL_RADIUS,
+                    WGS84_EARTH_EQUATORIAL_RADIUS,
+                    WGS84_EARTH_POLAR_RADIUS,
+                ]
             )
             earth_ellipsoid = gte.Ellipsoid3d(gte.Vector3d.Zero(), extents)
+
+            # The ellipsoid source is a constant source, since the ellipsoid's
+            # parameters remain the same for all time steps
             ellipsoid_source = kcl.ConstantSourceEllipsoid3d(earth_ellipsoid)
+
+            # The horizon source is a Variable object, so it must be added to the
+            # list of variables to be updated throughout the simulation.
             horizon_source = kcl.PolarHalfspaceSourceEllipsoid3d(
                 ellipsoid_source, pos_fov_target_source, buff_size
             )
@@ -195,20 +233,33 @@ class PointCoverage:
             deg2rad = math.pi / 180.0
             half_angle_rad = fov.diameter * 0.5 * deg2rad
             boresight_fov_gte = gte.Vector3d(fov.boresight)
+            
+            # First, define the boresight vector and cone angle in the FOV frame as a constant 
+            # source.
             boresight_fov_source = kcl.ConstantSourceVector3d(boresight_fov_gte)
+            angle_source = kcl.ConstantSourced(half_angle_rad)
+
+            # Define a source which transforms the boresight from the FOV frame to the targe frame.
+            # This is a Variable object so it must be added to the variables list to be updated.
             boresight_target_source = kcl.TransformedVector3dSource(
                 boresight_fov_source, fov_to_target_source, buff_size
             )
-            angle_source = kcl.ConstantSourced(half_angle_rad)
 
+            # Define a source which builds a cone object using the FOV position, boresight
+            # unit vector, and cone half-angle.
+            # This is a Variable object so it must be added to the variables list to be updated.
             fov_source = kcl.PosDirConeSource(
                 pos_fov_target_source,
                 boresight_target_source,
                 angle_source,
                 buff_size,
             )
+
+            # Define a Viewer object for the cone shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
             fov_viewer = kcl.ViewerCone3d(fov_source)
 
+            # Add variables to list
             variables.append(boresight_target_source)
             variables.append(fov_source)
 
@@ -223,10 +274,15 @@ class PointCoverage:
             right_fov = np.cross(fov.boresight, fov.ref_vector)
             right_fov_gte = gte.Vector3d(right_fov)
             up_fov_gte = gte.Vector3d(fov.ref_vector)
+
+            # First, define the "up" and "right" vectors in the FOV frame as constant sources.
+            # These orthogonal vectors define the first and second basis vectors for the FOV image
+            # plane.
             up_fov_source = kcl.ConstantSourceVector3d(up_fov_gte)
             right_fov_source = kcl.ConstantSourceVector3d(right_fov_gte)
 
-            # Transform up and right vectors from fov frame to target frame
+            # Define sources which transform up and right vectors from fov frame to target frame
+            # These are Variable objects so they must be added to the variables list to be updated.
             up_target_source = kcl.TransformedVector3dSource(
                 up_fov_source, fov_to_target_source, buff_size
             )
@@ -234,8 +290,13 @@ class PointCoverage:
                 right_fov_source, fov_to_target_source, buff_size
             )
 
+            # Define constant sources for the FOV angles about the up and right vectors
             right_angle_source = kcl.ConstantSourced(right_angle_rad)
             up_angle_source = kcl.ConstantSourced(up_angle_rad)
+
+            # Define a source which builds a rectangle object using the FOV position, up and right
+            # unit vectors, and FOV angles.
+            # This is a Variable object so it must be added to the variables list to be updated.
             fov_source = kcl.VectorAngleRectViewSource(
                 pos_fov_target_source,
                 up_target_source,
@@ -245,9 +306,11 @@ class PointCoverage:
                 buff_size,
             )
 
+            # Define a Viewer object for the FOV shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
             fov_viewer = kcl.ViewerRectView3d(fov_source)
 
-            # Add variables
+            # Add variables to list
             variables.append(up_target_source)
             variables.append(right_target_source)
             variables.append(fov_source)
@@ -259,14 +322,18 @@ class PointCoverage:
         else:
             raise ValueError("Unsupported field of view type.")
 
-        # Setup Viewers
+        # Setup Viewers. Viewers define a function which determines whether a given point is
+        # inside the viewer. Complex shapes can be constructed through CSG operations
+        # (union, intersection, compliment)
         horizon_viewer = kcl.ViewerHalfspace3d(horizon_source)
+        # Points are considered to be covered if they are in the horizon AND the FOV
         total_view = kcl.Intersection([horizon_viewer, fov_viewer])
 
         # Get the position of the grid points in the target frame
         target_points_list_gte = [
             gte.Vector3d(row) for row in target_point_array.to_numpy()
         ]
+        # List of target points stored as a constant-source in the target frame
         grid_source = kcl.ConstantSourceListVector3d(target_points_list_gte)
 
         # Setup Coverage source (no preprocessor)
@@ -279,11 +346,13 @@ class PointCoverage:
         )
         variables.append(cov_source)
 
-        # Drive coverage
+        # Add variables list to the VarDriver class, which is responsible for updating them
+        # during the simulation
         driver = kcl.VarDriver(variables)
         start_time = 0
         stop_time = len(times) - 1
 
+        # Run the simulation
         kcl.driveCoverage(buff_size, start_time, stop_time, driver, [])
 
         # Prepare coverage output

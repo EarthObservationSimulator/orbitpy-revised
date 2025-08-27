@@ -1,4 +1,13 @@
-"""Validation tests for orbitpy.coveragecalculator module."""
+"""Validation tests for orbitpy.coveragecalculator module.
+
+Tests orbitpy coverage calculator against STK data produced from various mission scenarios, varying
+orbit type (circular, elliptical)/(inclined, equatorial), sensor type (rectangular, conical),
+pointing direction (nadir/off nadir), and grid (global, US, equatorial). Thetrajectory data is read
+from the STK output file directly, so these tests cover the frame transformations and geometry
+calculations (point in FOV checks). To compare coverage output to orbitpy, the STK result is
+discretized. 
+
+"""
 
 import unittest
 import random
