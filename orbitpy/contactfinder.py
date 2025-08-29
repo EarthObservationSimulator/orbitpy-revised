@@ -101,7 +101,7 @@ class ContactFinderFactory:
 class LineOfSightContactFinder:
     """Handles line-of-sight contact opportunities between two entities.
     Presently only supports the scenarios when:
-        - Both entities are fixed, at the same reference frame
+        - Both entities are fixed, at the same reference frame.
         - At least one of the entities is fixed (in a reference frame) while
             the other entity is in motion.
     """
@@ -126,12 +126,12 @@ class LineOfSightContactFinder:
     ) -> Union[bool, list[bool]]:
         """
         Calculate the line-of-sight contact opportunities between two entities.
-        Presently only supports the scenario when:
-            - One of the entitites is fixed (in a reference frame) over the entire period of time when the other entity could be in motion.
+        Presently only supports the scenarios when:
+            - One of the entities is fixed (in a reference frame) over the entire period of time when the other entity could be in motion.
             - Both entities are fixed in the same reference frames.
 
         TODO: Support the scenario when both entities are in motion or fixed in different reference frame.
-        This would require additional calculations such as cases when the entitites have time-series at different time-steps,
+        This would require additional calculations such as cases when the entities have time-series at different time-steps,
         or for different durations.
 
 
@@ -150,7 +150,7 @@ class LineOfSightContactFinder:
         # Convert all the entities to Cartesian3DPosition (fixed) or PositionSeries (moving)
         entity1_fixed = False
         entity2_fixed = False
-        
+
         if isinstance(entity1_state, (GeographicPosition, Cartesian3DPosition, CartesianState)):
             entity1_fixed = True
             entity1_state = eosimutils.utils.convert_object(source_obj=entity1_state, target_type=Cartesian3DPosition)
@@ -182,27 +182,36 @@ class LineOfSightContactFinder:
             return los
 
         #### Handle the scenario when one of the entities is moving. ####
+        # The fixed entity is Cartesian3DPosition type and the moving entity is PositionSeries type.
         if entity1_fixed is False:
-            moving_entity_state = entity1_state
-            fixed_entity_state = entity2_state
+            moving_entity_position_series = entity1_state
+            fixed_entity_cartesian_3d_position = entity2_state
         else:
-            moving_entity_state = entity2_state
-            fixed_entity_state = entity1_state
+            moving_entity_position_series = entity2_state
+            fixed_entity_cartesian_3d_position = entity1_state
 
-        """
-        if isinstance(fixed_entity_state, Cartesian3DPosition):
-        
-        if fixed_entity_ref_frame != moving_entity_ref_frame:
-            # Transform the moving entity's state to the fixed entity's reference frame
-            moving_entity_state = utils.transform_to_target_frame(
-                frame_graph,
-                moving_entity_ref_frame,
-                fixed_entity_ref_frame,
-                moving_entity_state,
-                times
+        # Helper function to transform position vectors to a target frame
+        def transform_to_target_frame(frame_graph, from_frame, to_frame, input_pos_vector, times):
+            """Transform the input position vector to the target frame."""
+            rot_array, _ = frame_graph.get_orientation_transform(
+                from_frame, to_frame, times
             )
-        """
+            return rot_array.apply(input_pos_vector)
+
+        if fixed_entity_cartesian_3d_position.frame != moving_entity_position_series.frame:
+            # Transform the moving entity's state to the fixed entity's reference frame
+            moving_entity_position_series = utils.transform_to_target_frame(
+                frame_graph,
+                moving_entity_position_series.frame,
+                fixed_entity_cartesian_3d_position.frame,
+                moving_entity_position_series.position.to_numpy(),
+                moving_entity_position_series.time
+            )
+        
         # Check for line-of-sight contact opportunities
-        los = utils.check_line_of_sight(fixed_entity_state.to_numpy(), moving_entity_state.to_numpy(), WGS84_EARTH_POLAR_RADIUS)
+        los = []
+        fixed_entity_np_position = fixed_entity_cartesian_3d_position.to_numpy()
+        for i, cart_position in enumerate(moving_entity_position_series.position):
+            los.append(utils.check_line_of_sight(fixed_entity_np_position, cart_position.to_numpy(), WGS84_EARTH_POLAR_RADIUS))
 
         return los
