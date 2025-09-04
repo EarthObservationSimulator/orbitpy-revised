@@ -14,7 +14,7 @@ from eosimutils.state import (
 from eosimutils.trajectory import PositionSeries, StateSeries
 from eosimutils.framegraph import FrameGraph
 
-from orbitpy.eclipsefinder import EclipseFinder
+from orbitpy.eclipsefinder import EclipseFinder, EclipseInfo
 
 
 class TestEclipseFinder(unittest.TestCase):
@@ -47,8 +47,8 @@ class TestEclipseFinder(unittest.TestCase):
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, time=time, position=position
         )
-        expected_result = False
-        self.assertEqual(result, expected_result)
+        self.assertIsInstance(result, EclipseInfo)
+        self.assertFalse(result.is_eclipsed())
 
     def test_eclipse_geographic_position(self):
         """Test eclipse detection for a single geographic position and single time.
@@ -77,10 +77,9 @@ class TestEclipseFinder(unittest.TestCase):
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, time=time, position=geo_position
         )
-        expected_result = False
-        self.assertEqual(
-            result,
-            expected_result,
+        self.assertIsInstance(result, EclipseInfo)
+        self.assertFalse(
+            result.is_eclipsed(),
             msg=f"Latitude: {random_latitude} and Elevation: {random_elevation} was used.",
         )
 
@@ -115,9 +114,9 @@ class TestEclipseFinder(unittest.TestCase):
             time=multiple_times,
             position=single_position,
         )
-        expected_results = np.array([False, False, True])
+        self.assertIsInstance(result, EclipseInfo)
         self.assertTrue(
-            np.array_equal(result, expected_results),
+            np.array_equal(result.data[0], [False, False, True]),
             msg=f"Latitude: {random_latitude}, Longitude: {random_longitude} was used.",
         )
 
@@ -144,10 +143,9 @@ class TestEclipseFinder(unittest.TestCase):
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, state=cartesian_state
         )
-        expected_result = False
-        self.assertEqual(
-            result,
-            expected_result,
+        self.assertIsInstance(result, EclipseInfo)
+        self.assertFalse(
+            result.is_eclipsed(),
             msg=f"Date: {random_date} and Position: {random_position} was used.",
         )
 
@@ -180,8 +178,8 @@ class TestEclipseFinder(unittest.TestCase):
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, state=state_series
         )
-        expected_results = np.array([True, False])
-        self.assertTrue(np.array_equal(result, expected_results))
+        self.assertIsInstance(result, EclipseInfo)
+        self.assertTrue(np.array_equal(result.data[0], [True, False]))
 
     def test_eclipse_with_position_series(self):
         """Test eclipse detection with a PositionSeries object."""
@@ -207,8 +205,8 @@ class TestEclipseFinder(unittest.TestCase):
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, state=position_series
         )
-        expected_results = np.array([True, False, False])
-        self.assertTrue(np.array_equal(result, expected_results))
+        self.assertIsInstance(result, EclipseInfo)
+        self.assertTrue(np.array_equal(result.data[0], [True, False, False]))
 
     def test_invalid_inputs(self):
         """Test invalid input combinations."""
@@ -286,7 +284,7 @@ class TestEclipseFinder(unittest.TestCase):
         )
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, time=time, position=inside_earth_position
-        )
+        ).is_eclipsed()
         expected_result = True  # Object inside Earth is considered eclipsed
         self.assertEqual(result, expected_result)
 
@@ -310,7 +308,7 @@ class TestEclipseFinder(unittest.TestCase):
 
         result = self.eclipse_finder.execute(
             frame_graph=self.registry, time=time, position=on_surface_position
-        )
+        ).is_eclipsed()
         expected_result = False
         self.assertEqual(result, expected_result)
 

@@ -9,6 +9,7 @@ from typing import Union, Optional
 import spiceypy as spice
 import numpy as np
 
+
 from eosimutils.base import ReferenceFrame, WGS84_EARTH_POLAR_RADIUS
 from eosimutils.spicekernels import load_spice_kernels
 from eosimutils.framegraph import FrameGraph
@@ -18,10 +19,71 @@ from eosimutils.state import (
     GeographicPosition,
     Cartesian3DPosition,
 )
+from eosimutils.timeseries import Timeseries, _group_contiguous
 from eosimutils.trajectory import StateSeries, PositionSeries
 
 from .utils import check_line_of_sight
 
+class EclipseInfo(Timeseries):
+    """
+    A class to store the results of the eclipse-finder execute function.
+
+    This class inherits from the Timeseries class and ensures that the data stored
+    is an array of booleans representing times of eclipse.
+
+    Attributes:
+        time (AbsoluteDateArray): Time values provided as an AbsoluteDateArray object.
+        data (list): A list containing a single numpy array of booleans. 'T' indicates eclipse.
+                     'F' indicates no eclipse.
+        headers (list): A list containing headers for the data array.
+    """
+
+    def __init__(self, time: AbsoluteDateArray, data: np.ndarray):
+        """
+        Initialize a EclipseInfo instance.
+
+        Args:
+            time (AbsoluteDateArray): Time values provided as an AbsoluteDateArray object.
+            data (np.ndarray): A numpy array of booleans representing eclipse.
+
+        Raises:
+            TypeError: If `data` is not a numpy array of booleans.
+        """
+        headers = [["eclipse"]]
+        if not isinstance(data, np.ndarray) or not np.issubdtype(data.dtype, np.bool_):
+            raise TypeError("data must be a numpy array of booleans.")
+        super().__init__(time, [data], headers)
+
+    def is_eclipsed(self, index: int = None) -> Union[bool, None]:
+        """
+        Check if there is eclipse in the data, or at a specific index.
+
+        Args:
+            index (int, optional): The index corresponding to a specific time. If None, checks for any contact.
+
+        Returns:
+            bool: True if there is contact at the specified index or at least one contact exists.
+            None: If the index is out of bounds.
+        """
+        if index is None:
+            return np.any(self.data[0])
+        if 0 <= index < len(self.data[0]):
+            return self.data[0][index]
+        return None
+
+    def eclipse_intervals(self) -> list:
+        """
+        Get the time intervals where eclipse exist.
+
+        Returns:
+            list: A list of tuples representing the start and end times of contact intervals.
+        """
+        contact_indices = np.where(self.data[0])[0]
+        groups = _group_contiguous(contact_indices)
+        intervals = [
+            (self.time[i[0]], self.time[i[-1]]) for i in groups if len(i) > 0
+        ]
+        return intervals
 
 class EclipseFinder:
     """Class to calculate eclipse times for a location."""
@@ -91,7 +153,7 @@ class EclipseFinder:
         state: Optional[
             Union[StateSeries, PositionSeries, CartesianState]
         ] = None,
-    ) -> Union[bool, list[bool]]:
+    ) -> EclipseInfo:
         """Run the eclipse detection algorithm with Earth (spherical model with the
         radius as the Polar radius) as the occluding body.
 
@@ -199,7 +261,9 @@ class EclipseFinder:
         # Determine eclipse condition
         if isinstance(e2o_et, np.ndarray):
             # If et is an array, call the array version of the function
-            return EclipseFinder._in_eclipse_array(e2o_et, e2o_in_icrf_ec)
+            eclipses = EclipseFinder._in_eclipse_array(e2o_et, e2o_in_icrf_ec)
+            return EclipseInfo(AbsoluteDateArray(e2o_et), eclipses)
         else:
             # If et is a single value, call the single item version of the function
-            return EclipseFinder._in_eclipse_single_item(e2o_et, e2o_in_icrf_ec)
+            eclipses = EclipseFinder._in_eclipse_single_item(e2o_et, e2o_in_icrf_ec)
+            return EclipseInfo(AbsoluteDateArray(np.array([e2o_et])), np.array([eclipses]))
