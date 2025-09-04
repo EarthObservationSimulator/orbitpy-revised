@@ -1,23 +1,70 @@
-"""Unit tests for orbitpy.contactfinder module."""
+"""Unit tests for orbitpy.contactfinder module.
+TODO: Make tests for the ContactFinderFactory class."""
 
 import unittest
 import random
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 
-from eosimutils.base import ReferenceFrame, WGS84_EARTH_POLAR_RADIUS
-from eosimutils.time import AbsoluteDate, AbsoluteDateArray
+from eosimutils.base import ReferenceFrame
+from eosimutils.time import AbsoluteDateArray
 from eosimutils.state import (
     Cartesian3DPosition,
     GeographicPosition,
-    CartesianState,
     Cartesian3DPositionArray,
 )
-from eosimutils.trajectory import PositionSeries, StateSeries
+from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.framegraph import FrameGraph
 from eosimutils.orientation import ConstantOrientation
 
-from orbitpy.contactfinder import ContactFinderFactory, ContactFinderType, LineOfSightContactFinder
+from orbitpy.contactfinder import ContactInfo, LineOfSightContactFinder
+
+class TestContactInfo(unittest.TestCase):
+    """Unit tests for the ContactInfo class."""
+
+    def setUp(self):
+        """Set up test data for ContactInfo."""
+        self.times = AbsoluteDateArray.from_dict(
+            {
+                "time_format": "Gregorian_Date",
+                "time_scale": "UTC",
+                "calendar_date": [
+                    "2025-03-17T00:00:00.000",
+                    "2025-03-17T12:00:00.000",
+                    "2025-03-17T16:00:00.000",
+                    "2025-03-17T16:30:00.000",
+                ],
+            }
+        )
+        self.data = np.array([True, False, True, True], dtype=bool)
+        self.contact_info = ContactInfo(self.times, self.data)
+
+    def test_init_valid_data(self):
+        """Test initialization with valid data."""
+        self.assertIsInstance(self.contact_info, ContactInfo)
+        self.assertTrue(np.array_equal(self.contact_info.data[0], self.data))
+        self.assertEqual(self.contact_info.time, self.times)
+
+    def test_init_invalid_data(self):
+        """Test initialization with invalid data."""
+        with self.assertRaises(TypeError):
+            ContactInfo(self.times, np.array([1, 0, 1, 1]))  # Non-boolean data
+
+    def test_has_contact(self):
+        """Test the has_contact method."""
+        self.assertTrue(self.contact_info.has_contact())  # Check for any contact
+        self.assertTrue(self.contact_info.has_contact(0))  # Contact at index 0
+        self.assertFalse(self.contact_info.has_contact(1))  # No contact at index 1
+        self.assertTrue(self.contact_info.has_contact(2))  # Contact at index 2
+        self.assertTrue(self.contact_info.has_contact(3))  # Contact at index 3
+        self.assertIsNone(self.contact_info.has_contact(4))  # Out of bounds
+
+    def test_contact_intervals(self):
+        """Test the contact_intervals method."""
+        intervals = self.contact_info.contact_intervals()
+        self.assertEqual(len(intervals), 2)
+        self.assertEqual(intervals[0], (self.times[0], self.times[0]))
+        self.assertEqual(intervals[1], (self.times[2], self.times[3]))
 
 class TestLineOfSightContactFinder(unittest.TestCase):
 
@@ -28,21 +75,20 @@ class TestLineOfSightContactFinder(unittest.TestCase):
             FrameGraph()
         )  # ICRF_EC and ITRF frames are automatically registered.
 
-        # register a new frame at 90 deg offset from ICRF_EC
-        ReferenceFrame.add("ICRF_EC_90") 
-        rot90 = R.from_euler("xyz", [0, 0, 90], degrees=True) # Define 90 deg rotations about Z
+        # Register a new frame at 90 deg offset from ICRF_EC
+        ReferenceFrame.add("ICRF_EC_90")
+        rot90 = R.from_euler("xyz", [0, 0, 90], degrees=True)  # Define 90 deg rotations about Z
         constant_orien_90 = ConstantOrientation(
             rot90, ReferenceFrame.get("ICRF_EC"), ReferenceFrame.get("ICRF_EC_90")
         )
         self.registry.add_orientation_transform(constant_orien_90)
-    
+
     def tearDown(self):
         """Clean up after each test."""
         del self.los_contact_finder
         del self.registry
         ReferenceFrame.delete("ICRF_EC_90")
 
-    
     def test_fixed_geo_location_same_ref_frame(self):
         """Test line-of-sight detection between two fixed geographic positions in the same reference frame.
 
@@ -70,17 +116,11 @@ class TestLineOfSightContactFinder(unittest.TestCase):
             entity1_state=geo_position1,
             entity2_state=geo_position2,
         )
-        expected_result = False
-        self.assertEqual(result,
-                         expected_result,
-                         msg=f"Latitude: {random_latitude} and Elevation: {random_elevation} was used.")
+        self.assertIsInstance(result, ContactInfo)
+        self.assertFalse(result.has_contact(),  msg=f"Latitude: {random_latitude} and Elevation: {random_elevation} was used.")
 
     def test_fixed_cartesian_location_same_ref_frame(self):
-        """Test line-of-sight detection between two fixed geographic positions in the same reference frame.
-
-        The positions are fixed at the same latitude but at opposite longitudes, with random elevations 
-        within a specified range. The expected result is False.
-        """
+        """Test line-of-sight detection between two fixed Cartesian positions in the same (custom) reference frame."""
         position1 = Cartesian3DPosition.from_dict(
             {
                 "x": 7000.0,
@@ -102,41 +142,75 @@ class TestLineOfSightContactFinder(unittest.TestCase):
             entity1_state=position1,
             entity2_state=position2,
         )
-        expected_result = False
-        self.assertEqual(result, expected_result,
-                         msg=f"Position1: {position1} and Position2: {position2} was used.")
+        self.assertIsInstance(result, ContactInfo)
+        self.assertFalse(result.has_contact())
 
-    def test_execute_with_position_series(self):
+    def test_execute_with_position_series_and_geo_position(self):
         """Test LineOfSightContactFinder.execute with a PositionSeries object."""
         frame = ReferenceFrame.get("ITRF")
         times = AbsoluteDateArray.from_dict(
-                    {
-                        "time_format": "Gregorian_Date",
-                        "time_scale": "UTC",
-                        "calendar_date": [
-                            "2025-03-17T00:00:00.000",
-                            "2025-03-17T12:00:00.000",
-                            "2025-03-17T16:00:00.000",
-                        ]
-                    }
-                )
-        positions = Cartesian3DPositionArray.from_geographic_positions([GeographicPosition(0,0,10000), 
-                                                                        GeographicPosition(0, 180, 10000), 
-                                                                        GeographicPosition(90, 0, 10000)]).to_numpy()
+            {
+                "time_format": "Gregorian_Date",
+                "time_scale": "UTC",
+                "calendar_date": [
+                    "2025-03-17T00:00:00.000",
+                    "2025-03-17T12:00:00.000",
+                    "2025-03-17T16:00:00.000",
+                ]
+            }
+        )
+        positions = Cartesian3DPositionArray.from_geographic_positions(
+            [
+                GeographicPosition(0, 0, 10000),
+                GeographicPosition(0, 180, 10000),
+                GeographicPosition(90, 0, 10000),
+            ]
+        ).to_numpy()
         position_series = PositionSeries(times, positions, frame)
 
-        fixed_position = GeographicPosition(0,0,0)
+        fixed_position = GeographicPosition(0, 0, 0)
 
         # Execute the contact finder
-        los_results = self.los_contact_finder.execute(
+        result = self.los_contact_finder.execute(
             self.registry, position_series, fixed_position
         )
 
         # Assert the results
-        self.assertIsInstance(los_results, list)
-        self.assertEqual(len(los_results), len(positions))
-        for result in los_results:
-            self.assertIsInstance(result, bool)
-        expected_result = [True, False, False]
-        self.assertEqual(los_results, expected_result,
-                         msg=f"Position: {position_series} and Fixed Position: {fixed_position} was used.")
+        self.assertIsInstance(result, ContactInfo)
+        self.assertEqual(len(result.data[0]), len(positions))
+        self.assertTrue(np.array_equal(result.data[0], [True, False, False]),
+                        msg=f"Position: {position_series} and Fixed Position: {fixed_position} was used.")
+
+    def test_execute_with_state_series_and_cartesian_position(self):
+        """Test LineOfSightContactFinder.execute with a StateSeries object."""
+        frame = ReferenceFrame.get("ICRF_EC")
+        times = AbsoluteDateArray.from_dict(
+            {
+                "time_format": "Gregorian_Date",
+                "time_scale": "UTC",
+                "calendar_date": [
+                    "2025-03-17T00:00:00.000",
+                    "2025-03-17T12:00:00.000",
+                    "2025-03-17T16:00:00.000",
+                ]
+            }
+        )
+        # Define position and velocity arrays
+        positions = np.array([[7000.0, 0.0, 0.0], [-7000.0, 0.0, 0.0], [0.0, 0.0, 7000.0]])
+        velocities = np.array([[0.0, 7.5, 0.0], [0.0, 7.5, 0.0], [0.0, 7.5, 0.0]])
+
+        # Create the StateSeries object with both positions and velocities
+        state_series = StateSeries(times, [positions, velocities], frame)
+
+        fixed_position = Cartesian3DPosition(-7500, 0, 0, ReferenceFrame.get("ICRF_EC"))
+
+        # Execute the contact finder
+        result = self.los_contact_finder.execute(
+            self.registry, state_series, fixed_position
+        )
+
+        # Assert the results
+        self.assertIsInstance(result, ContactInfo)
+        self.assertEqual(len(result.data[0]), len(positions))
+        self.assertTrue(np.array_equal(result.data[0], [False, True, False]),
+                        msg=f"StateSeries: {state_series} and Fixed Position: {fixed_position} was used.")

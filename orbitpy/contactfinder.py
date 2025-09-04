@@ -7,15 +7,17 @@
 """
 
 from typing import Type, Dict, Any, Union, Callable
+import numpy as np
 
 from eosimutils.base import EnumBase, WGS84_EARTH_POLAR_RADIUS
-from eosimutils.time import AbsoluteDateArray, AbsoluteDateIntervalArray
+from eosimutils.time import AbsoluteDateArray
 from eosimutils.framegraph import FrameGraph
 from eosimutils.state import (
     CartesianState,
     GeographicPosition,
     Cartesian3DPosition,
 )
+from eosimutils.timeseries import Timeseries, _group_contiguous
 from eosimutils.trajectory import StateSeries, PositionSeries
 import eosimutils.utils
 
@@ -30,6 +32,74 @@ class ContactFinderType(EnumBase):
 
     LOS_CONTACT_FINDER = "LOS_CONTACT_FINDER"
 
+class ContactInfo(Timeseries):
+    """
+    A class to store the results of the contact-finder execute function.
+
+    This class inherits from the Timeseries class and ensures that the data stored
+    is an array of booleans representing contact opportunities.
+
+    Attributes:
+        time (AbsoluteDateArray or None): Time values.
+        data (np.ndarray): A numpy array of booleans. 'T' indicates contact.
+                        'F' indicates no contact.
+        headers (list): A list containing headers for the data array.
+    """
+
+    def __init__(self, time: Union[AbsoluteDateArray, None], data: np.ndarray):
+        """
+        Initialize a ContactInfo instance.
+
+        Args:
+            time (AbsoluteDateArray or None): Time values provided as an AbsoluteDateArray object, or None.
+            data (np.ndarray): A numpy array of booleans representing contact opportunities.
+
+        Raises:
+            TypeError: If `data` is not a numpy array of booleans.
+        """
+        headers = [["contact"]]
+        if not isinstance(data, np.ndarray) or not np.issubdtype(data.dtype, np.bool_):
+                raise TypeError("data must be a numpy array of booleans.")
+        
+        if time is not None:
+            # Call the parent class initializer if time is provided
+            super().__init__(time, [data], headers)
+        else:
+            # Handle the case where time is None
+            self.time = None
+            self.data = np.array([data], dtype=bool)
+            self.headers = headers
+
+    def has_contact(self, index: int = None) -> Union[bool, None]:
+        """
+        Check if there is any contact opportunity in the data, or at a specific index.
+
+        Args:
+            index (int, optional): The index corresponding to a specific time. If None, checks for any contact.
+
+        Returns:
+            bool: True if there is contact at the specified index or at least one contact exists.
+            None: If the index is out of bounds.
+        """
+        if index is None:
+            return np.any(self.data[0])
+        if 0 <= index < len(self.data[0]):
+            return self.data[0][index]
+        return None
+
+    def contact_intervals(self) -> list:
+        """
+        Get the time intervals where contact opportunities exist.
+
+        Returns:
+            list: A list of tuples representing the start and end times of contact intervals.
+        """
+        contact_indices = np.where(self.data[0])[0]
+        groups = _group_contiguous(contact_indices)
+        intervals = [
+            (self.time[i[0]], self.time[i[-1]]) for i in groups if len(i) > 0
+        ]
+        return intervals
 
 class ContactFinderFactory:
     """Factory class to register and invoke the appropriate contact-finder calculator class.
@@ -123,7 +193,7 @@ class LineOfSightContactFinder:
             GeographicPosition,
             Cartesian3DPosition,
         ],
-    ) -> Union[bool, list[bool]]:
+    ) -> ContactInfo:
         """
         Calculate the line-of-sight contact opportunities between two entities.
         Presently only supports the scenarios when:
@@ -178,8 +248,7 @@ class LineOfSightContactFinder:
                 )
             # Both entities are fixed in the same reference frame, so we can proceed with the calculations.
             los = utils.check_line_of_sight(entity1_state.to_numpy(), entity2_state.to_numpy(), WGS84_EARTH_POLAR_RADIUS)
-
-            return los
+            return ContactInfo(None, np.array([los], dtype=bool))
 
         #### Handle the scenario when one of the entities is moving. ####
         # The fixed entity is Cartesian3DPosition type and the moving entity is PositionSeries type.
@@ -214,4 +283,7 @@ class LineOfSightContactFinder:
         for i, cart_position in enumerate(moving_entity_position_series.position):
             los.append(utils.check_line_of_sight(fixed_entity_np_position, cart_position.to_numpy(), WGS84_EARTH_POLAR_RADIUS))
 
-        return los
+        # Convert results to ContactInfo
+        time = moving_entity_position_series.time
+        los_array = np.array(los, dtype=bool)
+        return ContactInfo(time, los_array)
