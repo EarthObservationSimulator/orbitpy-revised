@@ -317,7 +317,6 @@ class LineOfSightContactFinder:
                 moving_entity_position_series.position.to_numpy(),
                 moving_entity_position_series.time,
             )
-            print(moving_entity_position_np)
         else:
             moving_entity_position_np = (
                 moving_entity_position_series.position.to_numpy()
