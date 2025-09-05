@@ -19,6 +19,7 @@ from eosimutils.orientation import ConstantOrientation
 
 from orbitpy.contactfinder import ContactInfo, LineOfSightContactFinder
 
+
 class TestContactInfo(unittest.TestCase):
     """Unit tests for the ContactInfo class."""
 
@@ -52,9 +53,13 @@ class TestContactInfo(unittest.TestCase):
 
     def test_has_contact(self):
         """Test the has_contact method."""
-        self.assertTrue(self.contact_info.has_contact())  # Check for any contact
+        self.assertTrue(
+            self.contact_info.has_contact()
+        )  # Check for any contact
         self.assertTrue(self.contact_info.has_contact(0))  # Contact at index 0
-        self.assertFalse(self.contact_info.has_contact(1))  # No contact at index 1
+        self.assertFalse(
+            self.contact_info.has_contact(1)
+        )  # No contact at index 1
         self.assertTrue(self.contact_info.has_contact(2))  # Contact at index 2
         self.assertTrue(self.contact_info.has_contact(3))  # Contact at index 3
         self.assertIsNone(self.contact_info.has_contact(4))  # Out of bounds
@@ -66,7 +71,9 @@ class TestContactInfo(unittest.TestCase):
         self.assertEqual(intervals[0], (self.times[0], self.times[0]))
         self.assertEqual(intervals[1], (self.times[2], self.times[3]))
 
+
 class TestLineOfSightContactFinder(unittest.TestCase):
+    """Unit tests for the LineOfSightContactFinder class."""
 
     def setUp(self):
         """Set up contact finder object."""
@@ -77,9 +84,13 @@ class TestLineOfSightContactFinder(unittest.TestCase):
 
         # Register a new frame at 90 deg offset from ICRF_EC
         ReferenceFrame.add("ICRF_EC_90")
-        rot90 = R.from_euler("xyz", [0, 0, 90], degrees=True)  # Define 90 deg rotations about Z
+        rot90 = R.from_euler(
+            "xyz", [0, 0, 90], degrees=True
+        )  # Define 90 deg rotations about Z
         constant_orien_90 = ConstantOrientation(
-            rot90, ReferenceFrame.get("ICRF_EC"), ReferenceFrame.get("ICRF_EC_90")
+            rot90,
+            ReferenceFrame.get("ICRF_EC"),
+            ReferenceFrame.get("ICRF_EC_90"),
         )
         self.registry.add_orientation_transform(constant_orien_90)
 
@@ -90,10 +101,12 @@ class TestLineOfSightContactFinder(unittest.TestCase):
         ReferenceFrame.delete("ICRF_EC_90")
 
     def test_fixed_geo_location_same_ref_frame(self):
-        """Test line-of-sight detection between two fixed geographic positions in the same reference frame.
+        """Test line-of-sight detection between two fixed geographic
+        positions in the same reference frame.
 
-        The positions are fixed at the same latitude but at opposite longitudes, with random elevations 
-        within a specified range. The expected result is False.
+        The positions are fixed at the same latitude but at opposite longitudes,
+        with random elevations within a specified range.
+        The expected result is False.
         """
         random_latitude = random.uniform(-60, 60)
         random_elevation = random.uniform(0, 10000.0)
@@ -117,10 +130,15 @@ class TestLineOfSightContactFinder(unittest.TestCase):
             entity2_state=geo_position2,
         )
         self.assertIsInstance(result, ContactInfo)
-        self.assertFalse(result.has_contact(),  msg=f"Latitude: {random_latitude} and Elevation: {random_elevation} was used.")
+        self.assertFalse(
+            result.has_contact(),
+            msg=f"Latitude: {random_latitude} and \
+                Elevation: {random_elevation} was used.",
+        )
 
     def test_fixed_cartesian_location_same_ref_frame(self):
-        """Test line-of-sight detection between two fixed Cartesian positions in the same (custom) reference frame."""
+        """Test line-of-sight detection between two fixed Cartesian positions
+        in the same (custom) reference frame."""
         position1 = Cartesian3DPosition.from_dict(
             {
                 "x": 7000.0,
@@ -145,7 +163,7 @@ class TestLineOfSightContactFinder(unittest.TestCase):
         self.assertIsInstance(result, ContactInfo)
         self.assertFalse(result.has_contact())
 
-    def test_execute_with_position_series_and_geo_position(self):
+    def test_execute_with_position_series_and_geo_position_same_ref_frame(self):
         """Test LineOfSightContactFinder.execute with a PositionSeries object."""
         frame = ReferenceFrame.get("ITRF")
         times = AbsoluteDateArray.from_dict(
@@ -156,7 +174,7 @@ class TestLineOfSightContactFinder(unittest.TestCase):
                     "2025-03-17T00:00:00.000",
                     "2025-03-17T12:00:00.000",
                     "2025-03-17T16:00:00.000",
-                ]
+                ],
             }
         )
         positions = Cartesian3DPositionArray.from_geographic_positions(
@@ -178,10 +196,14 @@ class TestLineOfSightContactFinder(unittest.TestCase):
         # Assert the results
         self.assertIsInstance(result, ContactInfo)
         self.assertEqual(len(result.data[0]), len(positions))
-        self.assertTrue(np.array_equal(result.data[0], [True, False, False]),
-                        msg=f"Position: {position_series} and Fixed Position: {fixed_position} was used.")
+        self.assertTrue(
+            np.array_equal(result.data[0], [True, False, False]),
+            msg=f"Position: {position_series} and Fixed Position: {fixed_position} was used.",
+        )
 
-    def test_execute_with_state_series_and_cartesian_position(self):
+    def test_execute_with_state_series_and_cartesian_position_different_ref_frame(
+        self,
+    ):
         """Test LineOfSightContactFinder.execute with a StateSeries object."""
         frame = ReferenceFrame.get("ICRF_EC")
         times = AbsoluteDateArray.from_dict(
@@ -192,17 +214,21 @@ class TestLineOfSightContactFinder(unittest.TestCase):
                     "2025-03-17T00:00:00.000",
                     "2025-03-17T12:00:00.000",
                     "2025-03-17T16:00:00.000",
-                ]
+                ],
             }
         )
         # Define position and velocity arrays
-        positions = np.array([[7000.0, 0.0, 0.0], [-7000.0, 0.0, 0.0], [0.0, 0.0, 7000.0]])
-        velocities = np.array([[0.0, 7.5, 0.0], [0.0, 7.5, 0.0], [0.0, 7.5, 0.0]])
+        positions = np.array(
+            [[7000.0, 0.0, 0.0], [-7000.0, 0.0, 0.0], [0.0, 0.0, 7000.0]]
+        )
+        velocities = np.array(
+            [[0.0, 7.5, 0.0], [0.0, 7.5, 0.0], [0.0, 7.5, 0.0]]
+        )
 
         # Create the StateSeries object with both positions and velocities
         state_series = StateSeries(times, [positions, velocities], frame)
 
-        fixed_position = Cartesian3DPosition(-7500, 0, 0, ReferenceFrame.get("ICRF_EC"))
+        fixed_position = GeographicPosition(0, 180, 0)
 
         # Execute the contact finder
         result = self.los_contact_finder.execute(
@@ -212,5 +238,10 @@ class TestLineOfSightContactFinder(unittest.TestCase):
         # Assert the results
         self.assertIsInstance(result, ContactInfo)
         self.assertEqual(len(result.data[0]), len(positions))
-        self.assertTrue(np.array_equal(result.data[0], [False, True, False]),
-                        msg=f"StateSeries: {state_series} and Fixed Position: {fixed_position} was used.")
+        self.assertTrue(
+            np.array_equal(result.data[0], [True, True, False]),
+            msg=(
+                f"StateSeries: {state_series.position.to_numpy()} "
+                f"and Fixed Position: {fixed_position.itrs_xyz} was used."
+            ),
+        )

@@ -24,6 +24,7 @@ from eosimutils.trajectory import StateSeries, PositionSeries
 
 from .utils import check_line_of_sight
 
+
 class EclipseInfo(Timeseries):
     """
     A class to store the results of the eclipse-finder execute function.
@@ -50,7 +51,9 @@ class EclipseInfo(Timeseries):
             TypeError: If `data` is not a numpy array of booleans.
         """
         headers = [["eclipse"]]
-        if not isinstance(data, np.ndarray) or not np.issubdtype(data.dtype, np.bool_):
+        if not isinstance(data, np.ndarray) or not np.issubdtype(
+            data.dtype, np.bool_
+        ):
             raise TypeError("data must be a numpy array of booleans.")
         super().__init__(time, [data], headers)
 
@@ -59,10 +62,11 @@ class EclipseInfo(Timeseries):
         Check if there is eclipse in the data, or at a specific index.
 
         Args:
-            index (int, optional): The index corresponding to a specific time. If None, checks for any contact.
+            index (int, optional): The index corresponding to a specific time.
+                                    If None, checks for any eclipse.
 
         Returns:
-            bool: True if there is contact at the specified index or at least one contact exists.
+            bool: True if there is eclipse at the specified index or at least one eclipse exists.
             None: If the index is out of bounds.
         """
         if index is None:
@@ -84,6 +88,7 @@ class EclipseInfo(Timeseries):
             (self.time[i[0]], self.time[i[-1]]) for i in groups if len(i) > 0
         ]
         return intervals
+
 
 class EclipseFinder:
     """Class to calculate eclipse times for a location."""
@@ -157,7 +162,7 @@ class EclipseFinder:
         """Run the eclipse detection algorithm with Earth (spherical model with the
         radius as the Polar radius) as the occluding body.
 
-        The method is simplistic, and evaluates the line-of-sight from the Sun 
+        The method is simplistic, and evaluates the line-of-sight from the Sun
         (as a point-source) to the object, with a spherical Earth as occluder.
         (The method does not evaluate the umbra, penumbra or antiumbra conditions.)
         The polar-radius of Earth is used (largest dimension), instead of the equatorial
@@ -171,7 +176,7 @@ class EclipseFinder:
             https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/FORTRAN/spicelib/npedln.html
 
         Args:
-            frame_graph (FrameGraph): The frame graph containing transformations between 
+            frame_graph (FrameGraph): The frame graph containing transformations between
                                         reference frames.
             time (Optional[Union[AbsoluteDate, AbsoluteDateArray]]): Time point or array
                         of time points to evaluate the eclipse condition (default is None).
@@ -265,5 +270,9 @@ class EclipseFinder:
             return EclipseInfo(AbsoluteDateArray(e2o_et), eclipses)
         else:
             # If et is a single value, call the single item version of the function
-            eclipses = EclipseFinder._in_eclipse_single_item(e2o_et, e2o_in_icrf_ec)
-            return EclipseInfo(AbsoluteDateArray(np.array([e2o_et])), np.array([eclipses]))
+            eclipses = EclipseFinder._in_eclipse_single_item(
+                e2o_et, e2o_in_icrf_ec
+            )
+            return EclipseInfo(
+                AbsoluteDateArray(np.array([e2o_et])), np.array([eclipses])
+            )

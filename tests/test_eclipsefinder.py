@@ -16,6 +16,7 @@ from eosimutils.framegraph import FrameGraph
 
 from orbitpy.eclipsefinder import EclipseFinder, EclipseInfo
 
+
 class TestEclipseInfo(unittest.TestCase):
     """Unit tests for the EclipseInfo class."""
 
@@ -49,9 +50,13 @@ class TestEclipseInfo(unittest.TestCase):
 
     def test_is_eclipsed(self):
         """Test the is_eclipsed method."""
-        self.assertTrue(self.eclipse_info.is_eclipsed())  # Check for any eclipse
+        self.assertTrue(
+            self.eclipse_info.is_eclipsed()
+        )  # Check for any eclipse
         self.assertTrue(self.eclipse_info.is_eclipsed(0))  # Eclipse at index 0
-        self.assertFalse(self.eclipse_info.is_eclipsed(1))  # No eclipse at index 1
+        self.assertFalse(
+            self.eclipse_info.is_eclipsed(1)
+        )  # No eclipse at index 1
         self.assertTrue(self.eclipse_info.is_eclipsed(2))  # Eclipse at index 2
         self.assertTrue(self.eclipse_info.is_eclipsed(3))  # Eclipse at index 3
         self.assertIsNone(self.eclipse_info.is_eclipsed(4))  # Out of bounds
@@ -62,6 +67,7 @@ class TestEclipseInfo(unittest.TestCase):
         self.assertEqual(len(intervals), 2)
         self.assertEqual(intervals[0], (self.times[0], self.times[0]))
         self.assertEqual(intervals[1], (self.times[2], self.times[3]))
+
 
 class TestEclipseFinder(unittest.TestCase):
     """Unit tests for the EclipseFinder class."""

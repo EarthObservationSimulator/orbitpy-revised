@@ -1,7 +1,7 @@
 """
 .. module:: orbitpy.contactfinder
-    :synopsis: Module to handle contact opportunity finder between two entities (satellite to ground-station,
-                satellite to satellite, etc).
+    :synopsis: Module to handle contact opportunity finder between two entities
+    (satellite to ground-station, satellite to satellite, etc).
 
     A class to calculate line-of-sight contact opportunities is implemented.
 """
@@ -23,6 +23,7 @@ import eosimutils.utils
 
 from . import utils
 
+
 class ContactFinderType(EnumBase):
     """Enumeration of supported contact finder types.
 
@@ -31,6 +32,7 @@ class ContactFinderType(EnumBase):
     """
 
     LOS_CONTACT_FINDER = "LOS_CONTACT_FINDER"
+
 
 class ContactInfo(Timeseries):
     """
@@ -51,16 +53,18 @@ class ContactInfo(Timeseries):
         Initialize a ContactInfo instance.
 
         Args:
-            time (AbsoluteDateArray or None): Time values provided as an AbsoluteDateArray object, or None.
-            data (np.ndarray): A numpy array of booleans representing contact opportunities.
+            time (AbsoluteDateArray or None): Time values.
+            data (np.ndarray): Array of booleans representing contact opportunities.
 
         Raises:
             TypeError: If `data` is not a numpy array of booleans.
         """
         headers = [["contact"]]
-        if not isinstance(data, np.ndarray) or not np.issubdtype(data.dtype, np.bool_):
-                raise TypeError("data must be a numpy array of booleans.")
-        
+        if not isinstance(data, np.ndarray) or not np.issubdtype(
+            data.dtype, np.bool_
+        ):
+            raise TypeError("data must be a numpy array of booleans.")
+
         if time is not None:
             # Call the parent class initializer if time is provided
             super().__init__(time, [data], headers)
@@ -75,7 +79,8 @@ class ContactInfo(Timeseries):
         Check if there is any contact opportunity in the data, or at a specific index.
 
         Args:
-            index (int, optional): The index corresponding to a specific time. If None, checks for any contact.
+            index (int, optional): The index corresponding to a specific time.
+                                    If None, checks for any contact.
 
         Returns:
             bool: True if there is contact at the specified index or at least one contact exists.
@@ -100,6 +105,7 @@ class ContactInfo(Timeseries):
             (self.time[i[0]], self.time[i[-1]]) for i in groups if len(i) > 0
         ]
         return intervals
+
 
 class ContactFinderFactory:
     """Factory class to register and invoke the appropriate contact-finder calculator class.
@@ -138,24 +144,25 @@ class ContactFinderFactory:
 
     @classmethod
     def from_dict(cls, specs: Dict[str, Any]) -> object:
-        """Retrieves an instance of the appropriate contact-finder calculator based on specifications.
+        """Retrieves an instance of the appropriate contact-finder based on specifications.
 
         Args:
-            specs (Dict[str, Any]): A dictionary containing contact-finder calculator specifications.
-                Must include a valid contact-finder calculator type in the "contact_finder_type" key.
+            specs (Dict[str, Any]): A dictionary containing contact-finder specifications.
+                Must include a valid contact-finder type in the "contact_finder_type" key.
 
         Returns:
-            object: An instance of the appropriate contact-finder calculator class initialized
+            object: An instance of the appropriate contact-finder class initialized
                  with the given specifications.
 
         Raises:
             KeyError: If the "contact_finder_type" key is missing in the specifications dictionary.
-            ValueError: If the specified contact-finder calculator type is not registered.
+            ValueError: If the specified contact-finder type is not registered.
         """
         contact_finder_type_str = specs.get("contact_finder_type")
         if contact_finder_type_str is None:
             raise KeyError(
-                'Contact finder type key "contact_finder_type" not found in specifications dictionary.'
+                "Contact finder type key 'contact_finder_type' not found "
+                "in specifications dictionary."
             )
         contact_finder_class = cls._registry.get(contact_finder_type_str)
         if not contact_finder_class:
@@ -197,21 +204,25 @@ class LineOfSightContactFinder:
         """
         Calculate the line-of-sight contact opportunities between two entities.
         Presently only supports the scenarios when:
-            - One of the entities is fixed (in a reference frame) over the entire period of time when the other entity could be in motion.
+            - One of the entities is fixed (in a reference frame) over the entire
+                period of time when the other entity could be in motion.
             - Both entities are fixed in the same reference frames.
 
-        TODO: Support the scenario when both entities are in motion or fixed in different reference frame.
-        This would require additional calculations such as cases when the entities have time-series at different time-steps,
+        TODO: Support the scenario when both entities are in motion or fixed in
+        different reference frame. This would require additional calculations such as
+        cases when the entities have time-series at different time-steps,
         or for different durations.
 
 
         Args:
-            frame_graph (FrameGraph): The frame graph containing transformations between 
+            frame_graph (FrameGraph): The frame graph containing transformations between
                                         reference frames.
-            entity1_state (Union[StateSeries, PositionSeries, CartesianState, GeographicPosition, Cartesian3DPosition]):
-                State or position of the first entity.
-            entity2_state (Union[StateSeries, PositionSeries, CartesianState, GeographicPosition, Cartesian3DPosition]):
-                State or position of the second entity.
+            entity1_state (Union[StateSeries, PositionSeries, CartesianState,
+                                 GeographicPosition, Cartesian3DPosition]): State or position
+                                                                            of the first entity.
+            entity2_state (Union[StateSeries, PositionSeries, CartesianState,
+                                 GeographicPosition, Cartesian3DPosition]): State or position
+                                                                            of the second entity.
 
         Returns:
             ContactIntervals: An object containing time-intervals of contact opportunities.
@@ -221,23 +232,38 @@ class LineOfSightContactFinder:
         entity1_fixed = False
         entity2_fixed = False
 
-        if isinstance(entity1_state, (GeographicPosition, Cartesian3DPosition, CartesianState)):
+        if isinstance(
+            entity1_state,
+            (GeographicPosition, Cartesian3DPosition, CartesianState),
+        ):
             entity1_fixed = True
-            entity1_state = eosimutils.utils.convert_object(source_obj=entity1_state, target_type=Cartesian3DPosition)
+            entity1_state = eosimutils.utils.convert_object(
+                source_obj=entity1_state, target_type=Cartesian3DPosition
+            )
         elif isinstance(entity1_state, (StateSeries, PositionSeries)):
             entity1_fixed = False
-            entity1_state = eosimutils.utils.convert_object(source_obj=entity1_state, target_type=PositionSeries)
+            entity1_state = eosimutils.utils.convert_object(
+                source_obj=entity1_state, target_type=PositionSeries
+            )
 
-        if isinstance(entity2_state, (GeographicPosition, Cartesian3DPosition, CartesianState)):
+        if isinstance(
+            entity2_state,
+            (GeographicPosition, Cartesian3DPosition, CartesianState),
+        ):
             entity2_fixed = True
-            entity2_state = eosimutils.utils.convert_object(source_obj=entity2_state, target_type=Cartesian3DPosition)
+            entity2_state = eosimutils.utils.convert_object(
+                source_obj=entity2_state, target_type=Cartesian3DPosition
+            )
         elif isinstance(entity2_state, (StateSeries, PositionSeries)):
             entity2_fixed = False
-            entity2_state = eosimutils.utils.convert_object(source_obj=entity2_state, target_type=PositionSeries)
+            entity2_state = eosimutils.utils.convert_object(
+                source_obj=entity2_state, target_type=PositionSeries
+            )
 
         if not (entity1_fixed or entity2_fixed):
             raise NotImplementedError(
-                "At least one of the entities must be of type GeographicPosition or Cartesian3DPosition, i.e. it has to be fixed."
+                "At least one of the entities must be of type GeographicPosition"
+                " or Cartesian3DPosition, i.e. it has to be fixed."
             )
 
         #### Handle the scenario when both the entities are fixed. ####
@@ -246,8 +272,13 @@ class LineOfSightContactFinder:
                 raise NotImplementedError(
                     "Both the fixed entities must be fixed in the same reference frame."
                 )
-            # Both entities are fixed in the same reference frame, so we can proceed with the calculations.
-            los = utils.check_line_of_sight(entity1_state.to_numpy(), entity2_state.to_numpy(), WGS84_EARTH_POLAR_RADIUS)
+            # Both entities are fixed in the same reference frame, so we can
+            # proceed with the calculations.
+            los = utils.check_line_of_sight(
+                entity1_state.to_numpy(),
+                entity2_state.to_numpy(),
+                WGS84_EARTH_POLAR_RADIUS,
+            )
             return ContactInfo(None, np.array([los], dtype=bool))
 
         #### Handle the scenario when one of the entities is moving. ####
@@ -260,28 +291,49 @@ class LineOfSightContactFinder:
             fixed_entity_cartesian_3d_position = entity1_state
 
         # Helper function to transform position vectors to a target frame
-        def transform_to_target_frame(frame_graph, from_frame, to_frame, input_pos_vector, times):
+        def transform_to_target_frame(
+            frame_graph, from_frame, to_frame, input_pos_vector, times
+        ):
             """Transform the input position vector to the target frame."""
+            # TODO: Should the position transform be also applied? I.e. should
+            # the relative position difference in the center of the from and to
+            # frames be considered?
             rot_array, _ = frame_graph.get_orientation_transform(
                 from_frame, to_frame, times
             )
             return rot_array.apply(input_pos_vector)
 
-        if fixed_entity_cartesian_3d_position.frame != moving_entity_position_series.frame:
-            # Transform the moving entity's state to the fixed entity's reference frame
-            moving_entity_position_series = utils.transform_to_target_frame(
+        if (
+            fixed_entity_cartesian_3d_position.frame
+            != moving_entity_position_series.frame
+        ):
+            # Transform the moving entity's state to the fixed entity's reference frame.
+            # The reason the moving entity is transformed is because the time information
+            # is readily available with the moving entity's position series object.
+            moving_entity_position_np = transform_to_target_frame(
                 frame_graph,
                 moving_entity_position_series.frame,
                 fixed_entity_cartesian_3d_position.frame,
                 moving_entity_position_series.position.to_numpy(),
-                moving_entity_position_series.time
+                moving_entity_position_series.time,
             )
-        
+            print(moving_entity_position_np)
+        else:
+            moving_entity_position_np = (
+                moving_entity_position_series.position.to_numpy()
+            )
+
         # Check for line-of-sight contact opportunities
         los = []
-        fixed_entity_np_position = fixed_entity_cartesian_3d_position.to_numpy()
-        for i, cart_position in enumerate(moving_entity_position_series.position):
-            los.append(utils.check_line_of_sight(fixed_entity_np_position, cart_position.to_numpy(), WGS84_EARTH_POLAR_RADIUS))
+        fixed_entity_position_np = fixed_entity_cartesian_3d_position.to_numpy()
+        for _, cart_position_np in enumerate(moving_entity_position_np):
+            los.append(
+                utils.check_line_of_sight(
+                    fixed_entity_position_np,
+                    cart_position_np,
+                    WGS84_EARTH_POLAR_RADIUS,
+                )
+            )
 
         # Convert results to ContactInfo
         time = moving_entity_position_series.time
