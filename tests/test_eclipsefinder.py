@@ -16,6 +16,52 @@ from eosimutils.framegraph import FrameGraph
 
 from orbitpy.eclipsefinder import EclipseFinder, EclipseInfo
 
+class TestEclipseInfo(unittest.TestCase):
+    """Unit tests for the EclipseInfo class."""
+
+    def setUp(self):
+        """Set up test data for EclipseInfo."""
+        self.times = AbsoluteDateArray.from_dict(
+            {
+                "time_format": "Gregorian_Date",
+                "time_scale": "UTC",
+                "calendar_date": [
+                    "2025-03-17T00:00:00.000",
+                    "2025-03-17T12:00:00.000",
+                    "2025-03-17T16:00:00.000",
+                    "2025-03-17T16:30:00.000",
+                ],
+            }
+        )
+        self.data = np.array([True, False, True, True], dtype=bool)
+        self.eclipse_info = EclipseInfo(self.times, self.data)
+
+    def test_init_valid_data(self):
+        """Test initialization with valid data."""
+        self.assertIsInstance(self.eclipse_info, EclipseInfo)
+        self.assertTrue(np.array_equal(self.eclipse_info.data[0], self.data))
+        self.assertEqual(self.eclipse_info.time, self.times)
+
+    def test_init_invalid_data(self):
+        """Test initialization with invalid data."""
+        with self.assertRaises(TypeError):
+            EclipseInfo(self.times, np.array([1, 0, 1, 1]))  # Non-boolean data
+
+    def test_is_eclipsed(self):
+        """Test the is_eclipsed method."""
+        self.assertTrue(self.eclipse_info.is_eclipsed())  # Check for any eclipse
+        self.assertTrue(self.eclipse_info.is_eclipsed(0))  # Eclipse at index 0
+        self.assertFalse(self.eclipse_info.is_eclipsed(1))  # No eclipse at index 1
+        self.assertTrue(self.eclipse_info.is_eclipsed(2))  # Eclipse at index 2
+        self.assertTrue(self.eclipse_info.is_eclipsed(3))  # Eclipse at index 3
+        self.assertIsNone(self.eclipse_info.is_eclipsed(4))  # Out of bounds
+
+    def test_eclipse_intervals(self):
+        """Test the eclipse_intervals method."""
+        intervals = self.eclipse_info.eclipse_intervals()
+        self.assertEqual(len(intervals), 2)
+        self.assertEqual(intervals[0], (self.times[0], self.times[0]))
+        self.assertEqual(intervals[1], (self.times[2], self.times[3]))
 
 class TestEclipseFinder(unittest.TestCase):
     """Unit tests for the EclipseFinder class."""
@@ -122,7 +168,7 @@ class TestEclipseFinder(unittest.TestCase):
 
     def test_eclipse_with_cartesian_state(self):
         """Test eclipse detection with a CartesianState object.
-        The position is chosen such that it is above Earth and not in eclipse
+        The position is chosen such that it is "above" Earth and not in eclipse
         for any time.
         """
         random_date = f"2025-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}T \
@@ -188,16 +234,16 @@ class TestEclipseFinder(unittest.TestCase):
                 "time": {
                     "time_format": "GREGORIAN_DATE",
                     "calendar_date": [
-                        "2025-03-17T03:00:00.000",  # early morning at 0 deg longitude
-                        "2025-03-17T03:00:00.000",  # early morning at 0 deg longitude
-                        "2025-03-17T03:00:00.000",  # early morning at 0 deg longitude
+                        "2025-03-17T03:00:00.000",  # early morning
+                        "2025-03-17T03:00:00.000",
+                        "2025-03-17T03:00:00.000",
                     ],
                     "time_scale": "UTC",
                 },
                 "data": [
                     [7000.0, 0.0, 0.0],  # 0 deg longitude
                     [-7000.0, 0.0, 0.0],  # 180 deg longitude
-                    [0.0, 0.0, 7000.0],  # above Earth
+                    [0.0, 0.0, 7000.0],  # "above" Earth
                 ],
                 "frame": "ITRF",
             }
