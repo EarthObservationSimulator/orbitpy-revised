@@ -437,3 +437,99 @@ class LineOfSightContactFinder:
             time = moving_entity_position_series.time
             los_array = np.array(los, dtype=bool)
             return ContactInfo(time, los_array)
+
+@ContactFinderFactory.register_type("ELEVATION_AWARE_CONTACT_FINDER")
+class ElevationAwareContactFinder(LineOfSightContactFinder):
+    """Handles line-of-sight contact opportunities with elevation angle considerations.
+    This class extends the LineOfSightContactFinder to include a minimum elevation angle
+    constraint for contact opportunities. The limitations of the parent class also apply here.
+    """
+
+    def execute(
+        self,
+        frame_graph: FrameGraph,
+        observer_state: Union[
+            StateSeries,
+            PositionSeries,
+            CartesianState,
+            GeographicPosition,
+            Cartesian3DPosition,
+        ],
+        target_state: Union[
+            StateSeries,
+            PositionSeries,
+            CartesianState,
+            GeographicPosition,
+            Cartesian3DPosition,
+        ],
+        min_elevation_angle: float,
+    ) -> ContactInfo:
+        """
+        Calculate the line-of-sight contact opportunities between the observer and target,
+        considering a minimum elevation angle.
+
+        Args:
+            frame_graph (FrameGraph): The frame graph containing transformations between
+                                      reference frames.
+            observer_state: State or position of the observer entity (e.g., ground station).
+            target_state: State or position of the target entity (e.g., satellite).
+            min_elevation_angle (float): Minimum elevation angle (in degrees) for contact.
+
+        Returns:
+            ContactInfo: An object containing time-intervals of contact opportunities.
+        """
+        # Use the parent class logic to get initial line-of-sight results
+        contact_info = super().execute(
+            frame_graph, observer_state, target_state
+        )
+
+        obs_fixed_flag, obs_state_np, target_fixed_flag, target_state_np = get_entities_position_as_numpy(
+            frame_graph, observer_state, target_state
+        )
+
+        # Filter results based on elevation angle
+        los_with_elevation = []
+
+        # Handle the scenario when both the entities are fixed.
+        if obs_fixed_flag and target_fixed_flag:
+            has_los = contact_info.data[0]
+            if has_los:
+                elevation_angle = utils.calculate_elevation_angle(
+                    obs_state_np, target_state_np
+                )
+                los_with_elevation = elevation_angle >= min_elevation_angle
+            else:
+                los_with_elevation = False
+            return ContactInfo(None, np.array([los_with_elevation], dtype=bool))
+
+        # Handle the scenario when both the entities are moving.
+        if not (obs_fixed_flag or target_fixed_flag):
+            raise NotImplementedError(
+                "The scenario where both the observer and target are moving is not supported."
+            )
+
+        # Handle the scenario when one of the entities is moving (logical XOR operation).
+        if (obs_fixed_flag and not target_fixed_flag) or (not obs_fixed_flag and target_fixed_flag):
+
+            if obs_fixed_flag is False:
+                moving_entity_position_series = observer_state
+                moving_entity_position_np = obs_state_np
+                fixed_entity_position_np = target_state_np
+            else:
+                moving_entity_position_series = target_state
+                moving_entity_position_np = target_state_np
+                fixed_entity_position_np = obs_state_np
+
+            for i, has_los in enumerate(contact_info.data[0]):
+                if has_los:
+                    elevation_angle = utils.calculate_elevation_angle(
+                        fixed_entity_position_np, moving_entity_position_np[i]
+                    )
+                    los_with_elevation.append(elevation_angle >= min_elevation_angle)
+                else:
+                    los_with_elevation.append(False)
+
+            # Convert results to ContactInfo object
+            time = moving_entity_position_series.time
+            los_with_elevation_array = np.array(los_with_elevation, dtype=bool)
+            return ContactInfo(time, los_with_elevation_array)

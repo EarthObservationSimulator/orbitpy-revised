@@ -1,6 +1,12 @@
 """
 .. module:: orbitpy.utils
     :synopsis: Utilities to help with various calculations.
+
+Collection of utility functions for various calculations. The API of the functions
+in this module should only use standard and widely used data structures such as lists
+and numpy arrays. It should not use custom data structures or types. 
+This ensures compatibility and ease of use across different parts
+of the codebase.
 """
 
 from typing import Union
@@ -80,3 +86,45 @@ def check_line_of_sight(
         return False
     else:
         return True
+
+def calculate_elevation_angle(observer_position: np.ndarray, target_position: np.ndarray) -> float:
+    """
+    Calculate the elevation angle between an observer and a target.
+
+    Args:
+        observer_position (np.ndarray): A 3D numpy array representing the observer's position
+                                         in Cartesian coordinates (x, y, z).
+        target_position (np.ndarray): A 3D numpy array representing the target's position
+                                       in Cartesian coordinates (x, y, z).
+
+    Returns:
+        float: The elevation angle in degrees.
+    """
+    # Vector from observer to target
+    relative_vector = target_position - observer_position
+
+    # Normalize the observer's position to get the local zenith direction
+    observer_norm = np.linalg.norm(observer_position)
+    if observer_norm == 0:
+        raise ValueError("Observer position vector cannot be zero.")
+    zenith_direction = observer_position / observer_norm
+
+    # Normalize the relative vector
+    relative_norm = np.linalg.norm(relative_vector)
+    if relative_norm == 0:
+        raise ValueError("Relative vector between observer and target cannot be zero.")
+    relative_unit_vector = relative_vector / relative_norm
+
+    # Compute the dot product between the zenith direction and the relative vector
+    dot_product = np.dot(zenith_direction, relative_unit_vector)
+
+    # Clamp the dot product to avoid numerical issues with arccos
+    dot_product = np.clip(dot_product, -1.0, 1.0)
+
+    # Calculate the elevation angle in radians
+    elevation_angle_rad = np.arcsin(dot_product)
+
+    # Convert the elevation angle to degrees
+    elevation_angle_deg = np.degrees(elevation_angle_rad)
+
+    return elevation_angle_deg
