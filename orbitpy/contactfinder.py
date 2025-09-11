@@ -171,22 +171,24 @@ class ContactFinderFactory:
             )
         return contact_finder_class.from_dict(specs)
 
+
 def get_entities_position_as_numpy(
-        frame_graph: FrameGraph,
-        entity1_state: Union[
-            StateSeries,
-            PositionSeries,
-            CartesianState,
-            GeographicPosition,
-            Cartesian3DPosition,
-        ],
-        entity2_state: Union[
-            StateSeries,
-            PositionSeries,
-            CartesianState,
-            GeographicPosition,
-            Cartesian3DPosition,
-        ]) -> tuple[bool, np.ndarray, bool, np.ndarray]:
+    frame_graph: FrameGraph,
+    entity1_state: Union[
+        StateSeries,
+        PositionSeries,
+        CartesianState,
+        GeographicPosition,
+        Cartesian3DPosition,
+    ],
+    entity2_state: Union[
+        StateSeries,
+        PositionSeries,
+        CartesianState,
+        GeographicPosition,
+        Cartesian3DPosition,
+    ],
+) -> tuple[bool, np.ndarray, bool, np.ndarray]:
     """Helper function to extract position as numpy arrays for entities.
     The positions are returned in a common reference frame.
 
@@ -208,14 +210,14 @@ def get_entities_position_as_numpy(
     Returns:
         tuple: A tuple containing:
             - bool: True if the first entity is fixed, False otherwise.
-            - np.ndarray: Numpy array of position(s) for the first entity. 
+            - np.ndarray: Numpy array of position(s) for the first entity.
                         Multiple positions are returned as a numpy array of shape (N, 3).
             - bool: True if the second entity is fixed, False otherwise.
-            - np.ndarray: Numpy array of position(s) for the second entity. 
+            - np.ndarray: Numpy array of position(s) for the second entity.
                         Multiple positions are returned as a numpy array of shape (N, 3).
 
     Raises:
-        NotImplementedError: If a particular scenario is not supported 
+        NotImplementedError: If a particular scenario is not supported
                         (e.g., fixed entities in different reference frames).
     """
     entity1_fixed_flag = False
@@ -264,7 +266,7 @@ def get_entities_position_as_numpy(
                 entity1_position_np,
                 entity2_fixed_flag,
                 entity2_position_np,
-        )
+            )
 
     #### Handle the scenario when both the entities are moving. ####
     if not (entity1_fixed_flag or entity2_fixed_flag):
@@ -274,7 +276,9 @@ def get_entities_position_as_numpy(
         )
 
     #### Handle the scenario when one of the entities is moving (logical XOR operation). ####
-    if (entity1_fixed_flag and not entity2_fixed_flag) or (not entity1_fixed_flag and entity2_fixed_flag):
+    if (entity1_fixed_flag and not entity2_fixed_flag) or (
+        not entity1_fixed_flag and entity2_fixed_flag
+    ):
         # The fixed entity is Cartesian3DPosition type and the moving entity is PositionSeries type.
         if entity1_fixed_flag is False:
             moving_entity_position_series = entity1_state
@@ -332,7 +336,6 @@ def get_entities_position_as_numpy(
                 fixed_entity_position_np,
             )
 
-    
 
 @ContactFinderFactory.register_type(
     ContactFinderType.LOS_CONTACT_FINDER.to_string()
@@ -390,7 +393,12 @@ class LineOfSightContactFinder:
             ContactIntervals: An object containing time-intervals of contact opportunities.
         """
 
-        entity1_fixed_flag, entity1_state_np, entity2_fixed_flag, entity2_state_np = get_entities_position_as_numpy(
+        (
+            entity1_fixed_flag,
+            entity1_state_np,
+            entity2_fixed_flag,
+            entity2_state_np,
+        ) = get_entities_position_as_numpy(
             frame_graph, entity1_state, entity2_state
         )
 
@@ -402,7 +410,6 @@ class LineOfSightContactFinder:
                 WGS84_EARTH_POLAR_RADIUS,
             )
             return ContactInfo(None, np.array([los], dtype=bool))
-    
 
         #### Handle the scenario when both the entities are moving. ####
         if not (entity1_fixed_flag or entity2_fixed_flag):
@@ -411,7 +418,9 @@ class LineOfSightContactFinder:
             )
 
         #### Handle the scenario when one of the entities is moving (logical XOR operation). ####
-        if (entity1_fixed_flag and not entity2_fixed_flag) or (not entity1_fixed_flag and entity2_fixed_flag):
+        if (entity1_fixed_flag and not entity2_fixed_flag) or (
+            not entity1_fixed_flag and entity2_fixed_flag
+        ):
             if entity1_fixed_flag is False:
                 moving_entity_position_series = entity1_state
                 moving_entity_position_np = entity1_state_np
@@ -423,7 +432,7 @@ class LineOfSightContactFinder:
 
             # Check for line-of-sight contact opportunities
             los = []
-            
+
             for _, cart_position_np in enumerate(moving_entity_position_np):
                 los.append(
                     utils.check_line_of_sight(
@@ -437,6 +446,7 @@ class LineOfSightContactFinder:
             time = moving_entity_position_series.time
             los_array = np.array(los, dtype=bool)
             return ContactInfo(time, los_array)
+
 
 @ContactFinderFactory.register_type("ELEVATION_AWARE_CONTACT_FINDER")
 class ElevationAwareContactFinder(LineOfSightContactFinder):
@@ -483,8 +493,10 @@ class ElevationAwareContactFinder(LineOfSightContactFinder):
             frame_graph, observer_state, target_state
         )
 
-        obs_fixed_flag, obs_state_np, target_fixed_flag, target_state_np = get_entities_position_as_numpy(
-            frame_graph, observer_state, target_state
+        obs_fixed_flag, obs_state_np, target_fixed_flag, target_state_np = (
+            get_entities_position_as_numpy(
+                frame_graph, observer_state, target_state
+            )
         )
 
         # Filter results based on elevation angle
@@ -509,7 +521,9 @@ class ElevationAwareContactFinder(LineOfSightContactFinder):
             )
 
         # Handle the scenario when one of the entities is moving (logical XOR operation).
-        if (obs_fixed_flag and not target_fixed_flag) or (not obs_fixed_flag and target_fixed_flag):
+        if (obs_fixed_flag and not target_fixed_flag) or (
+            not obs_fixed_flag and target_fixed_flag
+        ):
 
             if obs_fixed_flag is False:
                 moving_entity_position_series = observer_state
@@ -525,7 +539,9 @@ class ElevationAwareContactFinder(LineOfSightContactFinder):
                     elevation_angle = utils.calculate_elevation_angle(
                         fixed_entity_position_np, moving_entity_position_np[i]
                     )
-                    los_with_elevation.append(elevation_angle >= min_elevation_angle)
+                    los_with_elevation.append(
+                        elevation_angle >= min_elevation_angle
+                    )
                 else:
                     los_with_elevation.append(False)
 

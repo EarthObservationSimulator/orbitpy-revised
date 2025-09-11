@@ -111,7 +111,7 @@ class PointCoverage:
 
     @classmethod
     def from_dict(
-        cls, specs: Dict[str, Any] # pylint: disable=unused-argument
+        cls, specs: Dict[str, Any]  # pylint: disable=unused-argument
     ) -> "PointCoverage":
         # Empty since class does not require any initialization parameters
         return cls()

@@ -17,7 +17,11 @@ from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.framegraph import FrameGraph
 from eosimutils.orientation import ConstantOrientation
 
-from orbitpy.contactfinder import ContactInfo, LineOfSightContactFinder, ElevationAwareContactFinder
+from orbitpy.contactfinder import (
+    ContactInfo,
+    LineOfSightContactFinder,
+    ElevationAwareContactFinder,
+)
 
 
 class TestContactInfo(unittest.TestCase):
@@ -246,6 +250,7 @@ class TestLineOfSightContactFinder(unittest.TestCase):
             ),
         )
 
+
 class TestElevationAwareContactFinder(unittest.TestCase):
     """Unit tests for the ElevationAwareContactFinder class."""
 
@@ -264,7 +269,7 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         Note that the positions are chosen such that the line-of-sight
         always exists, and the contact is determined solely by the elevation constraint.
         """
-        
+
         min_elevation_angle = 30  # degrees
 
         observer = Cartesian3DPosition.from_dict(
@@ -276,7 +281,11 @@ class TestElevationAwareContactFinder(unittest.TestCase):
             }
         )
 
-        target_x = random.uniform(0, np.tan((90 - min_elevation_angle) * np.pi / 180) * (8000.0 - 7000.0))
+        target_x = random.uniform(
+            0,
+            np.tan((90 - min_elevation_angle) * np.pi / 180)
+            * (8000.0 - 7000.0),
+        )
         target = Cartesian3DPosition.from_dict(
             {
                 "x": target_x,
@@ -287,11 +296,16 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         )
 
         result = self.elevation_contact_finder.execute(
-            self.registry, observer, target, min_elevation_angle=min_elevation_angle
+            self.registry,
+            observer,
+            target,
+            min_elevation_angle=min_elevation_angle,
         )
 
         self.assertIsInstance(result, ContactInfo)
-        self.assertTrue(result.has_contact(), msg=f"target_x: {target_x} was used.")
+        self.assertTrue(
+            result.has_contact(), msg=f"target_x: {target_x} was used."
+        )
 
     def test_no_contact_due_to_elevation_constraint(self):
         """Test when elevation constraint prevents contact.
@@ -309,7 +323,11 @@ class TestElevationAwareContactFinder(unittest.TestCase):
                 "frame": "ICRF_EC",
             }
         )
-        target_y = random.uniform(np.tan((90 - min_elevation_angle) * np.pi / 180) * (8000.0 - 7000.0), 20000.0)
+        target_y = random.uniform(
+            np.tan((90 - min_elevation_angle) * np.pi / 180)
+            * (8000.0 - 7000.0),
+            20000.0,
+        )
         target = Cartesian3DPosition.from_dict(
             {
                 "x": 0.0,
@@ -320,11 +338,16 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         )
 
         result = self.elevation_contact_finder.execute(
-            self.registry, observer, target, min_elevation_angle=min_elevation_angle
+            self.registry,
+            observer,
+            target,
+            min_elevation_angle=min_elevation_angle,
         )
 
         self.assertIsInstance(result, ContactInfo)
-        self.assertFalse(result.has_contact(), msg=f"target_y: {target_y} was used.")
+        self.assertFalse(
+            result.has_contact(), msg=f"target_y: {target_y} was used."
+        )
 
     def test_moving_target_with_elevation_constraint(self):
         """Test elevation-aware contact detection with a moving target."""
@@ -348,24 +371,43 @@ class TestElevationAwareContactFinder(unittest.TestCase):
                 ],
             }
         )
-        target_x1 = random.uniform(0, np.tan((90 - min_elevation_angle) * np.pi / 180) * (8000.0 - 7000.0))
-        target_x2 = random.uniform(0, np.tan((90 - min_elevation_angle) * np.pi / 180) * (8000.0 - 7000.0))
-        target_x3 = random.uniform(np.tan((90 - min_elevation_angle) * np.pi / 180) * (8000.0 - 7000.0), 25000.0)
+        target_x1 = random.uniform(
+            0,
+            np.tan((90 - min_elevation_angle) * np.pi / 180)
+            * (8000.0 - 7000.0),
+        )
+        target_x2 = random.uniform(
+            0,
+            np.tan((90 - min_elevation_angle) * np.pi / 180)
+            * (8000.0 - 7000.0),
+        )
+        target_x3 = random.uniform(
+            np.tan((90 - min_elevation_angle) * np.pi / 180)
+            * (8000.0 - 7000.0),
+            25000.0,
+        )
         positions = np.array(
-            [[target_x1, 0.0, 8000.0], 
-             [target_x2, 0.0, 8000.0], 
-             [target_x3, 0.0, 8000.0]]
+            [
+                [target_x1, 0.0, 8000.0],
+                [target_x2, 0.0, 8000.0],
+                [target_x3, 0.0, 8000.0],
+            ]
         )
         target = PositionSeries(times, positions, ReferenceFrame.get("ITRF"))
 
         # Minimum elevation angle
         result = self.elevation_contact_finder.execute(
-            self.registry, observer, target, min_elevation_angle=min_elevation_angle
+            self.registry,
+            observer,
+            target,
+            min_elevation_angle=min_elevation_angle,
         )
 
         self.assertIsInstance(result, ContactInfo)
         self.assertEqual(len(result.data[0]), len(positions))
         self.assertTrue(
             np.array_equal(result.data[0], [True, True, False]),
-            msg=f"min_elevation_angle: {min_elevation_angle}, target_x1: {target_x1}, target_x2: {target_x2}, target_x3: {target_x3} were used.",
+            msg=f"min_elevation_angle: {min_elevation_angle}, "
+                f"target_x1: {target_x1}, target_x2: {target_x2}, "
+                f"target_x3: {target_x3} were used.",
         )

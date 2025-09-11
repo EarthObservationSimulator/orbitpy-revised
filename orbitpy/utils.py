@@ -4,7 +4,7 @@
 
 Collection of utility functions for various calculations. The API of the functions
 in this module should only use standard and widely used data structures such as lists
-and numpy arrays. It should not use custom data structures or types. 
+and numpy arrays. It should not use custom data structures or types.
 This ensures compatibility and ease of use across different parts
 of the codebase.
 """
@@ -87,7 +87,10 @@ def check_line_of_sight(
     else:
         return True
 
-def calculate_elevation_angle(observer_position: np.ndarray, target_position: np.ndarray) -> float:
+
+def calculate_elevation_angle(
+    observer_position: np.ndarray, target_position: np.ndarray
+) -> float:
     """
     Calculate the elevation angle between an observer and a target.
 
@@ -112,7 +115,9 @@ def calculate_elevation_angle(observer_position: np.ndarray, target_position: np
     # Normalize the relative vector
     relative_norm = np.linalg.norm(relative_vector)
     if relative_norm == 0:
-        raise ValueError("Relative vector between observer and target cannot be zero.")
+        raise ValueError(
+            "Relative vector between observer and target cannot be zero."
+        )
     relative_unit_vector = relative_vector / relative_norm
 
     # Compute the dot product between the zenith direction and the relative vector
