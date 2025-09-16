@@ -36,7 +36,6 @@ class OrbitType(EnumBase):
     OSCULATING_ELEMENTS = "OSCULATING_ELEMENTS"
     CARTESIAN_STATE = "CARTESIAN_STATE"
 
-
 class OrbitFactory:
     """Factory class to register and create orbit objects."""
 
@@ -139,6 +138,7 @@ class TwoLineElementSet:
                 - "TLE_LINE2" (str): The second line of the TLE.
         """
         return {
+            "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
             "TLE_LINE0": self.line0,
             "TLE_LINE1": self.line1,
             "TLE_LINE2": self.line2,
@@ -229,7 +229,9 @@ class OrbitalMeanElementsMessage:
         Returns:
             Dict[str, Any]: The OMM as a dictionary.
         """
-        return self.omm_dict
+        out_dict = {"orbit_type": OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
+                    **self.omm_dict}
+        return out_dict
 
     def to_json(self) -> str:
         """
@@ -547,6 +549,7 @@ class OsculatingElements:
             dict: Dictionary containing the state information.
         """
         return {
+            "orbit_type": OrbitType.OSCULATING_ELEMENTS.value,
             "time": self.time.to_dict(),
             "semi_major_axis": self.semi_major_axis,
             "eccentricity": self.eccentricity,

@@ -5,11 +5,19 @@
 Collection of classes modeling space mission resources.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union, List
 import uuid
 from uuid import uuid4
 
 from eosimutils.state import GeographicPosition
+from eosimutils.fieldofview import (
+    FieldOfViewFactory,
+    CircularFieldOfView,
+    RectangularFieldOfView,
+    PolygonFieldOfView,
+)
+
+from .orbits import OrbitFactory, TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements
 
 
 class GroundStation:
@@ -99,4 +107,152 @@ class GroundStation:
             "longitude": self.geographic_position.longitude,
             "height": self.geographic_position.elevation,
             "min_elevation_angle": self.min_elevation_angle_deg,
+        }
+
+
+class Sensor:
+    """Handles sensor properties."""
+
+    def __init__(
+        self,
+        identifier: Optional[str],
+        name: Optional[str],
+        fov: Union[
+            CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView
+        ],
+    ):
+        """
+        Args:
+            identifier (str or None): Unique identifier for the ground station.
+                               Must be a valid UUID.
+                              If None, a new UUID is generated.
+            name (str or None): Name of the sensor.
+            fov (FieldOfView): Field of view object.
+        """
+        if identifier is not None:
+            try:
+                uuid.UUID(identifier)
+            except ValueError as exc:
+                raise ValueError("identifier must be a valid UUID.") from exc
+        else:
+            identifier = str(
+                uuid4()
+            )  # Generate a new UUID if identifier is None
+        self.identifier = identifier
+        self.name = name
+        self.fov = fov
+    
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, Any]) -> "Sensor":
+        """Construct a Sensor object from a dictionary.
+
+        Args:
+            dict_in (dict): Dictionary with the sensor information.
+                The dictionary should contain the following key-value pairs:
+                - "id" (str): (Optional) Unique identifier.
+                - "name" (str): (Optional) Name of the sensor.
+                - "fov" (FieldOfView): Field of view object.
+
+        Returns:
+            Sensor: Sensor object.
+        """
+        identifier = dict_in.get("id")
+        name = dict_in.get("name")
+        fov = FieldOfViewFactory.from_dict(dict_in["fov"])
+        return cls(identifier, name, fov)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the Sensor object to a dictionary.
+
+        Returns:
+            dict: Dictionary with the sensor information.
+        """
+        return {
+            "id": self.identifier,
+            "name": self.name,
+            "fov": self.fov.to_dict(),
+        }
+
+class Spacecraft:
+    """Handles spacecraft properties."""
+
+    def __init__(
+        self,
+        identifier: Optional[str],
+        name: Optional[str],
+        orbit: Union[TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements],
+        sensor: Optional[List[Sensor]] = None,
+    ):
+        """
+        Args:
+            identifier (str or None): Unique identifier for the ground station.
+                               Must be a valid UUID.
+                              If None, a new UUID is generated.
+            name (str or None): (Optional) Name of the spacecraft.
+            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage]): Orbit information.
+            sensor (List[Sensor] or Sensor): (Optional) List of Sensor objects or a single Sensor object.
+        """
+        if identifier is not None:
+            try:
+                uuid.UUID(identifier)
+            except ValueError as exc:
+                raise ValueError("identifier must be a valid UUID.") from exc
+        else:
+            identifier = str(
+                uuid4()
+            )  # Generate a new UUID if identifier is None
+        self.identifier = identifier
+        self.name = name
+        if orbit is None or not isinstance(
+            orbit, (TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements)
+        ):
+            raise TypeError(
+                "orbit must be a TwoLineElementSet, OrbitalMeanElementsMessage, or OsculatingElements object."
+            )
+        self.orbit = orbit
+        if sensor is not None:
+            if not isinstance(sensor, list):
+                sensor = [sensor]  # Convert single sensor object to a list
+            if not all(isinstance(s, Sensor) for s in sensor):
+                raise TypeError("sensor must be a list of Sensor objects.")
+        self.sensor = sensor
+
+    @classmethod
+    def from_dict(cls, dict_in: Dict[str, Any]) -> "Spacecraft":
+        """Construct a Spacecraft object from a dictionary.
+
+        Args:
+            dict_in (dict): Dictionary with the spacecraft information.
+                The dictionary should contain the following key-value pairs:
+                - "id" (str): (Optional) Unique identifier.
+                - "name" (str): (Optional) Name of the spacecraft.
+                - "orbit" (Union[TwoLineElementSet, OrbitalMeanElementsMessage]): Orbit information.
+                - "sensor" (List[Sensor] or Sensor): (Optional) List of Sensor objects or a single Sensor object.
+
+        Returns:
+            Spacecraft: Spacecraft object.
+        """
+        identifier = dict_in.get("id")
+        name = dict_in.get("name")
+        orbit = OrbitFactory.from_dict(dict_in.get("orbit"))
+        sensor_data = dict_in.get("sensor", None)
+        if isinstance(sensor_data, dict):  # Single sensor object
+            sensor = [Sensor.from_dict(sensor_data)]
+        elif isinstance(sensor_data, list):  # List of sensor objects
+            sensor = [Sensor.from_dict(s) for s in sensor_data]
+        else:
+            sensor = None
+        return cls(identifier, name, orbit, sensor)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the Spacecraft object to a dictionary.
+        
+        Returns:
+            dict: Dictionary with the spacecraft information.
+        """
+        return {
+            "id": self.identifier,
+            "name": self.name,
+            "orbit": self.orbit.to_dict(),
+            "sensor": [s.to_dict() for s in self.sensor] if self.sensor else None,
         }

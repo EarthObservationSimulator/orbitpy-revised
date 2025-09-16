@@ -452,7 +452,11 @@ class LineOfSightContactFinder:
 class ElevationAwareContactFinder(LineOfSightContactFinder):
     """Handles line-of-sight contact opportunities with elevation angle considerations.
     This class extends the LineOfSightContactFinder to include a minimum elevation angle
-    constraint for contact opportunities. The limitations of the parent class also apply here.
+    constraint for contact opportunities.
+    It first determines the line-of-sight (LOS) using the parent class and then applies 
+    an additional filter to ensure that the elevation angle between the observer and 
+    the target meets or exceeds the specified minimum threshold. 
+    The limitations of the parent class also apply here.
     """
 
     def execute(

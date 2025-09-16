@@ -5,8 +5,10 @@ import random
 import uuid
 
 from eosimutils.state import GeographicPosition
+from eosimutils.fieldofview import FieldOfViewFactory, CircularFieldOfView
 
-from orbitpy.resources import GroundStation
+from orbitpy.orbits import TwoLineElementSet
+from orbitpy.resources import GroundStation, Sensor, Spacecraft
 
 
 class TestGroundStation(unittest.TestCase):
@@ -99,6 +101,222 @@ class TestGroundStation(unittest.TestCase):
             )
         self.assertTrue(
             "identifier must be a valid UUID." in str(context.exception)
+        )
+
+class TestSensor(unittest.TestCase):
+    """Unit tests for the Sensor class."""
+
+    def setUp(self):
+        """Set up test data for Sensor."""
+        self.identifier = '865ddce7-4ade-44d9-8c22-2b1e6f65e830'
+        self.name = "Test Sensor"
+        self.fov_specs = {
+            "fov_type": "CIRCULAR",
+            "diameter": 60.0,
+            "frame": "ICRF_EC",
+            "boresight": [0.0, 0.0, 1.0],
+        }
+        self.fov = FieldOfViewFactory.from_dict(self.fov_specs)
+        self.sensor_dict = {
+            "id": '865ddce7-4ade-44d9-8c22-2b1e6f65e830',
+            "name": 'Test Sensor',
+            "fov": {"fov_type": "CIRCULAR",
+                    "diameter": 60.0,
+                    "frame": "ICRF_EC",
+                    "boresight": [0.0, 0.0, 1.0],
+                }
+            }
+        
+
+    def test_initialization(self):
+        """Test initialization of Sensor."""
+        sensor = Sensor(self.identifier, self.name, self.fov)
+        self.assertEqual(sensor.identifier, self.identifier)
+        self.assertEqual(sensor.name, self.name)
+        self.assertEqual(sensor.fov.diameter, self.fov.diameter)
+        self.assertEqual(sensor.fov.frame, self.fov.frame)
+        self.assertTrue((sensor.fov.boresight == self.fov.boresight).all())
+
+    def test_from_dict(self):
+        """Test creating a Sensor object from a dictionary."""
+        sensor = Sensor.from_dict(self.sensor_dict)
+        self.assertEqual(sensor.identifier, self.identifier)
+        self.assertEqual(sensor.name, self.name)
+        self.assertEqual(sensor.fov.diameter, self.fov.diameter)
+        self.assertEqual(sensor.fov.frame, self.fov.frame)
+        self.assertTrue((sensor.fov.boresight == self.fov.boresight).all())
+
+    def test_to_dict(self):
+        """Test converting a Sensor object to a dictionary."""
+        sensor = Sensor(self.identifier, self.name, self.fov)
+        dict_out = Sensor.to_dict(sensor)
+        self.assertEqual(dict_out["id"], self.identifier)
+        self.assertEqual(dict_out["name"], self.name)
+        self.assertEqual(dict_out["fov"]["diameter"], self.fov_specs["diameter"])
+        self.assertEqual(dict_out["fov"]["frame"], self.fov_specs["frame"])
+        self.assertEqual(dict_out["fov"]["boresight"], self.fov_specs["boresight"])
+
+    def test_default_id(self):
+        """Test that a default UUID is generated if no identifier is provided."""
+        sensor = Sensor(None, self.name, self.fov)
+        self.assertIsNotNone(sensor.identifier)
+        try:
+            uuid.UUID(sensor.identifier)
+        except ValueError:
+            self.fail("Generated identifier is not a valid UUID.")
+
+    def test_invalid_identifier(self):
+        """Test that an invalid UUID raises a ValueError."""
+        invalid_identifier = "invalid-uuid"
+        with self.assertRaises(ValueError) as context:
+            Sensor(invalid_identifier, self.name, self.fov)
+        self.assertIn("identifier must be a valid UUID.", str(context.exception))
+
+class TestSpacecraft(unittest.TestCase):
+    """Unit tests for the Spacecraft class."""
+
+    def setUp(self):
+        """Set up test data for Spacecraft."""
+        self.identifier = 'ddd716b0-443b-4141-a413-19b14260db9a'
+        self.name = "Test Spacecraft"
+        self.orbit = TwoLineElementSet(
+            line0="0 LANDSAT 9",
+            line1="1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
+            line2="2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
+        )
+        self.sensor_fov = CircularFieldOfView(diameter=60.0, frame="ICRF_EC", boresight=[0.0, 0.0, 1.0])
+        self.sensor = Sensor(
+            identifier='699881aa-5e50-4186-ba03-1eafaa4e6f62', 
+            name="Test Sensor", 
+            fov=self.sensor_fov
+        )
+
+        self.spacecraft_dict = {
+            "id": self.identifier,
+            "name": self.name,
+            "orbit": {
+                "orbit_type": "TWO_LINE_ELEMENT_SET",
+                "TLE_LINE0": "0 LANDSAT 9",
+                "TLE_LINE1": "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
+                "TLE_LINE2": "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
+            },
+            "sensor": [{
+                "id": '699881aa-5e50-4186-ba03-1eafaa4e6f62',
+                "name": "Test Sensor",
+                "fov": {
+                    "fov_type": "CIRCULAR",
+                    "diameter": 60.0,
+                    "frame": "ICRF_EC",
+                    "boresight": [0.0, 0.0, 1.0],
+                },
+            }],
+        }
+
+    def test_initialization(self):
+        """Test initialization of Spacecraft."""
+        spc = Spacecraft(
+            self.identifier, self.name, self.orbit, [self.sensor]
+        )
+        self.assertEqual(spc.identifier, self.identifier)
+        self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.orbit.line0, self.orbit.line0)
+        self.assertEqual(spc.orbit.line1, self.orbit.line1)
+        self.assertEqual(spc.orbit.line2, self.orbit.line2)
+        self.assertEqual(len(spc.sensor), 1)
+        self.assertEqual(spc.sensor[0].name, self.sensor.name)
+
+    def test_from_dict_single_sensor(self):
+        """Test creating a Spacecraft object from a dictionary."""
+        spc = Spacecraft.from_dict(self.spacecraft_dict)
+        self.assertEqual(spc.identifier, self.identifier)
+        self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.orbit.line0, self.orbit.line0)
+        self.assertEqual(spc.orbit.line1, self.orbit.line1)
+        self.assertEqual(spc.orbit.line2, self.orbit.line2)
+        self.assertEqual(len(spc.sensor), 1)
+        self.assertEqual(spc.sensor[0].name, self.sensor.name)
+
+    def test_from_dict_no_sensor(self):
+        """Test creating a Spacecraft object from a dictionary without sensor."""
+        dict_no_sensor = self.spacecraft_dict.copy()
+        dict_no_sensor.pop("sensor")
+        spc = Spacecraft.from_dict(dict_no_sensor)
+        self.assertEqual(spc.identifier, self.identifier)
+        self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.orbit.line0, self.orbit.line0)
+        self.assertEqual(spc.orbit.line1, self.orbit.line1)
+        self.assertEqual(spc.orbit.line2, self.orbit.line2)
+        self.assertIsNone(spc.sensor)
+
+    def test_from_dict_multiple_sensors(self):
+        """Test creating a Spacecraft object from a dictionary with multiple sensors."""
+        sensor2_dict = {
+                "id": '3aecaa97-048a-4dd6-8b23-88342520836f',
+                "name": "Test Sensor",
+                "fov": {
+                    "fov_type": "RECTANGULAR",
+                    "frame": "ICRF_EC",
+                    "boresight": [0.0, 0.0, 1.0],
+                    "cross_angle": 90.0,
+                    "ref_angle": 30.0
+                },
+            }
+        spacecraft_dict_multiple_sensors = self.spacecraft_dict.copy()
+        spacecraft_dict_multiple_sensors["sensor"] = [self.spacecraft_dict["sensor"][0], sensor2_dict]
+
+        spc = Spacecraft.from_dict(spacecraft_dict_multiple_sensors)
+        self.assertEqual(spc.identifier, self.identifier)
+        self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.orbit.line0, self.orbit.line0)
+        self.assertEqual(spc.orbit.line1, self.orbit.line1)
+        self.assertEqual(spc.orbit.line2, self.orbit.line2)
+        self.assertEqual(len(spc.sensor), 2)
+        self.assertEqual(spc.sensor[0].name, self.sensor.name)
+        self.assertEqual(spc.sensor[1].name, self.sensor.name)
+
+    def test_to_dict(self):
+        """Test converting a Spacecraft object to a dictionary."""
+        spc = Spacecraft(
+            self.identifier, self.name, self.orbit, [self.sensor]
+        )
+        dict_out = spc.to_dict()
+        self.assertEqual(dict_out["id"], self.identifier)
+        self.assertEqual(dict_out["name"], self.name)
+        self.assertEqual(dict_out["orbit"]["TLE_LINE0"], self.orbit.line0)
+        self.assertEqual(dict_out["orbit"]["TLE_LINE1"], self.orbit.line1)
+        self.assertEqual(dict_out["orbit"]["TLE_LINE2"], self.orbit.line2)
+        self.assertEqual(len(dict_out["sensor"]), 1)
+        self.assertEqual(dict_out["sensor"][0]["name"], self.sensor.name)
+
+    def test_default_id(self):
+        """Test that a default UUID is generated if no identifier is provided."""
+        spc = Spacecraft(None, self.name, self.orbit, [self.sensor])
+        self.assertIsNotNone(spc.identifier)
+        try:
+            uuid.UUID(spc.identifier)
+        except ValueError:
+            self.fail("Generated identifier is not a valid UUID.")
+
+    def test_invalid_identifier(self):
+        """Test that an invalid UUID raises a ValueError."""
+        invalid_identifier = "invalid-uuid"
+        with self.assertRaises(ValueError) as context:
+            Spacecraft(invalid_identifier, self.name, self.orbit, [self.sensor])
+        self.assertIn("identifier must be a valid UUID.", str(context.exception))
+
+    def test_invalid_sensor_list(self):
+        """Test that an invalid sensor list raises a TypeError."""
+        with self.assertRaises(TypeError) as context:
+            Spacecraft(self.identifier, self.name, self.orbit, ["invalid_sensor"])
+        self.assertIn("sensor must be a list of Sensor objects.", str(context.exception))
+
+    def test_invalid_orbit_type(self):
+        """Test that an invalid orbit type raises a TypeError."""
+        with self.assertRaises(TypeError) as context:
+            Spacecraft(self.identifier, self.name, "invalid_orbit", [self.sensor])
+        self.assertIn(
+            "orbit must be a TwoLineElementSet, OrbitalMeanElementsMessage, or OsculatingElements object.",
+            str(context.exception),
         )
 
 
