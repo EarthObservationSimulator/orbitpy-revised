@@ -80,10 +80,10 @@ class EclipseInfo(Timeseries):
         Get the time intervals where eclipse exist.
 
         Returns:
-            list: A list of tuples representing the start and end times of contact intervals.
+            list: A list of tuples representing the start and end times of eclipse intervals.
         """
-        contact_indices = np.where(self.data[0])[0]
-        groups = _group_contiguous(contact_indices)
+        eclipse_indices = np.where(self.data[0])[0]
+        groups = _group_contiguous(eclipse_indices)
         intervals = [
             (self.time[i[0]], self.time[i[-1]]) for i in groups if len(i) > 0
         ]
