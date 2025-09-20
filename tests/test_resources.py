@@ -192,8 +192,8 @@ class TestSpacecraft(unittest.TestCase):
         )
 
         self.spacecraft_dict = {
-            "id": self.identifier,
-            "name": self.name,
+            "id": 'ddd716b0-443b-4141-a413-19b14260db9a',
+            "name": 'Test Spacecraft',
             "orbit": {
                 "orbit_type": "TWO_LINE_ELEMENT_SET",
                 "TLE_LINE0": "0 LANDSAT 9",

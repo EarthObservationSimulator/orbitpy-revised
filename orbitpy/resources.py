@@ -81,8 +81,8 @@ class GroundStation:
         Returns:
             GroundStation: GroundStation object.
         """
-        identifier = dict_in.get("id")  # allow id to be None
-        name = dict_in["name"]
+        identifier = dict_in.get("id", None)  # allow id to be None
+        name = dict_in.get("name", None)
         latitude = dict_in["latitude"]
         longitude = dict_in["longitude"]
         height = dict_in["height"]
