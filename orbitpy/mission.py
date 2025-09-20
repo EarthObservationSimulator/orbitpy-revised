@@ -15,6 +15,7 @@ from eosimutils.framegraph import FrameGraph
 from .propagator import PropagatorFactory, SGP4Propagator
 from .resources import Spacecraft, GroundStation, Sensor
 from .eclipsefinder import EclipseFinder, EclipseInfo
+from .contactfinder import ElevationAwareContactFinder, ContactInfo
 
 def propagate_spacecraft(spacecraft: Spacecraft, propagator: Union[SGP4Propagator],
                         t0: AbsoluteDate, duration_days: float):
@@ -38,11 +39,29 @@ def propagate_spacecraft(spacecraft: Spacecraft, propagator: Union[SGP4Propagato
         )
     return propagated_states
 
-# def calculate eclipses for a spacecraft
-
-
 # def calculate contact with ground-station
+def calculate_gs_contact(trajectory: StateSeries, ground_station: GroundStation, frame_graph: FrameGraph) -> ContactInfo:
+    """
+    Calculate contact periods between a spacecraft and a ground station.
 
+    Args:
+        trajectory (StateSeries): Propagated trajectory of the spacecraft.
+        ground_station (GroundStation): Ground station object.
+        frame_graph (FrameGraph): Frame graph for coordinate transformations.
+
+    Returns:
+        contact_info (ContactInfo): ContactInfo object containing contact periods and details.
+    """
+    contact_finder = ElevationAwareContactFinder()
+    contact_info = contact_finder.execute(
+        frame_graph=frame_graph,
+        observer_state=ground_station.geographic_position.to_cartesian3d_position(),
+        target_state=trajectory,
+        min_elevation_angle=ground_station.min_elevation_angle_deg,
+    )
+    return contact_info
+
+# def calculate coverage spacecraft + sensor id, and a grid
 
 # def calculate coverage spacecraft + sensor id, and a grid
 # 
@@ -170,3 +189,27 @@ class Mission:
             )
             eclipse_info[spc_id] = result
         return eclipse_info
+    
+    def execute_gs_contact_finder(self, propagated_trajectories: Dict[str, StateSeries]) -> Dict[str, ContactInfo]:
+        """Calculate contact periods between spacecrafts and ground stations.
+
+        Args:
+            propagated_trajectories (Dict[str, StateSeries]): Dictionary mapping spacecraft IDs to their propagated StateSeries.
+        Returns:
+            Dict[str, ContactInfo]: Dictionary mapping spacecraft IDs to their contact information with ground stations.
+        """
+        if self.ground_stations is None:
+            raise ValueError("No ground stations specified for contact finding.")
+
+        contact_finder = ElevationAwareContactFinder()
+        contact_info = {}
+        for spc_id, trajectory in propagated_trajectories.items():
+            for gs in self.ground_stations:
+                result = calculate_gs_contact(
+                    trajectory=trajectory,
+                    ground_station=gs,
+                    frame_graph=self.frame_graph,
+                )
+                contact_info_key = f"{spc_id}_to_{gs.identifier}"
+                contact_info[contact_info_key] = result
+        return contact_info

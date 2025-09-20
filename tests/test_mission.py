@@ -11,6 +11,7 @@ from orbitpy.mission import Mission, propagate_spacecraft
 from orbitpy.resources import Spacecraft, GroundStation
 from orbitpy.propagator import SGP4Propagator
 from orbitpy.eclipsefinder import EclipseInfo
+from orbitpy.contactfinder import ContactInfo
 
 class TestMission_1(unittest.TestCase):
     """Tests for the Mission class with single spacecraft and single ground station."""
@@ -123,6 +124,16 @@ class TestMission_1(unittest.TestCase):
         self.assertIn(m.spacecrafts[0].identifier, eclipse_info)
         self.assertIsInstance(eclipse_info[m.spacecrafts[0].identifier], EclipseInfo)
         #JsonSerializer.save_to_json(eclipse_info[m.spacecrafts[0].identifier], 'test_mission_eclipse_output.json')
+    
+    def test_execute_gs_contact_finder(self):
+        m = Mission.from_dict(self.mission_dict)
+        propagated_trajectories = m.execute_propagation()
+        contact_info = m.execute_gs_contact_finder(propagated_trajectories)
+        self.assertIsInstance(contact_info, dict)
+        contact_info_key = f"{m.spacecrafts[0].identifier}_to_{m.ground_stations[0].identifier}"
+        self.assertIn(contact_info_key, contact_info)
+        self.assertIsInstance(contact_info[contact_info_key], ContactInfo)
+        #JsonSerializer.save_to_json(contact_info[contact_info_key], 'test_mission_contact_output.json')
 
 if __name__ == "__main__":
     unittest.main()
