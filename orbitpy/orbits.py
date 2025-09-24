@@ -332,7 +332,7 @@ class SpaceTrackAPI:
             )
 
     def get_closest_omm(
-        self, norad_id: int, target_date_time: str
+        self, norad_id: int, target_date_time: str, within_days: int = 1
     ) -> Optional[Dict[str, Any]]:
         """
         Retrieve the closest available OMM data *created* before the
@@ -392,6 +392,7 @@ class SpaceTrackAPI:
 
             closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
+                print(closest_omm)
                 retrieved_cd = closest_omm["CREATION_DATE"]
                 retrieved_cd_datetime = datetime.strptime(
                     retrieved_cd, "%Y-%m-%dT%H:%M:%S"
@@ -406,9 +407,9 @@ class SpaceTrackAPI:
 
                 # Check if the retrieved CREATION_DATE is more than 1 day before the target
                 # date-time
-                if (tdt_datetime - retrieved_cd_datetime).days > 1:
+                if (tdt_datetime - retrieved_cd_datetime).days > within_days:
                     raise ValueError(
-                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is more than 1 day "
+                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is more than {within_days} days "
                         f"before the target date-time {tdt}. Something is wrong."
                     )
 
