@@ -36,9 +36,9 @@ class TestPropagatorFactory(unittest.TestCase):
             PropagatorFactory._registry,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            PropagatorFactory._registry[
+            PropagatorFactory._registry[  # pylint: disable=protected-access
                 "SGP4_PROPAGATOR"
-            ],  # pylint: disable=protected-access
+            ],
             SGP4Propagator,
         )
 
@@ -52,9 +52,9 @@ class TestPropagatorFactory(unittest.TestCase):
             PropagatorFactory._registry,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            PropagatorFactory._registry[
+            PropagatorFactory._registry[  # pylint: disable=protected-access
                 "New_Propagator"
-            ],  # pylint: disable=protected-access
+            ],
             TestPropagatorFactory.DummyNewPropagator,
         )
         # Built-in propagator remains
@@ -63,9 +63,9 @@ class TestPropagatorFactory(unittest.TestCase):
             PropagatorFactory._registry,  # pylint: disable=protected-access
         )
         self.assertEqual(
-            PropagatorFactory._registry[
+            PropagatorFactory._registry[  # pylint: disable=protected-access
                 "SGP4_PROPAGATOR"
-            ],  # pylint: disable=protected-access
+            ],
             SGP4Propagator,
         )
 

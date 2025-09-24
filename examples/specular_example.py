@@ -16,8 +16,6 @@ from eosimutils.base import ReferenceFrame, SurfaceType
 
 from orbitpy.specular import get_specular_trajectory
 
-
-# Q: Add this to time module?
 def convert_datetime(np_dt):
     """Convert numpy datetime object to AbsoluteDateArray
 
