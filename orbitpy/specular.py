@@ -4,15 +4,10 @@
 
 """
 
-from os import times
-from typing import Type, Dict, Any, Union, Optional, Callable
-import math
 import numpy as np
 
 from eosimutils.trajectory import StateSeries, PositionSeries
-from eosimutils.framegraph import FrameGraph
 from eosimutils.base import (
-    ReferenceFrame,
     SurfaceType,
     WGS84_EARTH_EQUATORIAL_RADIUS,
     SPHERICAL_EARTH_MEAN_RADIUS,
@@ -22,15 +17,6 @@ from eosimutils.time import AbsoluteDateArray
 
 import kcl
 import GeometricTools as gte
-
-# -----------------------------------------------
-# Some interfaces for specular point calculation:
-# -----------------------------------------------
-
-# # Take list of GPS trajectories as input, and compute specular point for strongest pair at each step
-# def get_best_specular_trajectory(transmitter: StateSeries, receivers: List[StateSeries],
-#                             times: AbsoluteDateArray, surface: SurfaceType = SurfaceType.WGS84) -> PositionSeries:
-
 
 def get_specular_trajectory(
     transmitter: StateSeries,
@@ -80,11 +66,6 @@ def get_specular_trajectory(
                 SPHERICAL_EARTH_MEAN_RADIUS,
             ]
         )
-
-        # TODO: Remove this. Used to compare directly with old tests.
-        # extents = gte.Vector3d(
-        #     [WGS84_EARTH_EQUATORIAL_RADIUS, WGS84_EARTH_EQUATORIAL_RADIUS,WGS84_EARTH_EQUATORIAL_RADIUS]
-        # )
 
         earth_ellipsoid = gte.Ellipsoid3d(gte.Vector3d.Zero(), extents)
     elif surface == SurfaceType.WGS84:

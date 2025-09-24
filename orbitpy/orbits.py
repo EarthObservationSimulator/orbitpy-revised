@@ -409,8 +409,8 @@ class SpaceTrackAPI:
                 # date-time
                 if (tdt_datetime - retrieved_cd_datetime).days > within_days:
                     raise ValueError(
-                        f"The retrieved OMM CREATION_DATE {retrieved_cd} is more than {within_days} days "
-                        f"before the target date-time {tdt}. Something is wrong."
+                        f"Retrieved OMM CREATION_DATE {retrieved_cd} is more than {within_days} "
+                        f"days before the target date-time {tdt}. Something is wrong."
                     )
 
                 return closest_omm

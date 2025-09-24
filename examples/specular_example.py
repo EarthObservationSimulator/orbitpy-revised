@@ -8,10 +8,9 @@ for each.
 
 import numpy as np
 import os
-import datetime
 import matplotlib.pyplot as plt
 
-from eosimutils.time import AbsoluteDateArray, AbsoluteDate
+from eosimutils.time import AbsoluteDateArray
 from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.base import ReferenceFrame, SurfaceType
 

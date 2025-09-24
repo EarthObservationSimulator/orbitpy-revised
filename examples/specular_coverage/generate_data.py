@@ -4,13 +4,14 @@ import time
 import json
 import os
 
-from orbitpy.orbits import (SpaceTrackAPI, OrbitalMeanElementsMessage)
+from orbitpy.orbits import SpaceTrackAPI, OrbitalMeanElementsMessage
 
-def get_gps_omms(api, ids):
+
+def get_gps_omms(spacetrack_api, ids):
     """Retrieve OMM files for a list of GPS satellite IDs.
 
     Args:
-        api (SpaceTrackAPI): The SpaceTrackAPI instance to use for data retrieval.
+        spacetrack_api (SpaceTrackAPI): The SpaceTrackAPI instance to use for data retrieval.
         ids (list): A list of GPS satellite NORAD IDs.
 
     Returns:
@@ -18,13 +19,13 @@ def get_gps_omms(api, ids):
     """
 
     outputs = []
-    for id in ids:
+    for norad_id in ids:
         # Sleep to avoid triggering rate limit
         time.sleep(2.5)
         # Retrieve the closest available OMM data created before the
         # specified target datetime for the given satellite.
-        omm_data = api.get_closest_omm(
-            norad_id=id, target_date_time=target_date_time, within_days=100
+        omm_data = spacetrack_api.get_closest_omm(
+            norad_id=norad_id, target_date_time=target_date_time, within_days=100
         )
 
         orbit_obj = OrbitalMeanElementsMessage.from_dict(omm_data)
@@ -32,6 +33,7 @@ def get_gps_omms(api, ids):
         outputs.append(orbit_obj)
 
     return outputs
+
 
 # Specify the NORAD ID of the satellite for which to retrieve data
 gps_ids = [
@@ -156,17 +158,19 @@ norad_ids = gps_ids + cygnss_ids
 target_date_time = "2025-09-01T01:00:00"
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-cred_path = os.path.normpath(os.path.join(script_dir, "..", "spacetrack", "credentials.json"))
+cred_path = os.path.normpath(
+    os.path.join(script_dir, "..", "spacetrack", "credentials.json")
+)
 
 # Log in to Space-Track.org
-api = SpaceTrackAPI(cred_path)
-api.login()
+st_api = SpaceTrackAPI(cred_path)
+st_api.login()
 
 # Create an output directory
 output_dir = os.path.normpath(os.path.join(script_dir, "data"))
 os.makedirs(output_dir, exist_ok=True)
 
-omms = get_gps_omms(api, norad_ids)
+omms = get_gps_omms(st_api, norad_ids)
 
 # Write each json file to the data folder
 for i in range(len(omms)):
@@ -174,5 +178,5 @@ for i in range(len(omms)):
     output_filename = os.path.join(output_dir, f"omm_{norad_ids[i]}.json")
     output_json = omms[i].to_json()
 
-    with open(output_filename, "w") as f:
+    with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(output_json, f, indent=4)

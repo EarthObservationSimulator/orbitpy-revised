@@ -152,7 +152,7 @@ class SpecularCoverage:
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
                 calculated at discrete instances.
             transmitters (List[ReferenceFrame]): A list of ReferenceFrame objects used to lookup
-                the trajectories of the GNSS transmitters to be used for specular coverage calculation.
+                trajectories of the GNSS transmitters to be used for specular coverage calculation.
                 Transmitter trajectories must first be added to the frame graph for this to work.
             specular_radius (float): The radius of the specular reflection area ("glistening zone")
                 around each target point.
@@ -165,8 +165,8 @@ class SpecularCoverage:
                 performance, it should be at least equal to the number of CPU cores available
                 on the executing machine.
         Returns:
-            List[Tuple[DiscreteCoverageTP, List[float]]]: A list of tuples containing (1) the coverage
-                for each GPS transmitter and (2) the gps-specular point-receiver
+            List[Tuple[DiscreteCoverageTP, List[float]]]: A list of tuples containing (1) the
+                coverage for each GPS transmitter and (2) the gps-specular point-receiver
                 distances in km at the input time points.
         """
 
@@ -292,7 +292,8 @@ class SpecularCoverage:
         # This list is used to store the source objects for each looop iteration, otherwise,
         # the pointers will be deleted after each loop iteration due to default Pybind11 behavior.
         # Pybind11 will create a unique pointer for dynamically created bound objects, so that when
-        # the object goes out of scope in Python, it is deleted, even if it is still referenced in C++.
+        # the object goes out of scope in Python, it is deleted, even if it is still referenced in
+        # C++.
         source_refs = []
         for tx_frame in transmitters:
 
@@ -315,7 +316,7 @@ class SpecularCoverage:
                 buff_size,
             )
 
-            # Whenever LOS is available, the specular source will calculate the specular point position
+            # Whenever LOS is available, the specular source will calculate the specular point
             specular_source = kcl.SpecularPointSource(
                 pos_tx_target_source,
                 pos_fov_target_source,

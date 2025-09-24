@@ -9,8 +9,7 @@ from time import perf_counter as timer
 
 from orbitpy.orbits import OrbitalMeanElementsMessage
 from orbitpy.propagator import SGP4Propagator
-from orbitpy.coveragecalculator import (CoverageFactory,CoverageType)
-from orbitpy.coverage import DiscreteCoverageGP, DiscreteCoverageTP
+from orbitpy.coveragecalculator import CoverageFactory, CoverageType
 
 from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame, SPHERICAL_EARTH_MEAN_RADIUS
@@ -42,12 +41,12 @@ def random_points_on_sphere(n, r=SPHERICAL_EARTH_MEAN_RADIUS):
     return np.stack((x, y, z), axis=-1)
 
 
-def get_stateseries(ids, start_date, duration_days=1):
+def get_stateseries(ids, starting_date, duration_days=1):
     """Load OMM from data directory by ID and create stateseries using SGP4 propagator
 
     Args:
         ids (List[str]): A list of satellite IDs to load.
-        start_date (AbsoluteDate): The start date.
+        starting_date (AbsoluteDate): The start date.
         duration_days (int): The duration in days to propagate.
 
     Returns:
@@ -58,14 +57,15 @@ def get_stateseries(ids, start_date, duration_days=1):
     input_dir = os.path.normpath(os.path.join(script_dir, "data"))
 
     outputs = []
-    for id in ids:
-        omm_data = json.load(open(os.path.join(input_dir, f"omm_{id}.json")))
+    for norad_id in ids:
+        with open(os.path.join(input_dir, f"omm_{norad_id}.json"), encoding="utf-8") as f:
+            omm_data = json.load(f)
 
         orbit_obj = OrbitalMeanElementsMessage.from_json(omm_data)
 
         prop = SGP4Propagator(step_size=60.0)
 
-        output = prop.execute(start_date, duration_days, orbit_obj)
+        output = prop.execute(starting_date, duration_days, orbit_obj)
 
         outputs.append(output)
 
