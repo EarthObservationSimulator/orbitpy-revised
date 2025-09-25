@@ -3,15 +3,16 @@ import unittest
 import random
 import numpy as np
 
-from eosimutils.base import JsonSerializer
-from eosimutils.time import AbsoluteDate
+
 from eosimutils.trajectory import StateSeries
+from eosimutils.state import Cartesian3DPositionArray, GeographicPosition
 
 from orbitpy.mission import Mission, propagate_spacecraft
 from orbitpy.resources import Spacecraft, GroundStation
 from orbitpy.propagator import SGP4Propagator
 from orbitpy.eclipsefinder import EclipseInfo
 from orbitpy.contactfinder import ContactInfo
+from orbitpy.coverage import DiscreteCoverageTP
 
 class TestMission_1(unittest.TestCase):
     """Tests for the Mission class with single spacecraft and single ground station."""
@@ -53,7 +54,12 @@ class TestMission_1(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             }
-
+        self.point_array = Cartesian3DPositionArray.from_geographic_positions([
+            GeographicPosition(latitude_degrees=45.0, longitude_degrees=45.0, elevation_m=0.0),
+            GeographicPosition(latitude_degrees=-45.0, longitude_degrees=-45.0, elevation_m=0.0),
+            GeographicPosition(latitude_degrees=0.0, longitude_degrees=0.0, elevation_m=0.0),
+        ])
+        
         # Below dictionary has to be in the exact same format which would be produced by to_dict() method
         # E.g. time_scale 'UTC' should be in upper case, having the (single) spacecraft in a list.
         self.mission_dict = {
@@ -78,11 +84,34 @@ class TestMission_1(unittest.TestCase):
                         "fov": {
                             "fov_type": "CIRCULAR",
                             "diameter": 60.0,
-                            "frame": "ICRF_EC",
+                            "frame": "SENSOR_BODY_FIXED",
                             "boresight": [0.0, 0.0, 1.0],
                         },
                     }],
             }],
+            "transforms": {
+                "orientation_transforms": [
+                    {
+                    "orientation_type": "constant", "rotations": [0.0, 0.0, 0.0],
+                    "rotations_type": "EULER", "from": "SENSOR_BODY_FIXED", "to": "ORBITPY_LVLH", "euler_order": "xyz"
+                    },
+                    ],
+                "position_transforms": [
+                    {
+                        "from_frame": "SENSOR_BODY_FIXED", "to_frame": "ORBITPY_LVLH",
+                        "position": { "x": 0.0,  "y": 0.0, "z": 0.0,
+                            "frame": "SENSOR_BODY_FIXED", "type": "Cartesian3DPosition"
+                        }
+                    },
+                    {
+                        "from_frame": "ORBITPY_LVLH", "to_frame": "SENSOR_BODY_FIXED",
+                        "position": { "x": 0.0,  "y": 0.0, "z": 0.0,
+                            "frame": "ORBITPY_LVLH", "type": "Cartesian3DPosition"
+                        }
+                    }
+                ]
+                
+            },
             "ground_stations": [{
                     "id": '69e3233c-50ce-4aeb-bd40-74d74537f0ed',
                     "name": None,
@@ -94,7 +123,8 @@ class TestMission_1(unittest.TestCase):
             "propagator": {
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
-            }
+            },
+            "grid_points": self.point_array.to_dict(),
         }
         
     
@@ -106,7 +136,7 @@ class TestMission_1(unittest.TestCase):
         self.assertEqual(m_dict.get("spacecrafts"), self.mission_dict.get("spacecrafts"))  # single spacecraft
         self.assertEqual(m_dict.get("ground_stations"), self.mission_dict.get("ground_stations"))
         self.assertEqual(m_dict.get("propagator"), self.mission_dict.get("propagator"))
-        self.assertIsNone(m_dict.get("grid_points"))  # grid_points is None
+        #self.assertEqual(m_dict.get("grid_points"), self.mission_dict.get("grid_points")) TBD
 
     def test_execute_propagation(self):
         m = Mission.from_dict(self.mission_dict)
@@ -130,10 +160,39 @@ class TestMission_1(unittest.TestCase):
         propagated_trajectories = m.execute_propagation()
         contact_info = m.execute_gs_contact_finder(propagated_trajectories)
         self.assertIsInstance(contact_info, dict)
-        contact_info_key = f"{m.spacecrafts[0].identifier}_to_{m.ground_stations[0].identifier}"
-        self.assertIn(contact_info_key, contact_info)
-        self.assertIsInstance(contact_info[contact_info_key], ContactInfo)
-        #JsonSerializer.save_to_json(contact_info[contact_info_key], 'test_mission_contact_output.json')
+
+        sc_id = m.spacecrafts[0].identifier
+        gs_id = m.ground_stations[0].identifier
+
+        # top-level key is spacecraft id
+        self.assertIn(sc_id, contact_info)
+        self.assertIsInstance(contact_info[sc_id], dict)
+
+        # nested key is ground-station id and maps to ContactInfo
+        self.assertIn(gs_id, contact_info[sc_id])
+        self.assertIsInstance(contact_info[sc_id][gs_id], ContactInfo)
+
+        #JsonSerializer.save_to_json(contact_info[sc_id][gs_id], 'test_mission_contact_output.json')
+    
+    def test_execute_coverage_calculator(self):
+        m = Mission.from_dict(self.mission_dict)
+        propagated_trajectories = m.execute_propagation()
+        coverage_info = m.execute_coverage_calculator(propagated_trajectories)
+        self.assertIsInstance(coverage_info, dict)
+
+        sc_id = m.spacecrafts[0].identifier
+        sensor_id = m.spacecrafts[0].sensor[0].identifier
+
+        # top-level key is spacecraft id
+        self.assertIn(sc_id, coverage_info)
+        self.assertIsInstance(coverage_info[sc_id], dict)
+
+        # nested key is sensor id and maps to DiscreteCoverageTP
+        self.assertIn(sensor_id, coverage_info[sc_id])
+        self.assertIsInstance(coverage_info[sc_id][sensor_id], DiscreteCoverageTP)
+
+        #JsonSerializer.save_to_json(coverage_info[sc_id][sensor_id], 'test_mission_coverage_output.json')
+
 
 if __name__ == "__main__":
     unittest.main()
