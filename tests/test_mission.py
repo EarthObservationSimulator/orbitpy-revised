@@ -89,24 +89,18 @@ class TestMission_1(unittest.TestCase):
                         },
                     }],
             }],
-            "transforms": {
+            "frame_transforms": {
                 "orientation_transforms": [
                     {
                     "orientation_type": "constant", "rotations": [0.0, 0.0, 0.0],
                     "rotations_type": "EULER", "from": "SENSOR_BODY_FIXED", "to": "ORBITPY_LVLH", "euler_order": "xyz"
-                    },
-                    ],
+                    }
+                ],
                 "position_transforms": [
                     {
                         "from_frame": "SENSOR_BODY_FIXED", "to_frame": "ORBITPY_LVLH",
                         "position": { "x": 0.0,  "y": 0.0, "z": 0.0,
                             "frame": "SENSOR_BODY_FIXED", "type": "Cartesian3DPosition"
-                        }
-                    },
-                    {
-                        "from_frame": "ORBITPY_LVLH", "to_frame": "SENSOR_BODY_FIXED",
-                        "position": { "x": 0.0,  "y": 0.0, "z": 0.0,
-                            "frame": "ORBITPY_LVLH", "type": "Cartesian3DPosition"
                         }
                     }
                 ]

@@ -144,7 +144,7 @@ class Mission:
         # register the the OrbitPy LVLH frame if not already present
         if ReferenceFrame.get("ORBITPY_LVLH") is None:
             ReferenceFrame.add("ORBITPY_LVLH")
-        transform_dict = dict_in.get("transforms", None)
+        transform_dict = dict_in.get("frame_transforms", None)
         # add reference frames from the user-specified transforms if not already present
         orientation_transforms = transform_dict.get("orientation_transforms", None)
         position_transforms = transform_dict.get("position_transforms", None)
@@ -162,10 +162,9 @@ class Mission:
                     ReferenceFrame.add(pt["to_frame"])
         # create the frame graph using the user-specified transforms
         if transform_dict is not None:
-            frame_graph = FrameGraph.from_dict(transform_dict)
+            frame_graph = FrameGraph.from_dict(transform_dict, set_inverse=True)
         else:
             frame_graph = FrameGraph()
-
 
         return cls(
             start_time=start_time,
