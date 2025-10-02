@@ -166,8 +166,10 @@ class SpecularCoverage:
                 on the executing machine.
         Returns:
             List[Tuple[DiscreteCoverageTP, List[float]]]: A list of tuples containing (1) the
-                coverage for each GPS transmitter and (2) the gps-specular point-receiver
-                distances in km at the input time points.
+                coverage for each GPS transmitter and (2) the radar's range-corrected
+                gain (RCG) at the input time points.
+
+        For reference on RCG calculation, see https://ieeexplore.ieee.org/abstract/document/8370081
         """
 
         # Store all coverage output in memory
@@ -287,7 +289,7 @@ class SpecularCoverage:
         cov_sources = []
         # A list of distance sources, which will output the gps-specular point-receiver distances.
         # There will be one for each GPS transmitter.
-        distance_sources = []
+        rcg_sources = []
 
         # This list is used to store the source objects for each looop iteration, otherwise,
         # the pointers will be deleted after each loop iteration due to default Pybind11 behavior.
@@ -325,10 +327,14 @@ class SpecularCoverage:
                 buff_size,
             )
 
-            # Returns the distance from the transmitter to the specular point to the receiver.
-            distance_source = kcl.ChainedDistanceSourced(
-                [pos_tx_target_source, specular_source, pos_fov_target_source],
-                buff_size_full,
+            # Returns the range-corrected gain (RCG) for the radar.
+            radar_gain = 1.0  # Placeholder value
+            rcg_source = kcl.RCGSource(
+                pos_tx_target_source,
+                pos_fov_target_source,
+                specular_source,
+                radar_gain,
+                buff_size
             )
 
             radius_source = kcl.ConstantSourced(specular_radius)
@@ -338,9 +344,9 @@ class SpecularCoverage:
 
             variables.append(los_source)
             variables.append(specular_source)
-            variables.append(distance_source)
+            variables.append(rcg_source)
             variables.append(sphere_source)
-            distance_sources.append(distance_source)
+            rcg_sources.append(rcg_source)
 
             specular_viewer = kcl.ViewerSphere3d(sphere_source)
 
@@ -364,7 +370,7 @@ class SpecularCoverage:
                     los_source,
                     specular_source,
                     radius_source,
-                    distance_source,
+                    rcg_source,
                     sphere_source,
                     cov_source,
                     specular_viewer,
@@ -386,7 +392,7 @@ class SpecularCoverage:
         # Prepare coverage output
         for idx in range(len(cov_sources)):
             coverage_kcl = [cov_sources[idx].get(i) for i in range(len(times))]
-            distance = [distance_sources[idx].get(i) for i in range(len(times))]
+            distance = [rcg_sources[idx].get(i) for i in range(len(times))]
             coverage = DiscreteCoverageTP(
                 times, coverage_kcl, target_point_array
             )
