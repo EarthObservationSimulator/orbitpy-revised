@@ -140,9 +140,7 @@ class Mission:
             grid_points = Cartesian3DPositionArray.from_dict(grid_points_specs)
         
         # setup the frames and the transformations
-        # register the the OrbitPy LVLH frame if not already present
-        if ReferenceFrame.get("ORBITPY_LVLH") is None:
-            ReferenceFrame.add("ORBITPY_LVLH")
+        # The spacecrafts need to be setup before this so that their local orbit frames are registered.
         transform_dict = dict_in.get("frame_transforms", None)
         # add reference frames from the user-specified transforms if not already present
         orientation_transforms = transform_dict.get("orientation_transforms", None)
@@ -310,7 +308,6 @@ class Mission:
 
         # Add OrbitPy LVLH frame transformation based on the first spacecraft's trajectory
         eci_frame = ReferenceFrame.get("ICRF_EC")
-        lvlh_frame = ReferenceFrame.get("ORBITPY_LVLH")
         
         if self.grid_points is None:
             raise ValueError("No grid points specified for coverage calculation.")
@@ -319,17 +316,25 @@ class Mission:
         for item in propagated_trajectories:
             spc_id = item["spacecraft_id"]
             trajectory = item["trajectory"]
-            # Associate sensors with the spacecraft
+            times = trajectory.time # times at which coverage is to be calculated
+
+            # Associate trajectory with the spacecraft
             spacecraft = next((sc for sc in self.spacecrafts if sc.identifier == spc_id), None)
             if spacecraft is None:
                 continue
-            times = trajectory.time
+            
+            # get the local frame details for the spacecraft
+            if spacecraft.local_orbital_frame_handler is None:
+                raise ValueError(f"No local orbital frame handler specified for spacecraft {spc_id}.")
+            local_orbital_frame_handler = spacecraft.local_orbital_frame_handler
+            local_orbital_frame = local_orbital_frame_handler.get_frame()
+            att_lvlh, pos_lvlh = local_orbital_frame_handler.get_transform(trajectory)
 
             sensor_cov: List[Dict[str, Any]] = []
             for sensor in spacecraft.sensor:
-                att_lvlh, pos_lvlh = get_lvlh(trajectory, lvlh_frame)
+                # calculate coverage for each sensor
                 self.frame_graph.add_orientation_transform(att_lvlh)
-                self.frame_graph.add_pos_transform(from_frame=eci_frame, to_frame=lvlh_frame, position=pos_lvlh)
+                self.frame_graph.add_pos_transform(from_frame=eci_frame, to_frame=local_orbital_frame, position=pos_lvlh)
                 result = coverage_calculator.calculate_coverage(
                                     target_point_array=self.grid_points,                      
                                     fov=sensor.fov,
@@ -338,9 +343,11 @@ class Mission:
                                     surface=SurfaceType.SPHERE,
                             )
                 sensor_cov.append({"sensor_id": sensor.identifier, "coverage_info": result})
-            all_coverage_info.append({"spacecraft_id": spc_id, "coverage": sensor_cov})
+            
+            all_coverage_info.append({"spacecraft_id": spc_id, "coverage": sensor_cov}) # append results for this spacecraft
         return all_coverage_info
 
+    '''
     def execute_all(self) -> Dict[str, Any]:
         """Run propagation, eclipse, contact and coverage and return a dictionary of results.
         Does not modify Mission instance state; all results are returned in the dict.
@@ -363,3 +370,4 @@ class Mission:
             "coverage": coverage,
         }
         return mission_results
+    '''
