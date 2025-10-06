@@ -211,7 +211,7 @@ class Mission:
                 t0=self.start_time,
                 duration_days=self.duration_days,
             )
-            results.append({"spacecraft_id": sc.identifier, "trajectory": trajectory})
+            results.append({"spacecraft_id": sc.identifier, "spacecraft_name": sc.name, "trajectory": trajectory})
 
         return results
 
@@ -235,9 +235,10 @@ class Mission:
         results: List[Dict[str, Union[str, EclipseInfo]]] = []
         for item in propagated_trajectories:
             spc_id = item["spacecraft_id"]
+            spc_name = item.get("spacecraft_name")
             trajectory = item["trajectory"]
             eclipses = eclipse_finder.execute(frame_graph=self.frame_graph, state=trajectory)
-            results.append({"spacecraft_id": spc_id, "eclipse_info": eclipses})
+            results.append({"spacecraft_id": spc_id, "spacecraft_name": spc_name, "eclipse_info": eclipses})
 
         return results
 
@@ -270,15 +271,16 @@ class Mission:
         all_contact_info: List[Dict[str, Any]] = []
         for item in propagated_trajectories:
             spc_id = item["spacecraft_id"]
+            spc_name = item.get("spacecraft_name")
             trajectory = item["trajectory"]
-            ground_stn_contact_info = {"spacecraft_id": spc_id, "contacts": list()}
+            ground_stn_contact_info = {"spacecraft_id": spc_id, "spacecraft_name": spc_name, "contacts": list()}
             for gs in self.ground_stations:
                 result = calculate_gs_contact(
                     trajectory=trajectory,
                     ground_station=gs,
                     frame_graph=self.frame_graph,
                 )
-                ground_stn_contact_info["contacts"].append({"ground_station_id": gs.identifier, "contact_info": result})
+                ground_stn_contact_info["contacts"].append({"ground_station_id": gs.identifier, "ground_station_name": gs.name, "contact_info": result})
             all_contact_info.append(ground_stn_contact_info)
         return all_contact_info
 
@@ -315,6 +317,7 @@ class Mission:
         all_coverage_info: List[Dict[str, Any]] = []
         for item in propagated_trajectories:
             spc_id = item["spacecraft_id"]
+            spc_name = item.get("spacecraft_name")
             trajectory = item["trajectory"]
             times = trajectory.time # times at which coverage is to be calculated
 
@@ -342,9 +345,9 @@ class Mission:
                                     times=times,
                                     surface=SurfaceType.SPHERE,
                             )
-                sensor_cov.append({"sensor_id": sensor.identifier, "coverage_info": result})
-            
-            all_coverage_info.append({"spacecraft_id": spc_id, "coverage": sensor_cov}) # append results for this spacecraft
+                sensor_cov.append({"sensor_id": sensor.identifier, "sensor_name": sensor.name, "coverage_info": result})
+
+            all_coverage_info.append({"spacecraft_id": spc_id, "spacecraft_name": spc_name, "coverage": sensor_cov}) # append results for this spacecraft
         return all_coverage_info
 
     '''
