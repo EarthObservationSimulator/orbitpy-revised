@@ -128,6 +128,15 @@ class DiscreteCoverageTP:
         """
         return DiscreteCoverageGP.from_tp(self)
 
+    def coverage_time(self):
+        """
+        Calculate the total coverage time (the total time covered per point summed over all points)
+
+        Returns:
+            float: Total coverage time.
+        """
+        return sum(len(tp) for tp in self.coverage)
+
 
 class DiscreteCoverageGP:
     """
