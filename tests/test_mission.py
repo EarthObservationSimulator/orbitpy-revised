@@ -459,19 +459,24 @@ class TestMission_2(unittest.TestCase):
         assert covered_point_indices_set.issubset(lat_bound_indices_set), "Some covered points are outside the latitude bounds."
 
 class TestMissionGNSSR(unittest.TestCase):
-    """Tests for the Mission class with a GNSS spacecraft constellation."""
+    """Tests for the Mission class with a GNSS spacecraft constellation.
+        - Two GNSS spacecrafts
+        - Two spacecrafts in LEO
+        - One spacecraft has one sensor,
+          and another spacecraft has two sensors with different fields of view. One of the sensors is tilted.
+    """
     def setUp(self):
         
         # Generate uniformly spaced points on a latitude/longitude grid
-        self.all_geo_points_array = uniform_lat_lon_spacing_grid(-90, 90, 0.25, -180, 180, 0.25)
+        self.all_geo_points_array = uniform_lat_lon_spacing_grid(-35, 35, 1, -180, 180, 1)
         points_array = Cartesian3DPositionArray.from_geographic_positions(self.all_geo_points_array)
 
         self.mission_dict = {"start_time": {
                 "time_format": "GREGORIAN_DATE",
-                "calendar_date": "2025-08-31T00:40:09.645888",
+                "calendar_date": "2025-08-31T03:40:09.645888",
                 "time_scale": "UTC",
             },
-            "duration_days": 5.0,
+            "duration_days": 0.1,
             "spacecrafts": [{
                     "id": 'ddd716b0-443b-4141-a413-19b14260db9a',
                     "name": "SC_A",
@@ -490,8 +495,43 @@ class TestMissionGNSSR(unittest.TestCase):
                         "name": "GNSSR-A",
                         "fov": {
                             "fov_type": "CIRCULAR",
-                            "diameter": 60.0,
+                            "diameter": 120.0,
                             "frame": "LVLH_SC_A",
+                            "boresight": [0.0, 0.0, 1.0],
+                        },
+                    }
+                    ],
+            },
+            {
+                    "id": 'b8cd6469-d251-424f-8fa5-41c93659cf1c',
+                    "name": "SC_B",
+                    "orbit": {
+                        "orbit_type": "TWO_LINE_ELEMENT_SET",
+                        "TLE_LINE0": "0 CYGFM04",
+                        "TLE_LINE1": "1 41885U 16078B   25243.52866888  .00022954  00000-0  47551-3 0  9992",
+                        "TLE_LINE2": "2 41885  34.9364 335.9714 0008089 323.8044  36.2128 15.44763875483948"
+                    },
+                    "local_orbital_frame_handler": {
+                        "frame_type": "LVLH_TYPE_1",
+                        "name": "LVLH_SC_B",
+                    },
+                    "sensor": [{
+                        "id": 'fbd3a133-9ef3-40a5-98c0-6e06f68f652e',
+                        "name": "GNSSR-B",
+                        "fov": {
+                            "fov_type": "CIRCULAR",
+                            "diameter": 120.0,
+                            "frame": "LVLH_SC_B",
+                            "boresight": [0.0, 0.0, 1.0],
+                        },
+                    },
+                    {
+                        "id": '0d1ab430-a300-4c1f-8faa-1c130dafb1fa',
+                        "name": "GNSSR-C",
+                        "fov": {
+                            "fov_type": "CIRCULAR",
+                            "diameter": 60.0,
+                            "frame": "SENSOR_SC_B",
                             "boresight": [0.0, 0.0, 1.0],
                         },
                     }
@@ -503,16 +543,47 @@ class TestMissionGNSSR(unittest.TestCase):
                     "name": "GNSS_01",
                     "orbit": {
                         "orbit_type": "TWO_LINE_ELEMENT_SET",
-                        "TLE_LINE0": "0 NAVSTAR 43 (USA 132)",
-                        "TLE_LINE1": "1 24876U 97035A   25243.02788942 -.00000015  00000-0  00000-0 0  9994",
-                        "TLE_LINE2": "2 24876  55.8402 109.9260 0094706  55.9250 305.0515  2.00562905206132"
+                        "TLE_LINE0": "0 NAVSTAR 49 (USA 154)",
+                        "TLE_LINE1": "1 26605U 00071A   25243.48168497 -.00000012  00000-0  00000-0 0  9994",
+                        "TLE_LINE2": "2 26605  55.4600 106.4034 0165300 263.5601 279.2284  2.00553732181705"
                     },
                     "local_orbital_frame_handler": {
                         "frame_type": "LVLH_TYPE_1",
                         "name": "LVLH_GNSS_01",
                     }
                 },
+                {
+                    "id": '5e70abfe-c07e-4766-bb24-4b908f402efb',
+                    "name": "GNSS_02",
+                    "orbit": {
+                        "orbit_type": "TWO_LINE_ELEMENT_SET",
+                        "TLE_LINE0": "0 NAVSTAR 43 (USA 132)",
+                        "TLE_LINE1": "1 24876U 97035A   25243.02788942 -.00000015  00000-0  00000-0 0  9994",
+                        "TLE_LINE2": "2 24876  55.8402 109.9260 0094706  55.9250 305.0515  2.00562905206132"
+                    },
+                    "local_orbital_frame_handler": {
+                        "frame_type": "LVLH_TYPE_1",
+                        "name": "LVLH_GNSS_02",
+                    }
+                }
             ],
+             "frame_transforms": {
+                "orientation_transforms": [
+                    {
+                    "orientation_type": "constant", "rotations": [60.0, 0.0, 0.0],
+                    "rotations_type": "EULER", "from": "SENSOR_SC_B", "to": "LVLH_SC_B", "euler_order": "xyz"
+                    }
+                ],
+                "position_transforms": [
+                    {
+                        "from_frame": "SENSOR_SC_B", "to_frame": "LVLH_SC_B",
+                        "position": { "x": 0.0,  "y": 0.0, "z": 0.0,
+                            "frame": "SENSOR_SC_B", "type": "Cartesian3DPosition"
+                        }
+                    }
+                ]
+                
+            },
             "propagator": {
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
@@ -526,32 +597,47 @@ class TestMissionGNSSR(unittest.TestCase):
     def test_gnssr_coverage(self):
         m = Mission.from_dict(self.mission_dict)
         propagated_rx_trajectories, propagated_tx_trajectories = m.execute_propagation()
-        #JsonSerializer.save_to_json(propagated_rx_trajectories, 'test_propagated_rx_trajectories.json')
-        #JsonSerializer.save_to_json(propagated_tx_trajectories, 'test_propagated_tx_trajectories.json')
         coverage_info = m.execute_gnssr_coverage_calculator(propagated_rx_trajectories = propagated_rx_trajectories,
                                                             propagated_tx_trajectories = propagated_tx_trajectories)
 
-        '''
-        # coverage_info is a list of dicts, each with "spacecraft_id" and "coverage"
+
+        # Check the structure and types of coverage_info
         self.assertIsInstance(coverage_info, list)
-        self.assertEqual(len(coverage_info), len(m.spacecrafts))  # only the non-GNSSR spacecraft should be in the coverage results
+        for spacecraft_entry in coverage_info:
+            self.assertIsInstance(spacecraft_entry, dict)
+            self.assertIn("spacecraft_id", spacecraft_entry)
+            self.assertIn("spacecraft_name", spacecraft_entry)
+            self.assertIn("total_spacecraft_coverage", spacecraft_entry)
 
-        for sc_idx, sc_entry in enumerate(coverage_info):
-            # check spacecraft entry
-            self.assertIsInstance(sc_entry, dict)
-            expected_sc_id = m.spacecrafts[sc_idx].identifier
-            self.assertEqual(sc_entry.get("spacecraft_id"), expected_sc_id)
-            self.assertIn("coverage", sc_entry)
-            self.assertIsInstance(sc_entry["coverage"], list)
-            self.assertEqual(len(sc_entry["coverage"]), len(m.spacecrafts[sc_idx].sensor))
-            # check each sensor coverage
-            for s_idx, sensor_entry in enumerate(sc_entry["coverage"]):
-                expected_sensor_id = m.spacecrafts[sc_idx].sensor[s_idx].identifier
-                self.assertEqual(sensor_entry.get("sensor_id"), expected_sensor_id)
-                self.assertIn("coverage_info", sensor_entry)
-                self.assertIsInstance(sensor_entry["coverage_info"], DiscreteCoverageTP)
+            self.assertIsInstance(spacecraft_entry["spacecraft_id"], str)
+            self.assertIsInstance(spacecraft_entry["spacecraft_name"], str)
+            self.assertIsInstance(spacecraft_entry["total_spacecraft_coverage"], list)
 
-        '''
+            for sensor_entry in spacecraft_entry["total_spacecraft_coverage"]:
+                self.assertIsInstance(sensor_entry, dict)
+                self.assertIn("sensor_id", sensor_entry)
+                self.assertIn("sensor_name", sensor_entry)
+                self.assertIn("total_sensor_coverage", sensor_entry)
+
+                self.assertIsInstance(sensor_entry["sensor_id"], str)
+                self.assertIsInstance(sensor_entry["sensor_name"], str)
+                self.assertIsInstance(sensor_entry["total_sensor_coverage"], list)
+
+                for gnssr_entry in sensor_entry["total_sensor_coverage"]:
+                    self.assertIsInstance(gnssr_entry, dict)
+                    self.assertIn("gnss_spacecraft_id", gnssr_entry)
+                    self.assertIn("gnss_spacecraft_name", gnssr_entry)
+                    self.assertIn("coverage_info", gnssr_entry)
+                    self.assertIn("rcg_proportionality", gnssr_entry)
+
+                    self.assertIsInstance(gnssr_entry["gnss_spacecraft_id"], str)
+                    self.assertIsInstance(gnssr_entry["gnss_spacecraft_name"], str)
+                    self.assertIsInstance(gnssr_entry["coverage_info"], DiscreteCoverageTP)
+                    self.assertIsInstance(gnssr_entry["rcg_proportionality"], list)
+                    self.assertTrue(
+                        all(isinstance(rcg, float) for rcg in gnssr_entry["rcg_proportionality"])
+                    )
+
         # optionally dump to JSON for manual inspection
         JsonSerializer.save_to_json(coverage_info, 'test_mission_gnssr_coverage_output.json')
         

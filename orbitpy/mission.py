@@ -17,14 +17,12 @@ from eosimutils.time import AbsoluteDate
 from eosimutils.state import Cartesian3DPositionArray
 from eosimutils.trajectory import StateSeries
 from eosimutils.framegraph import FrameGraph
-from eosimutils.standardframes import get_lvlh
 
 from .propagator import PropagatorFactory, SGP4Propagator
-from .resources import Spacecraft, GroundStation, Sensor
+from .resources import Spacecraft, GroundStation
 from .eclipsefinder import EclipseFinder, EclipseInfo
 from .contactfinder import ElevationAwareContactFinder, ContactInfo
 from .coveragecalculator import PointCoverage, SpecularCoverage, CoverageType
-from .coverage import DiscreteCoverageTP
 
 def propagate_spacecraft(spacecraft: Spacecraft, propagator: SGP4Propagator,
                         t0: AbsoluteDate, duration_days: float) -> StateSeries:
@@ -128,7 +126,7 @@ class Mission:
             ground_stations (Union[GroundStation, List[GroundStation], None]): List of ground stations.
             propagator (Union[SGP4Propagator, None]): Propagator to use for orbit propagation.
             grid_points (Union[Cartesian3DPositionArray, None]): Grid points for coverage analysis.
-            gnss_spacecrafts (Optional[List[Spacecraft]]): List of GNSS satellites (source satellites) (applicable for GNSSR coverage).
+            gnss_spacecrafts (Optional[List[Spacecraft]]): List of GNSS satellites (transmitter satellites) (applicable for GNSSR coverage).
             frame_graph (FrameGraph): Frame graph for coordinate transformations.
             coverage_settings (Optional[CoverageSettings]): Coverage calculation settings.
         """
@@ -168,7 +166,7 @@ class Mission:
             spacecrafts = [spacecrafts]
         spacecrafts = [Spacecraft.from_dict(sc) for sc in spacecrafts]
 
-        # setup GNSS (source) spacecrafts (applicable for GNSSR coverage)
+        # setup GNSS (transmitter) spacecrafts (applicable for GNSSR coverage)
         gnss_spacecrafts = dict_in.get("gnss_spacecrafts", [])
         if not isinstance(gnss_spacecrafts, list):
             gnss_spacecrafts = [gnss_spacecrafts]
@@ -369,15 +367,21 @@ class Mission:
             List[Dict[str, Any]]: Nested dictionary mapping spacecraft IDs to a dict that maps sensor IDs to their coverage information.
             Example:
             [
-                {"spacecraft_id": "04a388ad-...", "spacecraft_name": "sc1", "coverage": [
+                {"spacecraft_id": "04a388ad-...", 
+                 "spacecraft_name": "sc1", 
+                 "total_spacecraft_coverage": [
                     {"sensor_id": "bb171ddb-...", "sensor_name": "sensorA", "coverage_info": DiscreteCoverageTP(...)},
                     {"sensor_id": "917953d3-...", "sensor_name": "sensorB", "coverage_info": DiscreteCoverageTP(...)},
                     ...
-                ]},
-                {"spacecraft_id": "44966609-...", "spacecraft_name": "sc2", "coverage": [
+                    ]
+                },
+                {"spacecraft_id": "44966609-...", 
+                 "spacecraft_name": "sc2", 
+                 "total_spacecraft_coverage": [
                     {"sensor_id": "354acb08-...", "sensor_name": "sensorC", "coverage_info": DiscreteCoverageTP(...)},
                     {"sensor_id": "6ce6981d-...", "sensor_name": "sensorD", "coverage_info": DiscreteCoverageTP(...)}
-                ]},
+                    ]
+                },
                 ...
             ]
         """
@@ -420,7 +424,7 @@ class Mission:
                             )
                 sensor_cov.append({"sensor_id": sensor.identifier, "sensor_name": sensor.name, "coverage_info": result})
 
-            all_coverage_info.append({"spacecraft_id": spc_id, "spacecraft_name": spc_name, "coverage": sensor_cov}) # append results for this spacecraft
+            all_coverage_info.append({"spacecraft_id": spc_id, "spacecraft_name": spc_name, "total_spacecraft_coverage": sensor_cov}) # append results for this spacecraft
         return all_coverage_info
 
     def execute_gnssr_coverage_calculator(self, 
@@ -434,23 +438,44 @@ class Mission:
             propagated_tx_trajectories (List[Dict[str, Union[str, StateSeries]]]): Propagation results containing GNSS satellite IDs and their corresponding StateSeries.
 
         Returns:
-            Dict[str, Any]: Dictionary with two items:
-                - tx_spacecrafts: Dictionary with lists of GNSS spacecraft IDs and their names.
-                - rx_spacecrafts: Nested dictionary mapping spacecraft IDs to a dict that maps sensor IDs to their coverage information.
+            List[Dict[str, Any]]: List of nested dictionary mapping spacecraft IDs to a dict that maps sensor IDs to their coverage information.
+                                Coverage information contains a list of coverage details for each GNSS transmitter.
             Example:
-            {   "tx_spacecrafts": { "spacecraft_id": ["441ab3ed-...", "4577c4c5--...", ], 
-                                        "spacecraft_name": ["gnss1", "gnss2", ...]
-                                        },
-                "rx_spacecrafts": [{"spacecraft_id": "04a388ad-...", 
-                                          "spacecraft_name": "receiver1", 
-                                          "coverage": [
-                                                        {"sensor_id": "bfc33b46-...", "sensor_name": "gnssrA", 
-                                                        "coverage_info": List[Tuple[DiscreteCoverageTP(...), List[float]]
-                                                    ]
-                                         },
-                                        ...
-                                        ]
-            }
+            [{ 
+                "spacecraft_id": "04a388ad-...", 
+                "spacecraft_name": "receiver1", 
+                "total_spacecraft_coverage": 
+                    [
+                        {   "sensor_id": "bfc33b46-...", 
+                            "sensor_name": "gnssrA",
+                            "total_sensor_coverage": [
+                                {
+                                    "gnss_spacecraft_id": "daea41f9-...",
+                                    "gnss_spacecraft_name": "GNSS_01", 
+                                    "coverage_info": DiscreteCoverageTP(...),
+                                    "rcg_proportionality": List[float]
+                                },
+                                ...
+                            ]
+                        },
+                        {   "sensor_id": "99a79793-...",
+                            "sensor_name": "gnssrB",
+                            "total_sensor_coverage": [
+                                {
+                                    ...
+                                },
+                                ...
+                            ]
+                        },
+                        ...
+                    ]
+             },
+             {
+                "spacecraft_id": "3381b372-...",
+                ...
+             },
+             ...
+            ]
         """
         if not self.gnss_spacecrafts:
             raise ValueError("No GNSS spacecrafts specified for GNSS-R coverage calculation.")
@@ -477,7 +502,7 @@ class Mission:
 
             # Compute transformations and add the GNSS LVLH frames
             # Associate trajectory with the spacecraft
-            tx_spacecraft = next((sc for sc in self.spacecrafts if sc.identifier == tx_item["spacecraft_id"]), None)
+            tx_spacecraft = next((sc for sc in self.gnss_spacecrafts if sc.identifier == tx_spc_id), None)
             if tx_spacecraft is None:
                 continue
             # get the local frame details for the spacecraft
@@ -493,9 +518,7 @@ class Mission:
             gnss_frames.append(tx_local_orbital_frame)
         
         # initialize the results dictionary
-        all_coverage_info = {"tx_spacecrafts": {"spacecraft_id": tx_spacecraft_id,
-                                                    "spacecraft_name": tx_spacecraft_name},
-                             "rx_spacecrafts": []}
+        all_coverage_info: List[Dict[str, Any]] = []
 
         for rx_item in propagated_rx_trajectories:
 
@@ -533,13 +556,26 @@ class Mission:
                                     specular_radius=self.coverage_settings.specular_radius_km,
                                     surface=SurfaceType.SPHERE,
                             )
-                print(result)
-                rx_sensor_cov.append({"sensor_id": rx_sensor.identifier, "sensor_name": rx_sensor.name, "coverage_info": result})
+                
+                # Structure the result as a list of dictionaries for clarity
+                _rx_sensor_cov = [
+                    {
+                        "gnss_spacecraft_id": tx_spacecraft_id[i],  # GNSS spacecraft ID
+                        "gnss_spacecraft_name": tx_spacecraft_name[i],  # GNSS spacecraft name
+                        "coverage_info": coverage[0],  # DiscreteCoverageTP object
+                        "rcg_proportionality": coverage[1],  # RCG proportionality factor
+                    }
+                    for i, coverage in enumerate(result)
+                ]
+                rx_sensor_cov.append({
+                    "sensor_id": rx_sensor.identifier,
+                    "sensor_name": rx_sensor.name,
+                    "total_sensor_coverage": _rx_sensor_cov,
+                })
 
+            rx_spc_coverage = {"spacecraft_id": rx_spc_id, "spacecraft_name": rx_spc_name, "total_spacecraft_coverage": rx_sensor_cov} # append results for this spacecraft
 
-            rx_spc_coverage = {"spacecraft_id": rx_spc_id, "spacecraft_name": rx_spc_name, "coverage": rx_sensor_cov}
-
-            all_coverage_info["receiver_spacecrafts"].append(rx_spc_coverage)
+            all_coverage_info.append(rx_spc_coverage)
 
         return all_coverage_info
     '''
