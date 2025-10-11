@@ -113,7 +113,7 @@ class Mission:
                 spacecrafts: Union[Spacecraft, List[Spacecraft]],
                 ground_stations: Union[GroundStation, List[GroundStation], None], 
                 propagator: Union[SGP4Propagator, None],
-                grid_points: Union[Cartesian3DPositionArray, None],
+                spatial_points: Union[Cartesian3DPositionArray, None],
                 gnss_spacecrafts: Optional[List[Spacecraft]] = None,
                 frame_graph: FrameGraph = None,
                 coverage_settings: Optional[CoverageSettings] = None,
@@ -125,7 +125,7 @@ class Mission:
             spacecrafts (Union[Spacecraft, List[Spacecraft]]): List of spacecraft in the mission.
             ground_stations (Union[GroundStation, List[GroundStation], None]): List of ground stations.
             propagator (Union[SGP4Propagator, None]): Propagator to use for orbit propagation.
-            grid_points (Union[Cartesian3DPositionArray, None]): Grid points for coverage analysis.
+            spatial_points (Union[Cartesian3DPositionArray, None]): Spatial points for coverage analysis.
             gnss_spacecrafts (Optional[List[Spacecraft]]): List of GNSS satellites (transmitter satellites) (applicable for GNSSR coverage).
             frame_graph (FrameGraph): Frame graph for coordinate transformations.
             coverage_settings (Optional[CoverageSettings]): Coverage calculation settings.
@@ -139,7 +139,7 @@ class Mission:
             ground_stations = [ground_stations]
         self.ground_stations = ground_stations
         self.propagator = propagator
-        self.grid_points = grid_points
+        self.spatial_points = spatial_points
         if gnss_spacecrafts is not None:
             if not isinstance(gnss_spacecrafts, list):
                 gnss_spacecrafts = [gnss_spacecrafts]
@@ -186,11 +186,11 @@ class Mission:
             propagator = PropagatorFactory.from_dict(propagator_specs)
         
         # setup grid points
-        grid_points_specs = dict_in.get("grid_points", None)
-        grid_points = None
-        if grid_points_specs is not None:
-            grid_points = Cartesian3DPositionArray.from_dict(grid_points_specs)
-        
+        spatial_points_dict = dict_in.get("spatial_points", None)
+        spatial_points = None
+        if spatial_points_dict is not None:
+            spatial_points = Cartesian3DPositionArray.from_dict(spatial_points_dict)
+
         # setup the frames and the transformations
         # The spacecrafts need to be setup before this so that their local orbit frames are registered.
         transform_dict = dict_in.get("frame_transforms", None)
@@ -227,7 +227,7 @@ class Mission:
             gnss_spacecrafts=gnss_spacecrafts,
             ground_stations=ground_stations,
             propagator=propagator,
-            grid_points=grid_points,
+            spatial_points=spatial_points,
             frame_graph=frame_graph,
             coverage_settings=coverage_settings,
         )
@@ -245,7 +245,7 @@ class Mission:
             "gnss_spacecrafts": [gnss_sc.to_dict() for gnss_sc in self.gnss_spacecrafts] if self.gnss_spacecrafts else None,
             "ground_stations": [gs.to_dict() for gs in self.ground_stations] if self.ground_stations else None,
             "propagator": self.propagator.to_dict() if self.propagator else None,
-            "grid_points": self.grid_points.to_dict() if self.grid_points else None,
+            "spatial_points": self.spatial_points.to_dict() if self.spatial_points else None,
             "coverage_settings": self.coverage_settings.to_dict() if self.coverage_settings else None,
         }
 
@@ -385,9 +385,9 @@ class Mission:
                 ...
             ]
         """
-        if self.grid_points is None:
-            raise ValueError("No grid points specified for coverage calculation.")
-        
+        if self.spatial_points is None:
+            raise ValueError("No spatial points specified for coverage calculation.")
+
         coverage_calculator = PointCoverage()
         eci_frame = ReferenceFrame.get("ICRF_EC")
         
@@ -416,7 +416,7 @@ class Mission:
                 self.frame_graph.add_orientation_transform(att_lvlh)
                 self.frame_graph.add_pos_transform(from_frame=eci_frame, to_frame=local_orbital_frame, position=pos_lvlh)
                 result = coverage_calculator.calculate_coverage(
-                                    target_point_array=self.grid_points,                      
+                                    target_point_array=self.spatial_points,                      
                                     fov=sensor.fov,
                                     frame_graph=self.frame_graph,
                                     times=times,
@@ -479,8 +479,8 @@ class Mission:
         """
         if not self.gnss_spacecrafts:
             raise ValueError("No GNSS spacecrafts specified for GNSS-R coverage calculation.")
-        if not self.grid_points:
-            raise ValueError("No grid points specified for coverage calculation.")
+        if not self.spatial_points:
+            raise ValueError("No spatial points specified for coverage calculation.")
         if not self.coverage_settings.specular_radius_km:
             raise ValueError("Specular radius not specified for coverage calculation.")
 
@@ -548,7 +548,7 @@ class Mission:
                 self.frame_graph.add_pos_transform(from_frame=eci_frame, to_frame=rx_local_orbital_frame, position=rx_pos_lvlh)
                 
                 result = coverage_calculator.calculate_coverage(
-                                    target_point_array=self.grid_points,                      
+                                    target_point_array=self.spatial_points,                      
                                     fov=rx_sensor.fov,
                                     frame_graph=self.frame_graph,
                                     times=rx_times,
@@ -578,27 +578,26 @@ class Mission:
             all_coverage_info.append(rx_spc_coverage)
 
         return all_coverage_info
-    '''
+    
     def execute_all(self) -> Dict[str, Any]:
         """Run propagation, eclipse, contact and coverage and return a dictionary of results.
         Does not modify Mission instance state; all results are returned in the dict.
         """
-        propagate = self.execute_propagation()
-        eclipse = self.execute_eclipse_finder(propagate)
+        propagated_trajectories = self.execute_propagation()
+        eclipse = self.execute_eclipse_finder(propagated_trajectories)
 
         contacts = None
         coverage = None
 
         if self.ground_stations:
-            contacts = self.execute_gs_contact_finder(propagate)
-        if self.grid_points is not None:
-            coverage = self.execute_coverage_calculator(propagate)
+            contacts = self.execute_gs_contact_finder(propagated_trajectories)
+        if self.spatial_points is not None:
+            coverage = self.execute_coverage_calculator(propagated_trajectories)
 
         mission_results = {
-            "propagate": propagate,
-            "eclipse": eclipse,
-            "contacts": contacts,
-            "coverage": coverage,
+            "propagator_results": propagated_trajectories,
+            "eclipse_finder_results": eclipse,
+            "contact_finder_results": contacts,
+            "coverage_calculator_results": coverage,
         }
         return mission_results
-    '''

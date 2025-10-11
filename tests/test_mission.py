@@ -99,7 +99,7 @@ class TestMission_1(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "grid_points": self.points_array.to_dict(),
+            "spatial_points": self.points_array.to_dict(),
         }
         
 
@@ -111,7 +111,7 @@ class TestMission_1(unittest.TestCase):
         self.assertEqual(m_dict.get("spacecrafts"), self.mission_dict.get("spacecrafts"))  # single spacecraft
         self.assertEqual(m_dict.get("ground_stations"), self.mission_dict.get("ground_stations"))
         self.assertEqual(m_dict.get("propagator"), self.mission_dict.get("propagator"))
-        self.assertEqual(m_dict.get("grid_points"), self.mission_dict.get("grid_points"))
+        self.assertEqual(m_dict.get("spatial_points"), self.mission_dict.get("spatial_points"))
 
     def test_execute_propagation(self):
         m = Mission.from_dict(self.mission_dict)
@@ -183,12 +183,12 @@ class TestMission_1(unittest.TestCase):
             self.assertIsInstance(sc_entry, dict)
             expected_sc_id = m.spacecrafts[sc_idx].identifier
             self.assertEqual(sc_entry.get("spacecraft_id"), expected_sc_id)
-            self.assertIn("coverage", sc_entry)
-            self.assertIsInstance(sc_entry["coverage"], list)
-            self.assertEqual(len(sc_entry["coverage"]), len(m.spacecrafts[sc_idx].sensor))
+            self.assertIn("total_spacecraft_coverage", sc_entry)
+            self.assertIsInstance(sc_entry["total_spacecraft_coverage"], list)
+            self.assertEqual(len(sc_entry["total_spacecraft_coverage"]), len(m.spacecrafts[sc_idx].sensor))
 
             # check each sensor coverage
-            for s_idx, sensor_entry in enumerate(sc_entry["coverage"]):
+            for s_idx, sensor_entry in enumerate(sc_entry["total_spacecraft_coverage"]):
                 expected_sensor_id = m.spacecrafts[sc_idx].sensor[s_idx].identifier
                 self.assertEqual(sensor_entry.get("sensor_id"), expected_sensor_id)
                 self.assertIn("coverage_info", sensor_entry)
@@ -338,7 +338,7 @@ class TestMission_2(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "grid_points": points_array.to_dict(),
+            "spatial_points": points_array.to_dict(),
         }
         self.m = Mission.from_dict(self.mission_dict)
         self.propagated_trajectories = self.m.execute_propagation()
@@ -404,11 +404,11 @@ class TestMission_2(unittest.TestCase):
             self.assertIsInstance(sc_entry, dict)
             expected_sc_id = self.m.spacecrafts[sc_idx].identifier
             self.assertEqual(sc_entry.get("spacecraft_id"), expected_sc_id)
-            self.assertIn("coverage", sc_entry)
-            self.assertIsInstance(sc_entry["coverage"], list)
-            self.assertEqual(len(sc_entry["coverage"]), len(self.m.spacecrafts[sc_idx].sensor))
+            self.assertIn("total_spacecraft_coverage", sc_entry)
+            self.assertIsInstance(sc_entry["total_spacecraft_coverage"], list)
+            self.assertEqual(len(sc_entry["total_spacecraft_coverage"]), len(self.m.spacecrafts[sc_idx].sensor))
             # check each sensor coverage
-            for s_idx, sensor_entry in enumerate(sc_entry["coverage"]):
+            for s_idx, sensor_entry in enumerate(sc_entry["total_spacecraft_coverage"]):
                 expected_sensor_id = self.m.spacecrafts[sc_idx].sensor[s_idx].identifier
                 self.assertEqual(sensor_entry.get("sensor_id"), expected_sensor_id)
                 self.assertIn("coverage_info", sensor_entry)
@@ -421,9 +421,9 @@ class TestMission_2(unittest.TestCase):
     def test_polar_spacecraft_sensor_coverages_do_not_overlap(self):
         """The two sensors on the polar-orbiting spacecraft should have non-overlapping coverage at each time point."""
         polar_entry = next(item for item in self.coverage_info if item["spacecraft_id"] == "cf4cea95-e935-4314-a235-02ea87040b11") # SC_A
-        self.assertEqual(len(polar_entry["coverage"]), 2)
-        sensor1_cov = polar_entry["coverage"][0]["coverage_info"]
-        sensor2_cov = polar_entry["coverage"][1]["coverage_info"]
+        self.assertEqual(len(polar_entry["total_spacecraft_coverage"]), 2)
+        sensor1_cov = polar_entry["total_spacecraft_coverage"][0]["coverage_info"]
+        sensor2_cov = polar_entry["total_spacecraft_coverage"][1]["coverage_info"]
         self.assertIsInstance(sensor1_cov, DiscreteCoverageTP)
         self.assertIsInstance(sensor2_cov, DiscreteCoverageTP)
         
@@ -436,8 +436,8 @@ class TestMission_2(unittest.TestCase):
     def test_low_inclination_spacecraft_coverage_within_latitude_bounds(self):
         """The covered points by the low-inclination spacecraft should be roughly within the maximum latitude range of the orbit."""
         iss_entry = next(item for item in self.coverage_info if item["spacecraft_name"] == "SC_B")
-        self.assertEqual(len(iss_entry["coverage"]), 1)
-        iss_cov = iss_entry["coverage"][0]["coverage_info"]
+        self.assertEqual(len(iss_entry["total_spacecraft_coverage"]), 1)
+        iss_cov = iss_entry["total_spacecraft_coverage"][0]["coverage_info"]
         self.assertIsInstance(iss_cov, DiscreteCoverageTP)
         
         # Get the Cartesian coordinates of the covered points
@@ -461,9 +461,9 @@ class TestMission_2(unittest.TestCase):
 class TestMissionGNSSR(unittest.TestCase):
     """Tests for the Mission class with a GNSS spacecraft constellation.
         - Two GNSS spacecrafts
-        - Two spacecrafts in LEO
-        - One spacecraft has one sensor,
-          and another spacecraft has two sensors with different fields of view. One of the sensors is tilted.
+        - Two receiver spacecrafts in LEO
+        - One receiver spacecraft has one sensor,
+          and another receiver spacecraft has two sensors with different fields of view. One of the sensors is tilted.
     """
     def setUp(self):
         
@@ -588,7 +588,7 @@ class TestMissionGNSSR(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "grid_points": points_array.to_dict(),
+            "spatial_points": points_array.to_dict(),
             "coverage_settings": {
                 "specular_radius_km": 15.0,
             }
@@ -639,7 +639,7 @@ class TestMissionGNSSR(unittest.TestCase):
                     )
 
         # optionally dump to JSON for manual inspection
-        JsonSerializer.save_to_json(coverage_info, 'test_mission_gnssr_coverage_output.json')
+        #JsonSerializer.save_to_json(coverage_info, 'test_mission_gnssr_coverage_output.json')
         
 
 
