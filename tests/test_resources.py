@@ -180,6 +180,7 @@ class TestSpacecraft(unittest.TestCase):
         """Set up test data for Spacecraft."""
         self.identifier = 'ddd716b0-443b-4141-a413-19b14260db9a'
         self.name = "Test Spacecraft"
+        self.norad_id = 49260
         self.orbit = TwoLineElementSet(
             line0="0 LANDSAT 9",
             line1="1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
@@ -196,6 +197,7 @@ class TestSpacecraft(unittest.TestCase):
         self.spacecraft_dict = {
             "id": 'ddd716b0-443b-4141-a413-19b14260db9a',
             "name": 'Test Spacecraft',
+            "norad_id": 49260,
             "orbit": {
                 "orbit_type": "TWO_LINE_ELEMENT_SET",
                 "TLE_LINE0": "0 LANDSAT 9",
@@ -221,10 +223,11 @@ class TestSpacecraft(unittest.TestCase):
     def test_initialization(self):
         """Test initialization of Spacecraft."""
         spc = Spacecraft(
-            self.identifier, self.name, self.orbit, self.local_orbital_frame_handler, [self.sensor]
+            self.identifier, self.name, self.norad_id, self.orbit, self.local_orbital_frame_handler, [self.sensor]
         )
         self.assertEqual(spc.identifier, self.identifier)
         self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.norad_id, self.norad_id)
         self.assertEqual(spc.orbit.line0, self.orbit.line0)
         self.assertEqual(spc.orbit.line1, self.orbit.line1)
         self.assertEqual(spc.orbit.line2, self.orbit.line2)
@@ -240,6 +243,7 @@ class TestSpacecraft(unittest.TestCase):
         spc = Spacecraft.from_dict(self.spacecraft_dict)
         self.assertEqual(spc.identifier, self.identifier)
         self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.norad_id, self.norad_id)
         self.assertEqual(spc.orbit.line0, self.orbit.line0)
         self.assertEqual(spc.orbit.line1, self.orbit.line1)
         self.assertEqual(spc.orbit.line2, self.orbit.line2)
@@ -257,6 +261,7 @@ class TestSpacecraft(unittest.TestCase):
         spc = Spacecraft.from_dict(dict_no_sensor)
         self.assertEqual(spc.identifier, self.identifier)
         self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.norad_id, self.norad_id)
         self.assertEqual(spc.orbit.line0, self.orbit.line0)
         self.assertEqual(spc.orbit.line1, self.orbit.line1)
         self.assertEqual(spc.orbit.line2, self.orbit.line2)
@@ -285,6 +290,7 @@ class TestSpacecraft(unittest.TestCase):
         spc = Spacecraft.from_dict(spacecraft_dict_multiple_sensors)
         self.assertEqual(spc.identifier, self.identifier)
         self.assertEqual(spc.name, self.name)
+        self.assertEqual(spc.norad_id, self.norad_id)
         self.assertEqual(spc.orbit.line0, self.orbit.line0)
         self.assertEqual(spc.orbit.line1, self.orbit.line1)
         self.assertEqual(spc.orbit.line2, self.orbit.line2)
@@ -299,11 +305,12 @@ class TestSpacecraft(unittest.TestCase):
     def test_to_dict(self):
         """Test converting a Spacecraft object to a dictionary."""
         spc = Spacecraft(
-            self.identifier, self.name, self.orbit, self.local_orbital_frame_handler, [self.sensor]
+            self.identifier, self.name, self.norad_id, self.orbit, self.local_orbital_frame_handler, [self.sensor]
         )
         dict_out = spc.to_dict()
         self.assertEqual(dict_out["id"], self.identifier)
         self.assertEqual(dict_out["name"], self.name)
+        self.assertEqual(dict_out["norad_id"], self.norad_id)
         self.assertEqual(dict_out["orbit"]["TLE_LINE0"], self.orbit.line0)
         self.assertEqual(dict_out["orbit"]["TLE_LINE1"], self.orbit.line1)
         self.assertEqual(dict_out["orbit"]["TLE_LINE2"], self.orbit.line2)
@@ -320,7 +327,7 @@ class TestSpacecraft(unittest.TestCase):
 
     def test_default_id(self):
         """Test that a default UUID is generated if no identifier is provided."""
-        spc = Spacecraft(None, self.name, self.orbit, self.local_orbital_frame_handler, [self.sensor])
+        spc = Spacecraft(None, self.name, self.norad_id, self.orbit, self.local_orbital_frame_handler, [self.sensor])
         self.assertIsNotNone(spc.identifier)
         try:
             uuid.UUID(spc.identifier)
@@ -331,19 +338,25 @@ class TestSpacecraft(unittest.TestCase):
         """Test that an invalid UUID raises a ValueError."""
         invalid_identifier = "invalid-uuid"
         with self.assertRaises(ValueError) as context:
-            Spacecraft(invalid_identifier, self.name, self.orbit, self.local_orbital_frame_handler, [self.sensor])
+            Spacecraft(invalid_identifier, self.name, self.norad_id, self.orbit, self.local_orbital_frame_handler, [self.sensor])
         self.assertIn("identifier must be a valid UUID.", str(context.exception))
 
     def test_invalid_sensor_list(self):
         """Test that an invalid sensor list raises a TypeError."""
         with self.assertRaises(TypeError) as context:
-            Spacecraft(self.identifier, self.name, self.orbit, self.local_orbital_frame_handler, ["invalid_sensor"])
+            Spacecraft(self.identifier, self.name, self.norad_id, self.orbit, self.local_orbital_frame_handler, ["invalid_sensor"])
         self.assertIn("sensor must be a list of Sensor objects.", str(context.exception))
+
+    def test_invalif_norad_id_type(self):
+        """Test that an invalid NORAD ID type raises a TypeError."""
+        with self.assertRaises(TypeError) as context:
+            Spacecraft(self.identifier, self.name, "invalid_norad_id", self.orbit, self.local_orbital_frame_handler, [self.sensor])
+        self.assertIn("norad_id must be an integer or None.", str(context.exception))
 
     def test_invalid_orbit_type(self):
         """Test that an invalid orbit type raises a TypeError."""
         with self.assertRaises(TypeError) as context:
-            Spacecraft(self.identifier, self.name, "invalid_orbit", self.local_orbital_frame_handler, [self.sensor])
+            Spacecraft(self.identifier, self.name, self.norad_id, "invalid_orbit", self.local_orbital_frame_handler, [self.sensor])
         self.assertIn(
             "orbit must be a TwoLineElementSet, OrbitalMeanElementsMessage, or OsculatingElements object.",
             str(context.exception),
@@ -352,9 +365,9 @@ class TestSpacecraft(unittest.TestCase):
     def test_invalid_frame_handler_type(self):
         """Test that an invalid frame handler type raises a TypeError."""
         with self.assertRaises(TypeError) as context:
-            Spacecraft(self.identifier, self.name, self.orbit, "invalid_frame_handler", [self.sensor])
+            Spacecraft(self.identifier, self.name, self.norad_id, self.orbit, "invalid_frame_handler", [self.sensor])
         self.assertIn(
-            "local_orbital_frame_handler must be a FrameHandler object.",
+            "local_orbital_frame_handler must be a frame handler object.",
             str(context.exception),
         )
 

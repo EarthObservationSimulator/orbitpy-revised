@@ -356,11 +356,13 @@ class SpaceTrackAPI:
         if not self.session:
             raise RuntimeError("Session not initialized. Please login first.")
 
-        # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S
+        # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S.%f or %Y-%m-%dT%H:%M:%S
         try:
-            tdt_datetime = datetime.strptime(
-                target_date_time, "%Y-%m-%dT%H:%M:%S"
-            )  # datetime object
+            # Try parsing with fractional seconds
+            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            # Fallback to parsing without fractional seconds
+            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S")
         except ValueError:
             print(
                 "Invalid target_date_time format. It should be a string in the format"
@@ -394,7 +396,7 @@ class SpaceTrackAPI:
 
             closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
-                print(closest_omm)
+                #print(closest_omm)
                 retrieved_cd = closest_omm["CREATION_DATE"]
                 retrieved_cd_datetime = datetime.strptime(
                     retrieved_cd, "%Y-%m-%dT%H:%M:%S"
