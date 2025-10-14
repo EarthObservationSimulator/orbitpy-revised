@@ -1,4 +1,5 @@
 """Unit tests for orbitpy.orbits module."""
+import os
 import unittest
 import random
 import numpy as np
@@ -48,6 +49,7 @@ class TestMission_1(unittest.TestCase):
             "spacecrafts": [{
                     "id": 'ddd716b0-443b-4141-a413-19b14260db9a',
                     "name": "SC_A",
+                    "norad_id": None,
                     "orbit": {
                         "orbit_type": "TWO_LINE_ELEMENT_SET",
                         "TLE_LINE0": "0 LANDSAT 9 ORBIT",
@@ -115,7 +117,7 @@ class TestMission_1(unittest.TestCase):
 
     def test_execute_propagation(self):
         m = Mission.from_dict(self.mission_dict)
-        propagated_trajectories = m.execute_propagation()
+        (propagated_trajectories, _) = m.execute_propagation()
         self.assertIsInstance(propagated_trajectories, list)
         self.assertEqual(len(propagated_trajectories), len(m.spacecrafts)) # match the number of spacecrafts
 
@@ -130,7 +132,7 @@ class TestMission_1(unittest.TestCase):
 
     def test_execute_eclipse_finder(self):
         m = Mission.from_dict(self.mission_dict)
-        propagated_trajectories = m.execute_propagation()
+        (propagated_trajectories, _) = m.execute_propagation()
         eclipse_results = m.execute_eclipse_finder(propagated_trajectories)
         self.assertIsInstance(eclipse_results, list)
         self.assertEqual(len(eclipse_results), len(m.spacecrafts)) # match the number of spacecrafts
@@ -145,7 +147,7 @@ class TestMission_1(unittest.TestCase):
 
     def test_execute_gs_contact_finder(self):
         m = Mission.from_dict(self.mission_dict)
-        propagated_trajectories = m.execute_propagation()
+        (propagated_trajectories, _) = m.execute_propagation()
         contact_info = m.execute_gs_contact_finder(propagated_trajectories)
 
         # contact_info is a list of dicts, each with "spacecraft_id" and "contacts" (a list of {ground_station_id, contact_info})
@@ -171,7 +173,7 @@ class TestMission_1(unittest.TestCase):
 
     def test_execute_coverage_calculator(self):
         m = Mission.from_dict(self.mission_dict)
-        propagated_trajectories = m.execute_propagation()
+        (propagated_trajectories, _) = m.execute_propagation()
         coverage_info = m.execute_coverage_calculator(propagated_trajectories)
 
         # coverage_info is a list of dicts, each with "spacecraft_id" and "coverage"
@@ -341,7 +343,7 @@ class TestMission_2(unittest.TestCase):
             "spatial_points": points_array.to_dict(),
         }
         self.m = Mission.from_dict(self.mission_dict)
-        self.propagated_trajectories = self.m.execute_propagation()
+        (self.propagated_trajectories, _) = self.m.execute_propagation()
         self.eclipse_results = self.m.execute_eclipse_finder(self.propagated_trajectories)
         self.contact_info = self.m.execute_gs_contact_finder(self.propagated_trajectories)
         self.coverage_info = self.m.execute_coverage_calculator(self.propagated_trajectories)
@@ -589,16 +591,17 @@ class TestMissionGNSSR(unittest.TestCase):
                 "step_size": 60,  # seconds
             },
             "spatial_points": points_array.to_dict(),
-            "coverage_settings": {
+            "settings": {
+                "coverage_type": "SPECULAR_COVERAGE",
                 "specular_radius_km": 15.0,
             }
         }
     
     def test_gnssr_coverage(self):
         m = Mission.from_dict(self.mission_dict)
-        propagated_rx_trajectories, propagated_tx_trajectories = m.execute_propagation()
-        coverage_info = m.execute_gnssr_coverage_calculator(propagated_rx_trajectories = propagated_rx_trajectories,
-                                                            propagated_tx_trajectories = propagated_tx_trajectories)
+        (propagated_rx_trajectories, propagated_tx_trajectories) = m.execute_propagation()
+        coverage_info = m.execute_gnssr_coverage_calculator(propagated_rx_trajectories=propagated_rx_trajectories,
+                                                            propagated_tx_trajectories=propagated_tx_trajectories)
 
 
         # Check the structure and types of coverage_info
@@ -641,7 +644,45 @@ class TestMissionGNSSR(unittest.TestCase):
         # optionally dump to JSON for manual inspection
         #JsonSerializer.save_to_json(coverage_info, 'test_mission_gnssr_coverage_output.json')
         
+class TestAutoRetrieveOrbit(unittest.TestCase):
+    """Tests for automatic retrieval of orbit from NORAD ID."""
+    def setUp(self):
+        user_dir = os.path.dirname(os.path.abspath(__file__))
+        self.mission_dict = {
+            "start_time": {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": "2025-04-17T12:00:00.000",
+                "time_scale": "UTC",
+            },
+            "duration_days": 1.0,
+            "spacecrafts": [{
+                    "id": '331c00dc-488c-4f47-8f5e-4a1a28ed8e40',
+                    "name": "ISS",
+                    "norad_id": 25544,  # ISS NORAD ID
+            }],
+            "propagator": {
+                "propagator_type": "SGP4_PROPAGATOR",
+                "step_size": 60,  # seconds
+            },
+            "settings": {
+                "user_dir": user_dir,
+                "spacetrack_credentials_relative_path": "../examples/spacetrack/credentials.json"
+            }
+        }
+    
+    def test_propagate_with_auto_retreival(self):
+        m = Mission.from_dict(self.mission_dict)
+        (propagated_trajectories, _) = m.execute_propagation()
+        self.assertIsInstance(propagated_trajectories, list)
+        self.assertEqual(len(propagated_trajectories), len(m.spacecrafts)) # match the number of spacecrafts
 
+        # check dict structure and types
+        for idx, entry in enumerate(propagated_trajectories):
+            self.assertIsInstance(entry, dict)
+            self.assertIsInstance(entry.get("spacecraft_id"), str)
+            self.assertIn(entry.get("spacecraft_id"), m.spacecrafts[idx].identifier)
+            self.assertIn("trajectory", entry)
+            self.assertIsInstance(entry["trajectory"], StateSeries)
 
 
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ def main(user_dir: str) -> None:
     with open(mission_specs_path, 'r') as mission_specs:
         mission_dict: dict[str, Any] = json.load(mission_specs)
 
-    mission_dict.setdefault("settings", {})["outDir"] = user_dir  # Ensure settings and set output directory
+    mission_dict.setdefault("settings", {})["user_dir"] = user_dir  # Ensure settings and set user directory.
 
     mission = Mission.from_dict(mission_dict)
 
@@ -41,11 +41,9 @@ def main(user_dir: str) -> None:
     print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")
 
     print("Writing results to output directory.")
-    results_fp = os.path.join(user_dir, 'mission_output.json')
+    results_fp = os.path.join(user_dir, 'MissionOutput.json')
     JsonSerializer.save_to_json(results, results_fp)
-    print("Results written to mission_output.json")
-
-
+    print("Results written to MissionOutput.json")
 
 class ReadableDir(argparse.Action):
     """Custom argparse Action to validate a readable directory."""
