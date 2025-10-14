@@ -439,7 +439,7 @@ class PointCoverage:
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
-            fov (Union[CircularFieldOfView, RectangularFieldOfView]): The field of view to use for
+            fov (Union[CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView]): The field of view to use for
                 coverage calculation.
             frame_graph (FrameGraph): The frame graph containing the necessary transformations
                 between frames.
@@ -613,9 +613,25 @@ class PointCoverage:
             variables.append(fov_source)
 
         elif isinstance(fov, PolygonFieldOfView):
-            raise NotImplementedError(
-                "PolygonFieldOfView is not yet implemented."
+
+            # Define the polygon vertices and interior point in the FOV frame
+            vertices_fov = [gte.Vector3d(v) for v in fov.boundary_corners]
+            interior_fov = gte.Vector3d(fov.boresight)
+
+            # Define a source which builds a spherical polygon object using the FOV position,
+            # polygon vertices and interior point.
+            # This is a Variable object so it must be added to the variables list to be updated.
+            fov_source = kcl.SphericalPolySource(
+                vertices_fov, interior_fov, pos_fov_target_source,fov_to_target_source, buff_size
             )
+
+            # Define a Viewer object for the polygon shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
+            fov_viewer = kcl.ViewerSphericalPolygond(fov_source)
+
+            # Add variables to list
+            variables.append(fov_source)
+
         else:
             raise ValueError("Unsupported field of view type.")
 
