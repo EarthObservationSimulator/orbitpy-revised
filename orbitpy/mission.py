@@ -658,7 +658,7 @@ class Mission:
                                     fov=rx_sensor.fov,
                                     frame_graph=self.frame_graph,
                                     times=rx_times,
-                                    transmitters=gnss_frames,
+                                    transmitter_frames=gnss_frames,
                                     specular_radius=self.settings.specular_radius_km,
                                     surface=SurfaceType.SPHERE,
                             )

@@ -600,8 +600,8 @@ class TestMissionGNSSR(unittest.TestCase):
     def test_gnssr_coverage(self):
         m = Mission.from_dict(self.mission_dict)
         (propagated_rx_trajectories, propagated_tx_trajectories) = m.execute_propagation()
-        coverage_info = m.execute_gnssr_coverage_calculator(propagated_rx_trajectories=propagated_rx_trajectories,
-                                                            propagated_tx_trajectories=propagated_tx_trajectories)
+        coverage_info = m.execute_gnssr_coverage_calculator(propagated_rx_trajectories,
+                                                            propagated_tx_trajectories)
 
 
         # Check the structure and types of coverage_info
