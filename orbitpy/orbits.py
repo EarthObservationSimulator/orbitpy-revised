@@ -342,6 +342,9 @@ class SpaceTrackAPI:
             norad_id (int): NORAD catalog ID of the satellite.
             target_datetime (str): Target datetime in ISO 8601 format
                                    (e.g., "2024-04-08T19:28:18").
+            within_days (int): Maximum number of days before the target
+                               datetime to consider for the OMM data.
+                               Default is 1 day.
 
         Returns:
             Optional[Dict[str, Any]]: The OMM data as a dictionary,
