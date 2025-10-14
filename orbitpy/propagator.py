@@ -145,7 +145,7 @@ class SGP4Propagator:
             "propagator_type": PropagatorType.SGP4_PROPAGATOR.value,
             "step_size": self.step_size,
         }
-    
+
     def execute(
         self,
         t0: AbsoluteDate,

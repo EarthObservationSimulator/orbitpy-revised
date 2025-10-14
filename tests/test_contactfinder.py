@@ -408,6 +408,6 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         self.assertTrue(
             np.array_equal(result.data[0], [True, True, False]),
             msg=f"min_elevation_angle: {min_elevation_angle}, "
-                f"target_x1: {target_x1}, target_x2: {target_x2}, "
-                f"target_x3: {target_x3} were used.",
+            f"target_x1: {target_x1}, target_x2: {target_x2}, "
+            f"target_x3: {target_x3} were used.",
         )

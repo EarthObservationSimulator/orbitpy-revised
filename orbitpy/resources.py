@@ -16,9 +16,17 @@ from eosimutils.fieldofview import (
     RectangularFieldOfView,
     PolygonFieldOfView,
 )
-from eosimutils.standardframes import StandardFrameHandlerFactory, LVLHType1FrameHandler
+from eosimutils.standardframes import (
+    StandardFrameHandlerFactory,
+    LVLHType1FrameHandler,
+)
 
-from .orbits import OrbitFactory, TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements
+from .orbits import (
+    OrbitFactory,
+    TwoLineElementSet,
+    OrbitalMeanElementsMessage,
+    OsculatingElements,
+)
 
 
 class GroundStation:
@@ -142,7 +150,7 @@ class Sensor:
         self.identifier = identifier
         self.name = name
         self.fov = fov
-    
+
     @classmethod
     def from_dict(cls, dict_in: Dict[str, Any]) -> "Sensor":
         """Construct a Sensor object from a dictionary.
@@ -161,7 +169,7 @@ class Sensor:
         name = dict_in.get("name")
         fov = FieldOfViewFactory.from_dict(dict_in["fov"])
         return cls(identifier, name, fov)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the Sensor object to a dictionary.
 
@@ -174,28 +182,40 @@ class Sensor:
             "fov": self.fov.to_dict(),
         }
 
+
 class Spacecraft:
     """Handles spacecraft properties."""
 
     def __init__(
         self,
         identifier: Optional[str],
-        name: Optional[str],
+        name: Optional[str] = None,
         norad_id: Optional[int] = None,
-        orbit: Optional[Union[TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements]] = None,
-        local_orbital_frame_handler: Optional[Union[LVLHType1FrameHandler]] = None,
-        sensor: Optional[List[Sensor]] = None
+        orbit: Optional[
+            Union[
+                TwoLineElementSet,
+                OrbitalMeanElementsMessage,
+                OsculatingElements,
+            ]
+        ] = None,
+        local_orbital_frame_handler: Optional[
+            Union[LVLHType1FrameHandler]
+        ] = None,
+        sensor: Optional[List[Sensor]] = None,
     ):
         """
         Args:
             identifier (str or None): Unique identifier for the ground station.
                                Must be a valid UUID.
                               If None, a new UUID is generated.
-            name (str or None): (Optional) Name of the spacecraft.
-            norad_id (int or None): (Optional) NORAD ID of the spacecraft. Defaults to None.
-            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements] or None): (Optional) Orbit information. Defaults to None.
-            local_orbital_frame_handler (Union[LVLHType1FrameHandler]): (Optional) Local orbital frame information (e.g., LVLH Type-1 frame handler).
-            sensor (List[Sensor] or Sensor): (Optional) List of Sensor objects or a single Sensor object.
+            name (Optional[str]): Name of the spacecraft. Defaults to None.
+            norad_id (Optional[int]): NORAD ID of the spacecraft. Defaults to None.
+            orbit (Optional[Union[TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements]]): #pylint: disable=line-too-long
+                                                                Orbit information. Defaults to None.
+            local_orbital_frame_handler (Optional[LVLHType1FrameHandler]):
+                Local orbital frame information (e.g., LVLH Type-1 frame handler).
+            sensor (Optional[Union[List[Sensor], Sensor]]):
+                    List of Sensor objects or a single Sensor object.
         """
         if identifier is not None:
             try:
@@ -213,17 +233,23 @@ class Spacecraft:
         if norad_id is not None and not isinstance(norad_id, int):
             raise TypeError("norad_id must be an integer or None.")
         self.norad_id = norad_id
-        
+
         if orbit is not None and not isinstance(
-            orbit, (TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements)
+            orbit,
+            (TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements),
         ):
             raise TypeError(
-                "orbit must be a TwoLineElementSet, OrbitalMeanElementsMessage, or OsculatingElements object."
+                "orbit must be a TwoLineElementSet, "
+                "OrbitalMeanElementsMessage, or OsculatingElements object."
             )
         self.orbit = orbit
 
-        if local_orbital_frame_handler is not None and not isinstance(local_orbital_frame_handler, LVLHType1FrameHandler):
-            raise TypeError("local_orbital_frame_handler must be a frame handler object.")
+        if local_orbital_frame_handler is not None and not isinstance(
+            local_orbital_frame_handler, LVLHType1FrameHandler
+        ):
+            raise TypeError(
+                "local_orbital_frame_handler must be a frame handler object."
+            )
         self.local_orbital_frame_handler = local_orbital_frame_handler
 
         if sensor is not None:
@@ -243,9 +269,12 @@ class Spacecraft:
                 - "id" (str): (Optional) Unique identifier.
                 - "name" (str): (Optional) Name of the spacecraft.
                 - "norad_id" (int): (Optional) NORAD ID of the spacecraft.
-                - "orbit" (dict): (Optional) Orbit information. See `orbitpy.orbits.OrbitFactory.from_dict`.
-                - "local_orbital_frame_handler" (dict): (Optional) Local orbital frame information (handler). See `eosimutils.standardframes.StandardFrameHandlerFactory.from_dict`.
-                - "sensor" (List[dict] or dict): (Optional) List of Sensors or a single Sensor. See `orbitpy.resources.Sensor.from_dict`.
+                - "orbit" (dict): (Optional) Orbit information.
+                                            See `orbitpy.orbits.OrbitFactory.from_dict`.
+                - "local_orbital_frame_handler" (dict): (Optional) Local orbital frame (handler).
+                            See `eosimutils.standardframes.StandardFrameHandlerFactory.from_dict`.
+                - "sensor" (List[dict] or dict): (Optional) List of Sensors or a single Sensor.
+                                                        See `orbitpy.resources.Sensor.from_dict`.
 
         Returns:
             Spacecraft: Spacecraft object.
@@ -254,9 +283,13 @@ class Spacecraft:
         name = dict_in.get("name")
         orbit_data = dict_in.get("orbit", None)
         orbit = OrbitFactory.from_dict(orbit_data) if orbit_data else None
-        local_orbital_frame_handler = dict_in.get("local_orbital_frame_handler", None)
+        local_orbital_frame_handler = dict_in.get(
+            "local_orbital_frame_handler", None
+        )
         if local_orbital_frame_handler is not None:
-            local_orbital_frame_handler = StandardFrameHandlerFactory.from_dict(local_orbital_frame_handler)
+            local_orbital_frame_handler = StandardFrameHandlerFactory.from_dict(
+                local_orbital_frame_handler
+            )
         sensor_data = dict_in.get("sensor", None)
         if isinstance(sensor_data, dict):  # Single sensor object
             sensor = [Sensor.from_dict(sensor_data)]
@@ -265,11 +298,18 @@ class Spacecraft:
         else:
             sensor = None
         norad_id = dict_in.get("norad_id", None)
-        return cls(identifier, name, norad_id, orbit, local_orbital_frame_handler, sensor)
+        return cls(
+            identifier,
+            name,
+            norad_id,
+            orbit,
+            local_orbital_frame_handler,
+            sensor,
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the Spacecraft object to a dictionary.
-        
+
         Returns:
             dict: Dictionary with the spacecraft information.
         """
@@ -278,6 +318,12 @@ class Spacecraft:
             "name": self.name,
             "norad_id": self.norad_id,
             "orbit": self.orbit.to_dict() if self.orbit else None,
-            "local_orbital_frame_handler": self.local_orbital_frame_handler.to_dict() if self.local_orbital_frame_handler else None,
-            "sensor": [s.to_dict() for s in self.sensor] if self.sensor else None,
+            "local_orbital_frame_handler": (
+                self.local_orbital_frame_handler.to_dict()
+                if self.local_orbital_frame_handler
+                else None
+            ),
+            "sensor": (
+                [s.to_dict() for s in self.sensor] if self.sensor else None
+            ),
         }

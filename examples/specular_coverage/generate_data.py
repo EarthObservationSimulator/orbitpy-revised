@@ -25,7 +25,9 @@ def get_gps_omms(spacetrack_api, ids):
         # Retrieve the closest available OMM data created before the
         # specified target datetime for the given satellite.
         omm_data = spacetrack_api.get_closest_omm(
-            norad_id=norad_id, target_date_time=target_date_time, within_days=100
+            norad_id=norad_id,
+            target_date_time=target_date_time,
+            within_days=100,
         )
 
         orbit_obj = OrbitalMeanElementsMessage.from_dict(omm_data)

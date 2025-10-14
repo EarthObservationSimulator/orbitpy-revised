@@ -36,6 +36,7 @@ class OrbitType(EnumBase):
     OSCULATING_ELEMENTS = "OSCULATING_ELEMENTS"
     CARTESIAN_STATE = "CARTESIAN_STATE"
 
+
 class OrbitFactory:
     """Factory class to register and create orbit objects."""
 
@@ -229,8 +230,10 @@ class OrbitalMeanElementsMessage:
         Returns:
             Dict[str, Any]: The OMM as a dictionary.
         """
-        out_dict = {"orbit_type": OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
-                    **self.omm_dict}
+        out_dict = {
+            "orbit_type": OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
+            **self.omm_dict,
+        }
         return out_dict
 
     def to_json(self) -> str:
@@ -359,19 +362,26 @@ class SpaceTrackAPI:
         if not self.session:
             raise RuntimeError("Session not initialized. Please login first.")
 
-        # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S.%f or %Y-%m-%dT%H:%M:%S
+        # Validate that target_date_time is a string in the
+        # format %Y-%m-%dT%H:%M:%S.%f or %Y-%m-%dT%H:%M:%S
         try:
             # Try parsing with fractional seconds
-            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S.%f")
-        except ValueError:
-            # Fallback to parsing without fractional seconds
-            tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            print(
-                "SpaceTrack: Invalid target_date_time format. It should be a string in the format"
-                "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
+            tdt_datetime = datetime.strptime(
+                target_date_time, "%Y-%m-%dT%H:%M:%S.%f"
             )
-            return None
+        except ValueError:
+            try:
+                # Fallback to parsing without fractional seconds
+                tdt_datetime = datetime.strptime(
+                    target_date_time, "%Y-%m-%dT%H:%M:%S"
+                )
+            except ValueError:
+                print(
+                    "SpaceTrack: Invalid target_date_time format. "
+                    "It should be a string in the format"
+                    "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
+                )
+                return None
 
         tdt = tdt_datetime.strftime(
             "%Y-%m-%dT%H:%M:%S"
@@ -399,7 +409,7 @@ class SpaceTrackAPI:
 
             closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
-                #print(closest_omm)
+                # print(closest_omm)
                 retrieved_cd = closest_omm["CREATION_DATE"]
                 retrieved_cd_datetime = datetime.strptime(
                     retrieved_cd, "%Y-%m-%dT%H:%M:%S"
