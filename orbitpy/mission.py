@@ -13,7 +13,7 @@ Base and standard reference frames with which the module works are:
 import os
 from typing import Dict, Any, Union, List, Optional
 
-from eosimutils.base import ReferenceFrame, SurfaceType
+from eosimutils.base import ReferenceFrame, SurfaceType, JsonSerializer
 from eosimutils.time import AbsoluteDate
 from eosimutils.state import Cartesian3DPositionArray
 from eosimutils.trajectory import StateSeries
@@ -174,6 +174,7 @@ class Settings:
             "spacetrack_credentials_relative_path": self.spacetrack_credentials_relative_path,
         }
 
+
 class Mission:
     """Class to represent a space mission with spacecraft, sensors, and ground stations."""
 
@@ -217,6 +218,34 @@ class Mission:
         self.frame_graph = frame_graph if frame_graph is not None else FrameGraph()
         self.settings = settings if settings else Settings()
 
+    @staticmethod
+    def load_object(other_cls, dict_in: dict, ref_dir: str) -> Optional[object]:
+        """Load an object from a dictionary or a JSON file.
+
+        Args:
+            other_cls: The class type to instantiate the object.
+            dict_in (dict): Dictionary containing object data or a reference to a JSON file.
+            ref_dir (str): Directory path to resolve relative file paths.
+
+        Returns:
+            object or None: An instance of the specified class, or None if dict_in is None.
+        """
+        if dict_in is None:
+            return None
+
+        if "relative_file_path" in dict_in:
+            # Load from JSON file
+            file_path = os.path.join(ref_dir, dict_in["relative_file_path"])
+            object = JsonSerializer.load_from_json(other_cls, file_path)
+            return object
+
+        if isinstance(dict_in, list):
+            # If dict_in is a list, return a list of objects
+            return [other_cls.from_dict(item) for item in dict_in]
+        else:
+            # Otherwise, return a single object
+            return other_cls.from_dict(dict_in)
+
     @classmethod
     def from_dict(cls, dict_in: Dict[str, Any]) -> "Mission":
         """Create a Mission object from a dictionary.
@@ -226,41 +255,41 @@ class Mission:
         Returns:
             Mission: An instance of the Mission class.
         """
+        # setup mission settings
+        settings_dict = dict_in.get("settings", None)
+        settings = Settings.from_dict(settings_dict) if settings_dict else Settings()
+
+
         # setup mission parameters
         start_time = AbsoluteDate.from_dict(dict_in["start_time"])
         duration_days = dict_in["duration_days"]
         
         # setup spacecrafts
-        spacecrafts = dict_in["spacecrafts"]
-        if not isinstance(spacecrafts, list):
-            spacecrafts = [spacecrafts]
-        spacecrafts = [Spacecraft.from_dict(sc) for sc in spacecrafts]
+        spacecrafts_list = dict_in.get("spacecrafts", [])
+        if not isinstance(spacecrafts_list, list):
+            spacecrafts_list = [spacecrafts_list]
+        spacecrafts = Mission.load_object(Spacecraft, spacecrafts_list, settings.user_dir)
 
         # setup GNSS (transmitter) spacecrafts (applicable for GNSSR coverage)
-        gnss_spacecrafts = dict_in.get("gnss_spacecrafts", [])
-        if not isinstance(gnss_spacecrafts, list):
-            gnss_spacecrafts = [gnss_spacecrafts]
-        gnss_spacecrafts = [Spacecraft.from_dict(sc) for sc in gnss_spacecrafts]
+        gnss_spacecrafts_list = dict_in.get("gnss_spacecrafts", [])
+        if not isinstance(gnss_spacecrafts_list, list):
+            gnss_spacecrafts_list = [gnss_spacecrafts_list]
+        gnss_spacecrafts = Mission.load_object(Spacecraft, gnss_spacecrafts_list, settings.user_dir)
 
         # setup ground-stations
-        ground_stations = dict_in.get("ground_stations", None)
-        if ground_stations is not None:
-            if not isinstance(ground_stations, list):
-                ground_stations = [ground_stations]
-            ground_stations = [GroundStation.from_dict(gs) for gs in ground_stations]
+        ground_stations_list = dict_in.get("ground_stations", [])
+        if not isinstance(ground_stations_list, list):
+            ground_stations_list = [ground_stations_list]
+        ground_stations = Mission.load_object(GroundStation, ground_stations_list, settings.user_dir)
         
         # setup propagator
-        propagator_specs = dict_in.get("propagator", None)
-        propagator = None
-        if propagator_specs is not None:
-            propagator = PropagatorFactory.from_dict(propagator_specs)
-        
+        propagator_dict = dict_in.get("propagator", None)
+        propagator = Mission.load_object(PropagatorFactory, propagator_dict, settings.user_dir)
+
         # setup grid points
         spatial_points_dict = dict_in.get("spatial_points", None)
-        spatial_points = None
-        if spatial_points_dict is not None:
-            spatial_points = Cartesian3DPositionArray.from_dict(spatial_points_dict)
-
+        spatial_points = Mission.load_object(Cartesian3DPositionArray, spatial_points_dict, settings.user_dir)
+        
         # setup the frames and the transformations
         # The spacecrafts need to be setup before this so that their local orbit frames are registered.
         transform_dict = dict_in.get("frame_transforms", None)
@@ -285,10 +314,6 @@ class Mission:
             frame_graph = FrameGraph.from_dict(transform_dict, set_inverse=True)
         else:
             frame_graph = FrameGraph()
-
-        # setup mission settings
-        settings_dict = dict_in.get("settings", None)
-        settings = Settings.from_dict(settings_dict) if settings_dict else Settings()
 
         return cls(
             start_time=start_time,

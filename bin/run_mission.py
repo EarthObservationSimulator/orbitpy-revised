@@ -41,9 +41,11 @@ def main(user_dir: str) -> None:
     print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")
 
     print("Writing results to output directory.")
+    start_time = time.process_time()
     results_fp = os.path.join(user_dir, 'MissionOutput.json')
     JsonSerializer.save_to_json(results, results_fp)
-    print("Results written to MissionOutput.json")
+    elapsed_time = time.process_time() - start_time
+    print(f"Results written to MissionOutput.json. Time taken: {elapsed_time:.2f} seconds")
 
 class ReadableDir(argparse.Action):
     """Custom argparse Action to validate a readable directory."""

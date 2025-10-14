@@ -326,10 +326,10 @@ class SpaceTrackAPI:
         response = self.session.post(login_url, data=payload)
 
         if response.status_code == 200:
-            print("Login successful.")
+            print("Spacetrack login successful.")
         else:
             raise RuntimeError(
-                f"Login failed with status code {response.status_code}:"
+                f"Spacetrack login failed with status code {response.status_code}:"
                 f"{response.text}"
             )
 
@@ -365,7 +365,7 @@ class SpaceTrackAPI:
             tdt_datetime = datetime.strptime(target_date_time, "%Y-%m-%dT%H:%M:%S")
         except ValueError:
             print(
-                "Invalid target_date_time format. It should be a string in the format"
+                "SpaceTrack: Invalid target_date_time format. It should be a string in the format"
                 "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
             )
             return None
