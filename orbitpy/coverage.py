@@ -30,7 +30,7 @@ class DiscreteCoverageTP:
 
     Attributes:
         time (AbsoluteDateArray): An array of time points.
-        coverage (List[List[int]]): For each time point, the list of accessed time-indices, where
+        coverage (List[List[int]]): For each time point, the list of accessed grid indices, where
             each time index corresponds to the (zero-indexed) position in the time array. Length of
             time and coverage must be identical.
         grid_points (Cartesian3DPositionArray): The positions of the grid points.
@@ -127,6 +127,15 @@ class DiscreteCoverageTP:
             DiscreteCoverageGP: Space-first coverage instance.
         """
         return DiscreteCoverageGP.from_tp(self)
+
+    def coverage_time(self):
+        """
+        Calculate the total coverage time (the total time covered per point summed over all points)
+
+        Returns:
+            int: Total coverage time.
+        """
+        return sum(len(tp) for tp in self.coverage)
 
 
 class DiscreteCoverageGP:
