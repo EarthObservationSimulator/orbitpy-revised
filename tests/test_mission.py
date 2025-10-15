@@ -873,7 +873,7 @@ class TestAutoRetrieveOrbit(unittest.TestCase):
             },
         }
 
-    def test_propagate_with_auto_retreival(self):
+    def test_propagate_with_auto_retrieval(self):
         m = Mission.from_dict(self.mission_dict)
         (propagated_trajectories, _) = m.execute_propagation()
         self.assertIsInstance(propagated_trajectories, list)

@@ -1,0 +1,125 @@
+{
+    "start_time": {
+        "time_format": "GREGORIAN_DATE",
+        "calendar_date": "2025-08-31T03:40:09.645888",
+        "time_scale": "UTC"
+    },
+    "duration_days": 0.1,
+    "spacecrafts": [{
+        "id": "ddd716b0-443b-4141-a413-19b14260db9a",
+        "name": "SC_A",
+        "orbit": {
+            "orbit_type": "TWO_LINE_ELEMENT_SET",
+            "TLE_LINE0": "0 CYGFM07",
+            "TLE_LINE1": "1 41890U 16078G   25243.55123970  .00022920  00000-0  47566-3 0  9998",
+            "TLE_LINE2": "2 41890  34.9494 335.1764 0008429 330.2077  29.8163 15.44709429483965"
+        },
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SC_A"
+        },
+        "sensor": [{
+            "id": "699881aa-5e50-4186-ba03-1eafaa4e6f62",
+            "name": "GNSSR-A",
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 120.0,
+                "frame": "LVLH_SC_A",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }
+        ]
+    },
+    {
+        "id": "b8cd6469-d251-424f-8fa5-41c93659cf1c",
+        "name": "SC_B",
+        "orbit": {
+            "orbit_type": "TWO_LINE_ELEMENT_SET",
+            "TLE_LINE0": "0 CYGFM04",
+            "TLE_LINE1": "1 41885U 16078B   25243.52866888  .00022954  00000-0  47551-3 0  9992",
+            "TLE_LINE2": "2 41885  34.9364 335.9714 0008089 323.8044  36.2128 15.44763875483948"
+        },
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SC_B"
+        },
+        "sensor": [{
+            "id": "fbd3a133-9ef3-40a5-98c0-6e06f68f652e",
+            "name": "GNSSR-B",
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 120.0,
+                "frame": "LVLH_SC_B",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        },
+        {
+            "id": "0d1ab430-a300-4c1f-8faa-1c130dafb1fa",
+            "name": "GNSSR-C",
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 60.0,
+                "frame": "SENSOR_SC_B",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }
+        ]
+    }],
+    "gnss_spacecrafts": [
+        {
+            "id": "daea41f9-65c0-4026-b8ff-bb3c0be9354b",
+            "name": "GNSS_01",
+            "orbit": {
+                "orbit_type": "TWO_LINE_ELEMENT_SET",
+                "TLE_LINE0": "0 NAVSTAR 49 (USA 154)",
+                "TLE_LINE1": "1 26605U 00071A   25243.48168497 -.00000012  00000-0  00000-0 0  9994",
+                "TLE_LINE2": "2 26605  55.4600 106.4034 0165300 263.5601 279.2284  2.00553732181705"
+            },
+            "local_orbital_frame_handler": {
+                "frame_type": "LVLH_TYPE_1",
+                "name": "LVLH_GNSS_01"
+            }
+        },
+        {
+            "id": "5e70abfe-c07e-4766-bb24-4b908f402efb",
+            "name": "GNSS_02",
+            "orbit": {
+                "orbit_type": "TWO_LINE_ELEMENT_SET",
+                "TLE_LINE0": "0 NAVSTAR 43 (USA 132)",
+                "TLE_LINE1": "1 24876U 97035A   25243.02788942 -.00000015  00000-0  00000-0 0  9994",
+                "TLE_LINE2": "2 24876  55.8402 109.9260 0094706  55.9250 305.0515  2.00562905206132"
+            },
+            "local_orbital_frame_handler": {
+                "frame_type": "LVLH_TYPE_1",
+                "name": "LVLH_GNSS_02"
+            }
+        }
+    ],
+    "frame_transforms": {
+        "orientation_transforms": [
+            {
+            "orientation_type": "constant", "rotations": [-30.0, 0.0, 0.0],
+            "rotations_type": "EULER", "from": "SENSOR_SC_B", "to": "LVLH_SC_B", "euler_order": "xyz"
+            }
+        ],
+        "position_transforms": [
+            {
+                "from_frame": "SENSOR_SC_B", "to_frame": "LVLH_SC_B",
+                "position": { "x": 0.0,  "y": 0.0, "z": 0.0,
+                    "frame": "SENSOR_SC_B", "type": "Cartesian3DPosition"
+                }
+            }
+        ]
+    },
+    "propagator": {
+        "propagator_type": "SGP4_PROPAGATOR",
+        "step_size": 60
+    },
+    "spatial_points": {
+        "relative_file_path": "spatial_points.json"
+    },
+    "coverage_settings": {
+        "coverage_type": "SPECULAR_COVERAGE",
+        "specular_radius_km": 15.0
+    }
+}
