@@ -118,7 +118,7 @@
     "spatial_points": {
         "relative_file_path": "spatial_points.json"
     },
-    "coverage_settings": {
+    "settings": {
         "coverage_type": "SPECULAR_COVERAGE",
         "specular_radius_km": 15.0
     }

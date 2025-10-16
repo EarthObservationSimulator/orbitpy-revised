@@ -276,7 +276,8 @@ class Mission:
         """Load an object from a dictionary or a JSON file.
 
         Args:
-            other_cls (Type[Any]): The class type to instantiate the object.
+            other_cls (Type[Any]): The class type to instantiate the object. 
+                                    The class should support a 'from_dict' function.
             dict_in (dict): Dictionary containing object data or a reference to a JSON file.
             ref_dir (str): Directory path to resolve relative file paths.
 
@@ -780,7 +781,13 @@ class Mission:
                                     "gnss_spacecraft_id": "daea41f9-...",
                                     "gnss_spacecraft_name": "GNSS_01",
                                     "coverage_info": DiscreteCoverageTP(...),
-                                    "rcg_proportionality": List[float]
+                                    "rcg_factor": List[float]
+                                },
+                                {
+                                    "gnss_spacecraft_id": "46c79a9f-...",
+                                    "gnss_spacecraft_name": "GNSS_02",
+                                    "coverage_info": DiscreteCoverageTP(...),
+                                    "rcg_factor": List[float]
                                 },
                                 ...
                             ]
@@ -935,7 +942,7 @@ class Mission:
                         "coverage_info": coverage[
                             0
                         ],  # DiscreteCoverageTP object
-                        "rcg_proportionality": coverage[
+                        "rcg_factor": coverage[
                             1
                         ],  # RCG proportionality factor
                     }
