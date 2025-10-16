@@ -411,7 +411,7 @@ class TestSpacecraft(unittest.TestCase):
             "sensor must be a list of Sensor objects.", str(context.exception)
         )
 
-    def test_invalif_norad_id_type(self):
+    def test_invalid_norad_id_type(self):
         """Test that an invalid NORAD ID type raises a TypeError."""
         with self.assertRaises(TypeError) as context:
             Spacecraft(

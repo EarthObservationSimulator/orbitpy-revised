@@ -1,3 +1,13 @@
+""" Script to run a mission from a JSON configuration file.
+See the `orbitpy.mission` module for details on the mission configuration schema.
+
+The script expects a user directory as input, which should contain a `MissionSpecs.json`
+file with the mission configuration. The script will execute the mission and write the results
+to `MissionOutput.json` in the same directory.
+
+Example usage:
+    python bin/run_mission.py <path_to_user_directory>
+"""
 import os
 import json
 import argparse
@@ -7,7 +17,6 @@ from typing import Any
 from eosimutils.base import JsonSerializer
 
 from orbitpy.mission import Mission
-
 
 def main(user_dir: str) -> None:
     """

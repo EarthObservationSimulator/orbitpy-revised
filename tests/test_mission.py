@@ -297,7 +297,7 @@ class TestMissionTwo(unittest.TestCase):
         self.mission_dict = {
             "start_time": {
                 "time_format": "GREGORIAN_DATE",
-                "calendar_date": "2025-09-30T13 :00:00.000",
+                "calendar_date": "2025-09-30T13:00:00.000",
                 "time_scale": "UTC",
             },
             "duration_days": 1.0,
@@ -822,7 +822,7 @@ class TestMissionGNSSR(unittest.TestCase):
                     self.assertIn("gnss_spacecraft_id", gnssr_entry)
                     self.assertIn("gnss_spacecraft_name", gnssr_entry)
                     self.assertIn("coverage_info", gnssr_entry)
-                    self.assertIn("rcg_proportionality", gnssr_entry)
+                    self.assertIn("rcg_factor", gnssr_entry)
 
                     self.assertIsInstance(
                         gnssr_entry["gnss_spacecraft_id"], str
@@ -834,12 +834,12 @@ class TestMissionGNSSR(unittest.TestCase):
                         gnssr_entry["coverage_info"], DiscreteCoverageTP
                     )
                     self.assertIsInstance(
-                        gnssr_entry["rcg_proportionality"], list
+                        gnssr_entry["rcg_factor"], list
                     )
                     self.assertTrue(
                         all(
                             isinstance(rcg, float)
-                            for rcg in gnssr_entry["rcg_proportionality"]
+                            for rcg in gnssr_entry["rcg_factor"]
                         )
                     )
 

@@ -380,7 +380,7 @@ class SpaceTrackAPI:
                     "SpaceTrack: Invalid target_date_time format. "
                     "It should be a string in the format"
                     "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
-                )
+                ) # Can fractional seconds be included?
                 return None
 
         tdt = tdt_datetime.strftime(

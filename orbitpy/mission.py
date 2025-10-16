@@ -3,16 +3,42 @@
    :synopsis: Module to handle mission initialization and execution.
 
 Collection of classes and functions relating to represention of
-mission parameters and execution.
+mission parameters and execution. The main class is `Mission` which
+holds all mission parameters and has functions to execute various
+mission analyses such as orbit propagation, eclipse finding, contact
+finding, and coverage calculation. A "Mission" object can be
+initialized from a dictionary (e.g. loaded from a JSON file) using
+the `from_dict` function. The mission analyses can be executed using
+the respective `execute_...` functions.
 
-Base and standard reference frames with which the module works are:
+This module is utilized by the `bin/run_mission.py` script to
+execute a mission defined in a JSON file.
+
+Base reference frames with which the module works are:
 1/ ICRF_EC (Earth-Centered Inertial Frame) as defined in eosimutils.base.ReferenceFrame
 2/ ITRF (Earth-Centered Earth-Fixed Frame) as defined in eosimutils.base.ReferenceFrame
 
+The features currently supported are:
+- Mission with one or more spacecraft, each with one or more sensors.
+- Orbit propagation using SGP4 propagator.
+- Eclipse finding.
+- Contact finding with one or more ground stations.
+- Automatic retrieval of orbit data (OMM) retrieved from Space-Track.org
+  using NORAD ID (at the specified start time of the mission).
+- Coverage calculation for point and specular coverage. In case of specular
+  coverage, multiple GNSS satellites can be specified as transmitters
+  (in addition to the receiver spacecraft with one or more GNSS-R sensors).
+
+The coding style is such that each of the dictionaries within the mission dictionary 
+is formatted so that it can be directly converted to the corresponding object using the
+`from_dict` function of the respective class. For example, the dictionary for a spacecraft
+is such that it can be directly converted to a `Spacecraft` object using the
+`Spacecraft.from_dict` function. (An exception is the `Settings` class which contains misscellaneous
+mission settings.)
 """
 
 import os
-from typing import Dict, Any, Union, List, Optional
+from typing import Dict, Any, Union, List, Optional, Tuple
 
 from eosimutils.base import ReferenceFrame, SurfaceType, JsonSerializer
 from eosimutils.time import AbsoluteDate
@@ -426,15 +452,20 @@ class Mission:
             "settings": self.settings.to_dict() if self.settings else None,
         }
 
-    def execute_propagation(self) -> List[Dict[str, Union[str, StateSeries]]]:
+    def execute_propagation(self) -> Tuple[List[Dict[str, Union[str, StateSeries]]], Optional[List[Dict[str, Union[str, StateSeries]]]]]:
         """Propagate all spacecrafts in the mission using the specified propagator.
 
         Returns:
-            Tuple[List[Dict[str, Any]], Optional[List[Dict[str, Any]]]]:
-                            Propagation results containing spacecraft identifiers (ids)
-                            and corresponding trajectories (StateSeries objects).
-                            The tuple contains two lists - one for regular spacecrafts
-                            and another for GNSS spacecrafts (if present).
+            Tuple[List[Dict[str, Union[str, StateSeries]]], Optional[List[Dict[str, Union[str, StateSeries]]]]]:
+                A tuple (results, tx_results) where:
+                -    results: List of propagation results for the spacecrafts.
+                - tx_results: Optional list of propagation results for GNSS (transmitter) spacecraft,
+                              or None if no GNSS spacecraft were provided. Applcable only for GNSS-R coverage.
+
+                Each list item is a dict with:
+                - "spacecraft_id": str
+                - "spacecraft_name": str
+                - "trajectory": StateSeries
 
         Example:
             ([
@@ -447,8 +478,7 @@ class Mission:
                     "spacecraft_id": "44966609-...",
                     "spacecraft_name": "sc2",
                     "trajectory": StateSeries(...)
-                },
-                ...
+                }
             ],
             None)
         """
@@ -507,11 +537,16 @@ class Mission:
 
         Args:
             propagated_trajectories (List[Dict[str, Union[str, StateSeries]]]):
-                Propagation results containing spacecraft IDs and their corresponding StateSeries.
+                Propagation results containing spacecraft IDs/names and their corresponding StateSeries.
 
         Returns:
-            List[Dict[str, Union[str, EclipseInfo]]]: Eclipse finding results.
-            Example:
+            List[Dict[str, Union[str, EclipseInfo]]]:
+                One item per spacecraft with:
+                - "spacecraft_id": str
+                - "spacecraft_name": str
+                - "eclipse_info": EclipseInfo
+
+        Example:
             [
                 {   "spacecraft_id": "04a388ad-...",
                     "spacecraft_name": "sc1",
@@ -520,8 +555,7 @@ class Mission:
                 {   "spacecraft_id": "44966609-...",
                     "spacecraft_name": "sc2",
                     "eclipse_info": EclipseInfo(...)
-                },
-                ...
+                }
             ]
         """
         eclipse_finder = EclipseFinder()
@@ -546,16 +580,23 @@ class Mission:
     def execute_gs_contact_finder(
         self, propagated_trajectories: List[Dict[str, Union[str, StateSeries]]]
     ) -> List[Dict[str, Any]]:
-        """Calculate contact periods between spacecrafts and ground stations.
+        """Compute ground-station contacts for each spacecraft–station pair.
 
         Args:
-            propagated_trajectories (List[Dict[str, Union[str, StateSeries]]]):
-                Propagation results containing spacecraft IDs and their corresponding
-                StateSeries.
+            propagated_trajectories:
+                Output of execute_propagation()[0] (or any list in the same format),
+                i.e., a list of dicts with "spacecraft_id", "spacecraft_name", and "trajectory".
 
         Returns:
-            List[Dict[str, Any]]: List of nested dictionaries mapping spacecraft IDs to a dict
-                that maps ground-station IDs to ContactInfo.
+            List[Dict[str, Any]]: List of nested dictionaries mapping spacecraft IDs/names to a dict
+                that maps ground-station IDs/names to ContactInfo.
+                Each item has:
+                - "spacecraft_id": str
+                - "spacecraft_name": str
+                - "contacts": List[Dict[str, Any]] where each dict has:
+                        - "ground_station_id": str
+                        - "ground_station_name": str
+                        - "contact_info": ContactInfo
             Example:
             [
                 {
@@ -571,8 +612,7 @@ class Mission:
                             "ground_station_id": "c3ece70c-...",
                             "ground_station_name": "gs2",
                             "contact_info": ContactInfo(...)
-                        },
-                        ...
+                        }
                     ]
                 },
                 {
@@ -588,11 +628,9 @@ class Mission:
                             "ground_station_id": "c3ece70c-...",
                             "ground_station_name": "gs2",
                             "contact_info": ContactInfo(...)
-                        },
-                        ...
+                        }
                     ]
-                },
-                ...
+                }
             ]
         """
         if self.ground_stations is None:
@@ -629,16 +667,25 @@ class Mission:
     def execute_coverage_calculator(
         self, propagated_trajectories: List[Dict[str, Union[str, StateSeries]]]
     ) -> List[Dict[str, Any]]:
-        """Calculate coverage for spacecraft sensors over specified grid points.
+        """Compute coverage over configured spatial points for each spacecraft sensor.
+        Executed the PointCoverage calculator.
 
         Args:
-            propagated_trajectories (List[Dict[str, Union[str, StateSeries]]]):
-                Propagation results containing spacecraft IDs and their corresponding
-                StateSeries.
+            propagated_trajectories:
+                Output of execute_propagation()[0].
 
         Returns:
-            List[Dict[str, Any]]: Nested dictionary mapping spacecraft IDs to a dict that maps
-                sensor IDs to their coverage information.
+            List[Dict[str, Any]]: Nested dictionary mapping spacecraft IDs/names to a dict that maps
+                sensor IDs/names to their coverage information.
+                Each item has:
+                    One item per (spacecraft, sensor) with:
+                    - "spacecraft_id": str
+                    - "spacecraft_name": str
+                    - "total_spacecraft_coverage": List[Dict[str, Any]] where each dict has:
+                        - "sensor_id": str
+                        - "sensor_name": str
+                        - "coverage": PointCoverage
+
             Example:
             [
                 {
@@ -654,8 +701,7 @@ class Mission:
                             "sensor_id": "917953d3-...",
                             "sensor_name": "sensorB",
                             "coverage_info": DiscreteCoverageTP(...)
-                        },
-                        ...
+                        }
                     ]
                 },
                 {
@@ -673,9 +719,12 @@ class Mission:
                             "coverage_info": DiscreteCoverageTP(...)
                         }
                     ]
-                },
-                ...
+                }
             ]
+        
+        Raises:
+            ValueError: If no spatial points are specified for coverage calculation.
+            ValueError: If a spacecraft does not have a local orbital frame handler specified.
         """
         if self.spatial_points is None:
             raise ValueError(
@@ -754,19 +803,33 @@ class Mission:
         The GNSS satellites are the transmitter satellites, and the receiver
         spacecraft(s) is the one with the GNSS-R sensor(s).
 
+        Specular radius is taken from Settings.
+
         Args:
-            propagated_rx_trajectories (List[Dict[str, Union[str, StateSeries]]]):
-                Propagation results containing receiver spacecraft IDs and their
-                corresponding trajectories (as a StateSeries object).
-            propagated_tx_trajectories (List[Dict[str, Union[str, StateSeries]]]):
-                Propagation results containing GNSS spacecraft IDs and their
-                corresponding trajectories (as a StateSeries object).
+            propagated_rx_trajectories:
+                Output of execute_propagation()[0].
+            propagated_tx_trajectories:
+                Output of execute_propagation()[1].
 
         Returns:
-            List[Dict[str, Any]]: List of nested dictionary mapping spacecraft IDs to a dict
-                that maps sensor IDs to their coverage information.
-                Coverage information contains a list of coverage details for each GNSS
-                transmitter.
+            List[Dict[str, Any]]: List of nested (3 levels) dictionary mapping spacecraft IDs/names to a dict
+                that maps sensors IDs/names to their coverage information.
+                Each sensor has a list of dictionaries that maps the
+                GNSS spacecraft IDs/names to their coverage information.
+
+                Each item has:
+                - "spacecraft_id": str
+                - "spacecraft_name": str
+                - "total_spacecraft_coverage": List[Dict[str, Any]] where each dict has:
+                    - "sensor_id": str
+                    - "sensor_name": str
+                    - "total_sensor_coverage": List[Dict[str, Any]] where each dict has:
+                        - "gnss_spacecraft_id": str
+                        - "gnss_spacecraft_name": str
+                        - "coverage_info": DiscreteCoverageTP
+                        - "rcg_factor": List[float]
+
+
             Example:
             [
                 {
@@ -788,8 +851,7 @@ class Mission:
                                     "gnss_spacecraft_name": "GNSS_02",
                                     "coverage_info": DiscreteCoverageTP(...),
                                     "rcg_factor": List[float]
-                                },
-                                ...
+                                }
                             ]
                         },
                         {
@@ -967,8 +1029,24 @@ class Mission:
         return all_coverage_info
 
     def execute_all(self) -> Dict[str, Any]:
-        """Run propagation, eclipse, contact and coverage and return a dictionary of results.
-        Does not modify Mission instance state; all results are returned in the dict.
+        """Run all configured mission analyses and return a structured result bundle.
+
+        Returns:
+            Dict[str, Any]:
+                A dictionary with the following keys (present only if the respective analysis runs):
+                - "propagation": List[Dict[str, Union[str, StateSeries]]]
+                                  Primary spacecraft propagation results (see execute_propagation()).
+                - "propagation_gnss": Optional[List[Dict[str, Union[str, StateSeries]]]]
+                                      GNSS spacecraft propagation results (see execute_propagation()).
+                - "eclipse": List[Dict[str, Union[str, EclipseInfo]]]
+                             Eclipse results per spacecraft (see execute_eclipse_finder()).
+                - "contacts": List[Dict[str, Any]]
+                              Ground-station contact results (see execute_gs_contact_finder()).
+                - "coverage": List[Dict[str, Any]]
+                              Point coverage results (see execute_coverage_calculator()).
+                - "coverage_gnssr": List[Dict[str, Any]]
+                                    GNSS-R specular coverage results (see execute_gnssr_coverage_calculator()).
+
         """
         propagated_trajectories, gnss_trajectories = self.execute_propagation()
         eclipse = self.execute_eclipse_finder(propagated_trajectories)
