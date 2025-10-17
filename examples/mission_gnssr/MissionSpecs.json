@@ -116,7 +116,9 @@
         "step_size": 60
     },
     "spatial_points": {
-        "relative_file_path": "spatial_points.json"
+        "cartesian_3d_array":{
+                            "relative_file_path": "spatial_points.json"
+        }
     },
     "settings": {
         "coverage_type": "SPECULAR_COVERAGE",

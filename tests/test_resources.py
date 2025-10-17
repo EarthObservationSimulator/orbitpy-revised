@@ -411,21 +411,6 @@ class TestSpacecraft(unittest.TestCase):
             "sensor must be a list of Sensor objects.", str(context.exception)
         )
 
-    def test_invalid_norad_id_type(self):
-        """Test that an invalid NORAD ID type raises a TypeError."""
-        with self.assertRaises(TypeError) as context:
-            Spacecraft(
-                self.identifier,
-                self.name,
-                "invalid_norad_id",
-                self.orbit,
-                self.local_orbital_frame_handler,
-                [self.sensor],
-            )
-        self.assertIn(
-            "norad_id must be an integer or None.", str(context.exception)
-        )
-
     def test_invalid_orbit_type(self):
         """Test that an invalid orbit type raises a TypeError."""
         with self.assertRaises(TypeError) as context:
@@ -457,6 +442,25 @@ class TestSpacecraft(unittest.TestCase):
         self.assertIn(
             "local_orbital_frame_handler must be a frame handler object.",
             str(context.exception),
+        )
+
+    def test_default_local_orbital_frame_handler_initialized(self):
+        """Test that a default LVLH Type-1 frame handler is created when not provided."""
+        spc = Spacecraft(
+            self.identifier,
+            self.name,
+            self.norad_id,
+            self.orbit,
+            None,  # no local_orbital_frame_handler provided
+            [self.sensor],
+        )
+        self.assertIsNotNone(spc.local_orbital_frame_handler)
+        self.assertIsInstance(
+            spc.local_orbital_frame_handler, LVLHType1FrameHandler
+        )
+        expected_name = f"LVLH_{self.identifier}".upper()
+        self.assertEqual(
+            spc.local_orbital_frame_handler.frame.to_string(), expected_name
         )
 
 

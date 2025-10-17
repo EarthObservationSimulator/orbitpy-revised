@@ -44,7 +44,7 @@ def main(user_dir: str) -> None:
     mission = Mission.from_dict(mission_dict)
 
     print("Start mission.")
-    results = mission.execute_all()  # Assuming results are handled internally
+    results = mission.execute_all()
 
     elapsed_time = time.process_time() - start_time
     print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")

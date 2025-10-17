@@ -145,7 +145,9 @@ class TestMissionOne(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": self.points_array.to_dict(),
+            "spatial_points": {
+                "cartesian_3d_array": self.points_array.to_dict()
+            }
         }
 
     def test_from_dict_and_to_dict_roundtrip(self):
@@ -452,7 +454,9 @@ class TestMissionTwo(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": points_array.to_dict(),
+            "spatial_points": {
+                "cartesian_3d_array": points_array.to_dict()
+            },
         }
         self.m = Mission.from_dict(self.mission_dict)
         (self.propagated_trajectories, _) = self.m.execute_propagation()
@@ -775,7 +779,9 @@ class TestMissionGNSSR(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": points_array.to_dict(),
+            "spatial_points": {
+                "cartesian_3d_array": points_array.to_dict()
+            },
             "settings": {
                 "coverage_type": "SPECULAR_COVERAGE",
                 "specular_radius_km": 15.0,

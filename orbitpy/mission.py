@@ -42,7 +42,7 @@ from typing import Dict, Any, Union, List, Optional, Tuple
 
 from eosimutils.base import ReferenceFrame, SurfaceType, JsonSerializer
 from eosimutils.time import AbsoluteDate
-from eosimutils.state import Cartesian3DPositionArray
+from eosimutils.state import Cartesian3DPositionArray, GeographicPositionArray
 from eosimutils.trajectory import StateSeries
 from eosimutils.framegraph import FrameGraph
 
@@ -82,7 +82,7 @@ def auto_retrieve_orbit(
     )["calendar_date"]
 
     omm_data = api.get_closest_omm(
-        norad_id=norad_id, target_date_time=target_date_time_str
+        norad_id=norad_id, target_date_time=target_date_time_str, within_days=5
     )
 
     # Log out from Space-Track.org
@@ -124,6 +124,8 @@ def propagate_spacecraft(
         trajectory (StateSeries): StateSeries object containing the propagated states.
     """
     # determine the orbit to use for propagation
+    if spacecraft is None:
+        raise ValueError("Spacecraft cannot be None.")
     if spacecraft.orbit is not None:
         orbit = spacecraft.orbit
     elif spacecraft.norad_id is not None:
@@ -246,8 +248,7 @@ class Settings:
             "specular_radius_km": self.specular_radius_km,
             "spacetrack_credentials_relative_path": self.spacetrack_credentials_relative_path,
         }
-
-
+    
 class Mission:
     """Class to represent a space mission with spacecraft, sensors, and ground stations."""
 
@@ -256,9 +257,9 @@ class Mission:
         start_time: AbsoluteDate,
         duration_days: float,
         spacecrafts: Union[Spacecraft, List[Spacecraft]],
-        ground_stations: Union[GroundStation, List[GroundStation], None],
-        propagator: Union[SGP4Propagator, None],
-        spatial_points: Union[Cartesian3DPositionArray, None],
+        ground_stations: Optional[Union[GroundStation, List[GroundStation]]],
+        propagator: Optional[SGP4Propagator],
+        cartesian_spatial_points: Optional[Cartesian3DPositionArray] = None,
         gnss_spacecrafts: Optional[List[Spacecraft]] = None,
         frame_graph: FrameGraph = None,
         settings: Optional[Settings] = None,
@@ -270,7 +271,8 @@ class Mission:
             spacecrafts (Union[Spacecraft, List[Spacecraft]]): List of spacecraft in the mission.
             ground_stations (Optional[GroundStation, List[GroundStation]]): List of ground stations.
             propagator (Optional[SGP4Propagator]): Propagator to use for orbit propagation.
-            spatial_points (Optional[Cartesian3DPositionArray]): Spatial points for coverage calc.
+            cartesian_spatial_points (Optional[Cartesian3DPositionArray]): Cartesian spatial points 
+                                                                            for coverage calculation.
             gnss_spacecrafts (Optional[List[Spacecraft]]): List of GNSS satellites (transmitters)
                                                             (applicable for GNSSR coverage).
             frame_graph (FrameGraph): Frame graph for coordinate transformations.
@@ -287,7 +289,7 @@ class Mission:
             ground_stations = [ground_stations]
         self.ground_stations = ground_stations
         self.propagator = propagator
-        self.spatial_points = spatial_points
+        self.cartesian_spatial_points = cartesian_spatial_points
         if gnss_spacecrafts is not None:
             if not isinstance(gnss_spacecrafts, list):
                 gnss_spacecrafts = [gnss_spacecrafts]
@@ -346,27 +348,21 @@ class Mission:
         duration_days = dict_in["duration_days"]
 
         # setup spacecrafts
-        spacecrafts_list = dict_in.get("spacecrafts", [])
-        if not isinstance(spacecrafts_list, list):
-            spacecrafts_list = [spacecrafts_list]
+        spacecrafts_dict_val = dict_in.get("spacecrafts", None)
         spacecrafts = Mission.load_object(
-            Spacecraft, spacecrafts_list, settings.user_dir
+            Spacecraft, spacecrafts_dict_val, settings.user_dir
         )
-
+        
         # setup GNSS (transmitter) spacecrafts (applicable for GNSSR coverage)
-        gnss_spacecrafts_list = dict_in.get("gnss_spacecrafts", [])
-        if not isinstance(gnss_spacecrafts_list, list):
-            gnss_spacecrafts_list = [gnss_spacecrafts_list]
+        gnss_spacecrafts_dict_val = dict_in.get("gnss_spacecrafts", None)
         gnss_spacecrafts = Mission.load_object(
-            Spacecraft, gnss_spacecrafts_list, settings.user_dir
+            Spacecraft, gnss_spacecrafts_dict_val, settings.user_dir
         )
 
         # setup ground-stations
-        ground_stations_list = dict_in.get("ground_stations", [])
-        if not isinstance(ground_stations_list, list):
-            ground_stations_list = [ground_stations_list]
+        ground_stations_dict_val = dict_in.get("ground_stations", None)
         ground_stations = Mission.load_object(
-            GroundStation, ground_stations_list, settings.user_dir
+            GroundStation, ground_stations_dict_val, settings.user_dir
         )
 
         # setup propagator
@@ -375,11 +371,28 @@ class Mission:
             PropagatorFactory, propagator_dict, settings.user_dir
         )
 
-        # setup grid points
+        # setup spatial points as a Cartesian3DPositionArray.
+        # The input could be either GeographicPositionArray or Cartesian3DPositionArray.
         spatial_points_dict = dict_in.get("spatial_points", None)
-        spatial_points = Mission.load_object(
-            Cartesian3DPositionArray, spatial_points_dict, settings.user_dir
-        )
+        if spatial_points_dict is not None:
+            # determine the type of spatial points specified based on the dictionary keys
+            if "geographic_array" in spatial_points_dict:
+                geographic_points_dict = spatial_points_dict["geographic_array"]
+                geographic_points = Mission.load_object(
+                    GeographicPositionArray, geographic_points_dict, settings.user_dir
+                )
+                cartesian_spatial_points = geographic_points.to_cartesian3d_position_array()
+            elif "cartesian_3d_array" in spatial_points_dict:
+                cartesian_points_dict = spatial_points_dict["cartesian_3d_array"]
+                cartesian_spatial_points = Mission.load_object(
+                    Cartesian3DPositionArray, cartesian_points_dict, settings.user_dir
+                )
+            else:
+                raise ValueError(
+                    "Unsupported spatial points specification."
+                )
+        else:
+            cartesian_spatial_points = None
 
         # setup the frames and the transformations
         # The spacecrafts need to be setup before this so that their
@@ -418,7 +431,7 @@ class Mission:
             gnss_spacecrafts=gnss_spacecrafts,
             ground_stations=ground_stations,
             propagator=propagator,
-            spatial_points=spatial_points,
+            cartesian_spatial_points=cartesian_spatial_points,
             frame_graph=frame_graph,
             settings=settings,
         )
@@ -447,7 +460,7 @@ class Mission:
                 self.propagator.to_dict() if self.propagator else None
             ),
             "spatial_points": (
-                self.spatial_points.to_dict() if self.spatial_points else None
+                { "cartesian_3d_array": self.cartesian_spatial_points.to_dict()} if self.cartesian_spatial_points else None
             ),
             "settings": self.settings.to_dict() if self.settings else None,
         }
@@ -726,7 +739,7 @@ class Mission:
             ValueError: If no spatial points are specified for coverage calculation.
             ValueError: If a spacecraft does not have a local orbital frame handler specified.
         """
-        if self.spatial_points is None:
+        if self.cartesian_spatial_points is None:
             raise ValueError(
                 "No spatial points specified for coverage calculation."
             )
@@ -771,7 +784,7 @@ class Mission:
                     position=pos_lvlh,
                 )
                 result = coverage_calculator.calculate_coverage(
-                    target_point_array=self.spatial_points,
+                    target_point_array=self.cartesian_spatial_points,
                     fov=sensor.fov,
                     frame_graph=self.frame_graph,
                     times=times,
@@ -878,7 +891,7 @@ class Mission:
             raise ValueError(
                 "No GNSS spacecrafts specified for GNSS-R coverage calculation."
             )
-        if not self.spatial_points:
+        if not self.cartesian_spatial_points:
             raise ValueError(
                 "No spatial points specified for coverage calculation."
             )
@@ -983,7 +996,7 @@ class Mission:
                 )
 
                 result = coverage_calculator.calculate_coverage(
-                    target_point_array=self.spatial_points,
+                    target_point_array=self.cartesian_spatial_points,
                     fov=rx_sensor.fov,
                     frame_graph=self.frame_graph,
                     times=rx_times,
@@ -1056,7 +1069,7 @@ class Mission:
 
         if self.ground_stations:
             contacts = self.execute_gs_contact_finder(propagated_trajectories)
-        if self.spatial_points is not None:
+        if self.cartesian_spatial_points is not None:
             if self.settings.coverage_type == CoverageType.POINT_COVERAGE:
                 coverage = self.execute_coverage_calculator(
                     propagated_trajectories

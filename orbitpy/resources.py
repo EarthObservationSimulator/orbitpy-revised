@@ -18,6 +18,7 @@ from eosimutils.fieldofview import (
 )
 from eosimutils.standardframes import (
     StandardFrameHandlerFactory,
+    StandardFrameType,
     LVLHType1FrameHandler,
 )
 
@@ -190,7 +191,7 @@ class Spacecraft:
         self,
         identifier: Optional[str],
         name: Optional[str] = None,
-        norad_id: Optional[int] = None,
+        norad_id: Optional[Union[int, str]] = None,
         orbit: Optional[
             Union[
                 TwoLineElementSet,
@@ -209,11 +210,12 @@ class Spacecraft:
                                Must be a valid UUID.
                               If None, a new UUID is generated.
             name (Optional[str]): Name of the spacecraft. Defaults to None.
-            norad_id (Optional[int]): NORAD ID of the spacecraft. Defaults to None.
+            norad_id (Optional[Union[int, str]]): NORAD ID of the spacecraft. Defaults to None.
             orbit (Optional[Union[TwoLineElementSet, OrbitalMeanElementsMessage, OsculatingElements]]): #pylint: disable=line-too-long
                                                                 Orbit information. Defaults to None.
             local_orbital_frame_handler (Optional[LVLHType1FrameHandler]):
                 Local orbital frame information (e.g., LVLH Type-1 frame handler).
+                If not provided, defaults to LVLH Type-1 frame handler with the name "LVLH_<spacecraft_id in upper case>".
             sensor (Optional[Union[List[Sensor], Sensor]]):
                     List of Sensor objects or a single Sensor object.
         """
@@ -230,8 +232,8 @@ class Spacecraft:
 
         self.name = name
 
-        if norad_id is not None and not isinstance(norad_id, int):
-            raise TypeError("norad_id must be an integer or None.")
+        if norad_id is not None and not isinstance(norad_id, (int, str)):
+            raise TypeError("norad_id must be an integer or string or None.")
         self.norad_id = norad_id
 
         if orbit is not None and not isinstance(
@@ -250,6 +252,13 @@ class Spacecraft:
             raise TypeError(
                 "local_orbital_frame_handler must be a frame handler object."
             )
+        if local_orbital_frame_handler is None:
+            local_orbital_frame_handler = StandardFrameHandlerFactory.from_dict(
+                {
+                    "frame_type": StandardFrameType.LVLH_TYPE_1.to_string(),
+                    "name": f"LVLH_{identifier}",
+                }
+            )
         self.local_orbital_frame_handler = local_orbital_frame_handler
 
         if sensor is not None:
@@ -267,12 +276,16 @@ class Spacecraft:
             dict_in (dict): Dictionary with the spacecraft information.
                 The dictionary should contain the following key-value pairs:
                 - "id" (str): (Optional) Unique identifier.
+                            If not provided, the created Spacecraft object defaults 
+                            to a new UUID. (See __init__ method.)
                 - "name" (str): (Optional) Name of the spacecraft.
                 - "norad_id" (int): (Optional) NORAD ID of the spacecraft.
                 - "orbit" (dict): (Optional) Orbit information.
                                             See `orbitpy.orbits.OrbitFactory.from_dict`.
                 - "local_orbital_frame_handler" (dict): (Optional) Local orbital frame (handler).
                             See `eosimutils.standardframes.StandardFrameHandlerFactory.from_dict`.
+                            If not provided, the created Spacecraft object defaults to LVLH Type-1 frame handler 
+                            with the name "LVLH_<spacecraft_id in upper case>". (See __init__ method.)
                 - "sensor" (List[dict] or dict): (Optional) List of Sensors or a single Sensor.
                                                         See `orbitpy.resources.Sensor.from_dict`.
 
