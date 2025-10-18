@@ -1,0 +1,31 @@
+{
+    "start_time": {
+        "time_format": "GREGORIAN_DATE",
+        "calendar_date": "2025-01-08T09:00:00.00",
+        "time_scale": "UTC"
+    },
+    "duration_days": 0.1,
+    "spacecrafts": {
+        "relative_file_path": "cygnss_spacecrafts.json"
+    },
+    "gnss_spacecrafts": {
+        "relative_file_path": "gnss_spacecrafts.json"
+    },
+    "ground_stations": {
+        "relative_file_path": "ground_stations.json"
+    },
+    "propagator": {
+        "propagator_type": "SGP4_PROPAGATOR",
+        "step_size": 60
+    },
+    "spatial_points": {
+        "geographic_array": {
+            "relative_file_path": "spatial_points.json"
+        }
+    },
+    "settings": {
+        "coverage_type": "SPECULAR_COVERAGE",
+        "specular_radius_km": 25.0,
+        "spacetrack_credentials_relative_path": "../spacetrack/credentials.json"
+    }
+}

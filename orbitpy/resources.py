@@ -2,7 +2,17 @@
 .. module:: orbitpy.resources
    :synopsis: Models of space mission resources.
 
-Collection of classes modeling space mission resources.
+Collection of classes modeling space mission resources (ground stations, 
+sensors, and spacecraft).
+
+These classes handle the properties of each resource and provide
+methods to serialize and deserialize the resource information to and from
+dictionaries. The primary application is in the `mission` module, where
+these resources are used to define the mission configuration.
+
+The mission module provoides methods to run simulations (propagate, contact finding, 
+eclipse finding, coverage) based on the defined resources and their properties.
+
 """
 
 from typing import Dict, Any, Optional, Union, List
