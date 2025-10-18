@@ -113,7 +113,9 @@ class SpecularCoverage:
     points."""
 
     @classmethod
-    def from_dict(cls, specs: Dict[str, Any]) -> "SpecularCoverage":
+    def from_dict(
+        cls, specs: Dict[str, Any]  # pylint: disable=unused-argument
+    ) -> "SpecularCoverage":
         # Empty since class does not require any initialization parameters
         return cls()
 
@@ -151,7 +153,7 @@ class SpecularCoverage:
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
                 calculated at discrete instances.
-            transmitter_frames (List[ReferenceFrame]): A list of ReferenceFrame objects used to 
+            transmitter_frames (List[ReferenceFrame]): A list of ReferenceFrame objects used to
                 lookup trajectories of the GNSS transmitters to be used for specular coverage
                 calculation. Transmitter trajectories must first be added to the frame graph
                 for this to work.
@@ -183,7 +185,7 @@ class SpecularCoverage:
         3. Calculate the specular point between each transmitter and the
         receiver, if LOS is available. Also calculate the RCG factor at the specular point.
         4. Create a sphere around the specular point with radius specular_radius.
-        5. Check which target points are in the sphere, the receiver FOV, and have LOS 
+        5. Check which target points are in the sphere, the receiver FOV, and have LOS
         to the receiver (i.e. are in the horizon). Points which satisfy all three conditions are
         considered covered.
 
@@ -351,7 +353,7 @@ class SpecularCoverage:
                 pos_fov_target_source,
                 specular_source,
                 radar_gain,
-                buff_size
+                buff_size,
             )
 
             radius_source = kcl.ConstantSourced(specular_radius)

@@ -18,6 +18,7 @@ from eosimutils.time import AbsoluteDateArray
 import kcl
 import GeometricTools as gte
 
+
 def get_specular_trajectory(
     transmitter: StateSeries,
     receiver: StateSeries,

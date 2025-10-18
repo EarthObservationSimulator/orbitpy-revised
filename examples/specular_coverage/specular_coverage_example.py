@@ -58,7 +58,9 @@ def get_stateseries(ids, starting_date, duration_days=1):
 
     outputs = []
     for norad_id in ids:
-        with open(os.path.join(input_dir, f"omm_{norad_id}.json"), encoding="utf-8") as f:
+        with open(
+            os.path.join(input_dir, f"omm_{norad_id}.json"), encoding="utf-8"
+        ) as f:
             omm_data = json.load(f)
 
         orbit_obj = OrbitalMeanElementsMessage.from_json(omm_data)

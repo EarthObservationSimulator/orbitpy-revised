@@ -177,7 +177,7 @@ class TestEclipseFinder(unittest.TestCase):
         The position is chosen such that it is "above" Earth and not in eclipse
         for any time.
         """
-        random_date = f"2025-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}T \
+        random_date = f"2025-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}T\
             {random.randint(0, 23):02d}:{random.randint(0, 59):02d}:{random.randint(0, 59):02d}.000"
         random_position = [0.0, 0.0, random.uniform(6800.0, 10000.0)]
         cartesian_state = CartesianState.from_dict(
