@@ -557,17 +557,17 @@ class Mission:
                 One item per spacecraft with:
                 - "spacecraft_id": str
                 - "spacecraft_name": str
-                - "eclipse_info": EclipseInfo
+                - "eclipse_info": A list of tuples representing the start and end times of eclipse intervals.
 
         Example:
             [
                 {   "spacecraft_id": "04a388ad-...",
                     "spacecraft_name": "sc1",
-                    "eclipse_info": EclipseInfo(...)
+                    "eclipse_info": [ [start, end], [start, end], ... ]
                 },
                 {   "spacecraft_id": "44966609-...",
                     "spacecraft_name": "sc2",
-                    "eclipse_info": EclipseInfo(...)
+                    "eclipse_info": [ [start, end], [start, end], ... ]
                 }
             ]
         """
@@ -584,7 +584,7 @@ class Mission:
                 {
                     "spacecraft_id": spc_id,
                     "spacecraft_name": spc_name,
-                    "eclipse_info": eclipses,
+                    "eclipse_info": eclipses.eclipse_intervals(),
                 }
             )
 

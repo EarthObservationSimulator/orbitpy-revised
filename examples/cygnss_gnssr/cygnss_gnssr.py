@@ -33,7 +33,7 @@ from eosimutils.base import JsonSerializer
 from orbitpy.mission import Mission
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dshield_format_converter import write_dshield_format_of_propagator_results, write_dshield_format_of_contact_results
+from dshield_format_converter import write_dshield_format_of_propagator_results, write_dshield_format_of_contact_results, write_dshield_format_of_eclipse_results, write_dshield_format_of_gnssr_coverage_results
 
 exec_start_time = time.process_time()
 
@@ -61,6 +61,8 @@ results = mission.execute_all()
 
 propagator_results = results.get("propagator_results", [])
 contact_finder_results = results.get("contact_finder_results", {})
+eclipse_finder_results = results.get("eclipse_finder_results", {})
+gnssr_coverage_calculator_results = results.get("coverage_calculator_results", {})
 
 elapsed_time = time.process_time() - exec_start_time
 print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")
@@ -72,8 +74,8 @@ exec_start_time = time.process_time()
 epoch = mission.start_time.to_dict(time_format="GREGORIAN_DATE", time_scale="UTC")
 step_size = mission.propagator.step_size
 
-results_fp = os.path.join(results_dir, 'ContactOutput.json')
-JsonSerializer.save_to_json(contact_finder_results, results_fp)
+results_fp = os.path.join(results_dir, 'coverage_calculator_results.json')
+JsonSerializer.save_to_json(gnssr_coverage_calculator_results, results_fp)
 
 
 # Write propagation results using the in-memory propagator_results.
@@ -82,6 +84,12 @@ write_dshield_format_of_propagator_results(propagator_results_serializable, resu
 
 contact_finder_results_serializable = JsonSerializer.to_serializable(contact_finder_results)
 write_dshield_format_of_contact_results(contact_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
+
+eclipse_finder_results_serializable = JsonSerializer.to_serializable(eclipse_finder_results)
+write_dshield_format_of_eclipse_results(eclipse_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
+
+gnssr_coverage_calculator_results_serializable = JsonSerializer.to_serializable(gnssr_coverage_calculator_results)
+write_dshield_format_of_gnssr_coverage_results(gnssr_coverage_calculator_results_serializable, results_dir, epoch, step_size_seconds=step_size) 
 
 elapsed_time = time.process_time() - exec_start_time
 print(f"Results written to MissionOutput.json. Time taken: {elapsed_time:.2f} seconds")

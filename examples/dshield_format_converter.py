@@ -2,8 +2,6 @@ import os
 import shutil
 import pandas as pd
 
-from eosimutils.time import AbsoluteDate
-
 def write_dshield_format_of_propagator_results(propagator_results: list[dict], out_dir: str) -> None:
     """
     Write one CSV file per spacecraft with the format requested by D-SHIELD project.
@@ -84,7 +82,7 @@ def write_dshield_format_of_propagator_results(propagator_results: list[dict], o
         print(f"Wrote state CSV for {name}: {out_fp}")
 
 
-def write_dshield_format_of_contact_results(contact_results: list[dict], out_dir: str, epoch_dict: dict, step_size_seconds: float = 60.0) -> None:
+def write_dshield_format_of_contact_results(contact_results: list[dict], out_dir: str, epoch_dict: dict, step_size_seconds: float) -> None:
     """
     Write per-spacecraft / per-ground-station contact CSV files in the D-SHIELD style.
 
@@ -176,3 +174,167 @@ def write_dshield_format_of_contact_results(contact_results: list[dict], out_dir
                     f.write(f"{start_idx},{end_idx}\n")
 
             print(f"Wrote contact CSV for {sc_name} -> {gs_name}: {out_fp}")
+
+def write_dshield_format_of_eclipse_results(eclipse_results: list[dict], out_dir: str, epoch_dict: dict, step_size_seconds: float) -> None:
+    """
+    Write per-spacecraft eclipse interval CSV files in the D-SHIELD style.
+
+    The resulting files are produced within the following directory structure:
+
+        <out_dir>/<spacecraft_name>/eclipse/eclipse_intervals.csv
+
+    - Each spacecraft produces one CSV file named eclipse_intervals.csv.
+    - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
+    - The '<eclipse>' folder is erased and recreated.
+
+    The eclipse times indicated in the eclipse intervals need to be represented in Gregorian date UTC format.
+
+    Args:
+        eclipse_results (list[dict]): List of spacecraft eclipse results. Each entry should have
+                                      "eclipse_info" as a list of [start, end] time pairs.
+        out_dir (str): Output directory to save the CSV files.
+        epoch_dict (dict): Dictionary representing the epoch (start time) of the mission.
+                           See `eosimutils.time.AbsoluteDate.to_dict` for structure.
+        step_size_seconds (float): Step size in seconds used to compute time indices.
+    """
+    if step_size_seconds <= 0:
+        raise ValueError("step_size_seconds must be positive to compute time indices.")
+
+    # helper to parse provided time representation to pandas.Timestamp
+    def _to_dt(t):
+        if isinstance(t, dict):
+            if t.get("time_format") != "GREGORIAN_DATE" or t.get("time_scale") != "UTC":
+                raise ValueError(f"Unsupported time format: {t.get('time_format')} and/or time scale: {t.get('time_scale')}")
+            return pd.to_datetime(t.get("calendar_date"))
+        return pd.to_datetime(t)
+
+    epoch_str = epoch_dict.get("calendar_date", None)
+    if epoch_str is None:
+        raise ValueError("epoch_dict must contain 'calendar_date' key")
+    tf_label = epoch_dict.get("time_format", "UNKNOWN")
+    ts_label = epoch_dict.get("time_scale", "UNKNOWN")
+    epoch_dt = _to_dt(epoch_str)
+
+    for sc in eclipse_results:
+        sc_name = sc.get("spacecraft_name", sc.get("spacecraft_id", "spacecraft"))
+        sc_folder = os.path.join(out_dir, sc_name)
+        os.makedirs(sc_folder, exist_ok=True)
+
+        # Create a fresh results folder.
+        results_dir = os.path.join(sc_folder, "eclipse")
+        if os.path.exists(results_dir) and os.path.isdir(results_dir):
+            shutil.rmtree(results_dir)
+        os.makedirs(results_dir, exist_ok=True)
+
+        eclipse_info = sc.get("eclipse_info", [])
+        if not eclipse_info:
+            print(f"Skipping {sc_name}: no eclipse intervals")
+            continue
+
+        out_fp = os.path.join(results_dir, "eclipse_intervals.csv")
+        with open(out_fp, "w", newline="") as f:
+            header_title = f"Eclipse intervals for spacecraft {sc_name}"
+            f.write(header_title + "\n")
+            f.write(f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n")
+            f.write(f"Step size [s] is {float(step_size_seconds)}\n")
+            f.write("start index,end index\n")
+
+            for interval in eclipse_info:
+                if not interval or len(interval) < 2:
+                    continue
+                try:
+                    start_dt = _to_dt(interval[0])
+                    end_dt = _to_dt(interval[1])
+                except Exception:
+                    # skip malformed interval
+                    continue
+
+                start_idx = int(round((start_dt - epoch_dt).total_seconds() / step_size_seconds))
+                end_idx = int(round((end_dt - epoch_dt).total_seconds() / step_size_seconds))
+                f.write(f"{start_idx},{end_idx}\n")
+
+        print(f"Wrote eclipse CSV for {sc_name}: {out_fp}")
+
+
+def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict], out_dir: str, epoch_dict: dict, step_size_seconds: float) -> None:
+    """
+    Write per-spacecraft, per-sensor coverage CSV files in the D-SHIELD style.
+    """
+    if step_size_seconds <= 0:
+        raise ValueError("step_size_seconds must be positive to compute time indices.")
+
+    def _to_dt(value):
+        if isinstance(value, dict):
+            tf = value.get("time_format")
+            ts = value.get("time_scale")
+            if tf != "GREGORIAN_DATE" or ts != "UTC":
+                raise ValueError(f"Unsupported time format: {tf} and/or time scale: {ts}")
+            return pd.to_datetime(value.get("calendar_date"))
+        return pd.to_datetime(value)
+
+    epoch_str = epoch_dict.get("calendar_date")
+    if epoch_str is None:
+        raise ValueError("epoch_dict must contain 'calendar_date' key")
+    tf_label = epoch_dict.get("time_format", "UNKNOWN")
+    ts_label = epoch_dict.get("time_scale", "UNKNOWN")
+    epoch_dt = _to_dt(epoch_dict)
+
+    for sc in coverage_results:
+        sc_name = sc.get("spacecraft_name", sc.get("spacecraft_id", "spacecraft"))
+        sc_id = sc.get("spacecraft_id", "")
+        sc_folder = os.path.join(out_dir, sc_name)
+        os.makedirs(sc_folder, exist_ok=True)
+
+        coverage_dir = os.path.join(sc_folder, "access")
+        if os.path.exists(coverage_dir) and os.path.isdir(coverage_dir):
+            shutil.rmtree(coverage_dir)
+        os.makedirs(coverage_dir, exist_ok=True)
+
+        sensors = sc.get("total_spacecraft_coverage", [])
+        if not sensors:
+            print(f"Skipping {sc_name}: no sensor coverage data")
+            continue
+
+        for sensor_idx, sensor in enumerate(sensors):
+            sensor_name = sensor.get("sensor_name") or ""
+            sensor_id = sensor.get("sensor_id")
+            out_fp = os.path.join(coverage_dir, f"sensor{sensor_idx+1}_access.csv")
+
+            sensor_coverages = sensor.get("total_sensor_coverage", [])
+            if not sensor_coverages:
+                print(f"Skipping {sc_name} sensor {sensor_name} id: {sensor_id}: no coverage data")
+                continue
+
+            with open(out_fp, "w", newline="") as f:
+                f.write(f"Spacecraft with name {sc_name}, id {sc_id}. Sensor with name {sensor_name}, id {sensor_id} \n")
+                f.write(f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n")
+                f.write(f"Step size [s] is {float(step_size_seconds)}\n")
+                f.write("\"time index\" \"source name\" \"GP index\"\n")
+
+                # iterate over gnss spacecrafts (sources) source => gnss spacecraft
+                for source in sensor_coverages:
+                    source_name = source.get("gnss_spacecraft_name") or "UNKNOWN SOURCE NAME"
+                    source_id = source.get("gnss_spacecraft_id")
+                    coverage_info = source.get("coverage_info", {})
+                    time_info = coverage_info.get("time", {})
+                    times = time_info.get("calendar_date", [])
+                    if not times:
+                        continue
+
+                    try:
+                        times_dt = pd.to_datetime(times)
+                    except Exception:
+                        continue
+
+                    coverage_lists = coverage_info.get("coverage", [])
+                    if len(times_dt) != len(coverage_lists):
+                        print(f"Warning: Mismatched lengths for coverage times and lists for {sc_name} sensor {sensor_name} source {source_name}")
+                    for idx in range(len(times_dt)):
+                        gp_indices = coverage_lists[idx]
+                        if not gp_indices:
+                            continue
+                        time_idx = int(round((times_dt[idx] - epoch_dt).total_seconds() / step_size_seconds))
+                        gp_str = ",".join(str(int(gp)) for gp in gp_indices)
+                        f.write(f"{time_idx} {source_name} {gp_str}\n")
+
+            print(f"Wrote coverage CSV for {sc_name} sensor {sensor_name}: {out_fp}")
