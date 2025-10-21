@@ -20,7 +20,9 @@ galelio_sat_norad_ids = ['37846', '37847', '38857', '40128', '40129', '40544', '
 
 
 """
+import shutil
 from typing import Any
+import sys
 import os
 import time
 import json
@@ -30,9 +32,18 @@ from eosimutils.base import JsonSerializer
 
 from orbitpy.mission import Mission
 
-start_time = time.process_time()
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dshield_format_converter import write_dshield_format_of_propagator_results, write_dshield_format_of_contact_results
+
+exec_start_time = time.process_time()
 
 user_dir = os.path.dirname(os.path.abspath(__file__))
+results_dir = os.path.join(user_dir, "results")
+
+# Create a fresh results folder.
+if os.path.exists(results_dir) and os.path.isdir(results_dir):
+    shutil.rmtree(results_dir)
+os.makedirs(results_dir, exist_ok=True)
 
 # Load mission specifications from JSON file
 mission_specs_path = os.path.join(user_dir, 'MissionSpecs.json')
@@ -48,23 +59,31 @@ mission = Mission.from_dict(mission_dict)
 print("Start mission.")
 results = mission.execute_all()
 
-elapsed_time = time.process_time() - start_time
+propagator_results = results.get("propagator_results", [])
+contact_finder_results = results.get("contact_finder_results", {})
+
+elapsed_time = time.process_time() - exec_start_time
 print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")
 
-# Save results to JSON file
+##### Save results to the format expected in the D-SHIELD project #####
 print("Writing results to output directory.")
-start_time = time.process_time()
-results_fp = os.path.join(user_dir, 'MissionOutput.json')
+exec_start_time = time.process_time()
 
-JsonSerializer.save_to_json(results, results_fp)
+epoch = mission.start_time.to_dict(time_format="GREGORIAN_DATE", time_scale="UTC")
+step_size = mission.propagator.step_size
 
-#data = JsonSerializer.to_serializable(results["propagator_results"])
-#df = pd.json_normalize(data)
-# Save to CSV
-#df.to_csv(results_fp, index=False)
+results_fp = os.path.join(results_dir, 'ContactOutput.json')
+JsonSerializer.save_to_json(contact_finder_results, results_fp)
 
 
-elapsed_time = time.process_time() - start_time
+# Write propagation results using the in-memory propagator_results.
+propagator_results_serializable = JsonSerializer.to_serializable(propagator_results)
+write_dshield_format_of_propagator_results(propagator_results_serializable, results_dir)
+
+contact_finder_results_serializable = JsonSerializer.to_serializable(contact_finder_results)
+write_dshield_format_of_contact_results(contact_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
+
+elapsed_time = time.process_time() - exec_start_time
 print(f"Results written to MissionOutput.json. Time taken: {elapsed_time:.2f} seconds")
 
 

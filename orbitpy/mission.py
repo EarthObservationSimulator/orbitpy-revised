@@ -82,7 +82,7 @@ def auto_retrieve_orbit(
     )["calendar_date"]
 
     omm_data = api.get_closest_omm(
-        norad_id=norad_id, target_date_time=target_date_time_str, within_days=5
+        norad_id=norad_id, target_date_time=target_date_time_str, within_days=1
     )
 
     # Log out from Space-Track.org
@@ -609,7 +609,7 @@ class Mission:
                 - "contacts": List[Dict[str, Any]] where each dict has:
                         - "ground_station_id": str
                         - "ground_station_name": str
-                        - "contact_info": ContactInfo
+                        - "contact_info":  A list of tuples representing the start and end times of contact intervals.
             Example:
             [
                 {
@@ -619,12 +619,12 @@ class Mission:
                         {
                             "ground_station_id": "69e3233c-...",
                             "ground_station_name": "gs1",
-                            "contact_info": ContactInfo(...)
+                            "contact_info": [ [start, end], [start, end], ... ]
                         },
                         {
                             "ground_station_id": "c3ece70c-...",
                             "ground_station_name": "gs2",
-                            "contact_info": ContactInfo(...)
+                            "contact_info": [ [start, end], [start, end], ... ]
                         }
                     ]
                 },
@@ -635,12 +635,12 @@ class Mission:
                         {
                             "ground_station_id": "69e3233c-...",
                             "ground_station_name": "gs1",
-                            "contact_info": ContactInfo(...)
+                            "contact_info": [ [start, end], [start, end], ... ]
                         },
                         {
                             "ground_station_id": "c3ece70c-...",
                             "ground_station_name": "gs2",
-                            "contact_info": ContactInfo(...)
+                            "contact_info": [ [start, end], [start, end], ... ]
                         }
                     ]
                 }
@@ -671,7 +671,7 @@ class Mission:
                     {
                         "ground_station_id": gs.identifier,
                         "ground_station_name": gs.name,
-                        "contact_info": result,
+                        "contact_info": result.contact_intervals(), # interval format
                     }
                 )
             all_contact_info.append(ground_stn_contact_info)
@@ -1047,33 +1047,46 @@ class Mission:
         Returns:
             Dict[str, Any]:
                 A dictionary with the following keys (present only if the respective analysis runs):
-                - "propagation": List[Dict[str, Union[str, StateSeries]]]
+                - "propagator_results": List[Dict[str, Union[str, StateSeries]]]
                                   Primary spacecraft propagation results (see execute_propagation()).
                 - "propagation_gnss": Optional[List[Dict[str, Union[str, StateSeries]]]]
                                       GNSS spacecraft propagation results (see execute_propagation()).
-                - "eclipse": List[Dict[str, Union[str, EclipseInfo]]]
+                                      Applies for the case of gnssr missions.
+                - "eclipse_finder_results": List[Dict[str, Union[str, EclipseInfo]]]
                              Eclipse results per spacecraft (see execute_eclipse_finder()).
-                - "contacts": List[Dict[str, Any]]
+                - "contact_finder_results": List[Dict[str, Any]]
                               Ground-station contact results (see execute_gs_contact_finder()).
-                - "coverage": List[Dict[str, Any]]
-                              Point coverage results (see execute_coverage_calculator()).
-                - "coverage_gnssr": List[Dict[str, Any]]
-                                    GNSS-R specular coverage results (see execute_gnssr_coverage_calculator()).
+                - "coverage_calculator_results": List[Dict[str, Any]]
+                              Coverage calculator results (see execute_coverage_calculator()).
 
         """
+        # propagation
         propagated_trajectories, gnss_trajectories = self.execute_propagation()
+
+        # eclipse calculation
         eclipse = self.execute_eclipse_finder(propagated_trajectories)
 
         contacts = None
         coverage = None
 
+        # ground-station contacts
         if self.ground_stations:
             contacts = self.execute_gs_contact_finder(propagated_trajectories)
+
+        # coverage calculation
         if self.cartesian_spatial_points is not None:
             if self.settings.coverage_type == CoverageType.POINT_COVERAGE:
                 coverage = self.execute_coverage_calculator(
                     propagated_trajectories
                 )
+                # form the mission results dictionary
+                mission_results = {
+                    "propagator_results": propagated_trajectories,
+                    "eclipse_finder_results": eclipse,
+                    "contact_finder_results": contacts,
+                    "coverage_calculator_results": coverage,
+                }
+                
             elif self.settings.coverage_type == CoverageType.SPECULAR_COVERAGE:
                 if not gnss_trajectories:
                     raise ValueError(
@@ -1083,15 +1096,19 @@ class Mission:
                     propagated_rx_trajectories=propagated_trajectories,
                     propagated_tx_trajectories=gnss_trajectories,
                 )
+                # form the mission results dictionary
+                mission_results = {
+                    "propagator_results": propagated_trajectories,
+                    "gnssr_propagator_results": gnss_trajectories,
+                    "eclipse_finder_results": eclipse,
+                    "contact_finder_results": contacts,
+                    "coverage_calculator_results": coverage,
+                }
+                
             else:
                 raise ValueError(
                     f"Unsupported coverage type {self.settings.coverage_type}."
                 )
 
-        mission_results = {
-            "propagator_results": propagated_trajectories,
-            "eclipse_finder_results": eclipse,
-            "contact_finder_results": contacts,
-            "coverage_calculator_results": coverage,
-        }
+       
         return mission_results

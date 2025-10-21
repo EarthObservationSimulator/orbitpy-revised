@@ -11,3 +11,4 @@ htmlcov/
 
 # ignore output files of example scripts
 MissionOutput.json
+examples/cygnss_gnssr/results/*
