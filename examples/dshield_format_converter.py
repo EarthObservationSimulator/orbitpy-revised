@@ -97,7 +97,7 @@ def write_dshield_format_of_contact_results(contact_results: list[dict], out_dir
     The contact times indicated in the contact intervals need to be represented in Gregorian date UTC format.
 
     Args:
-        contact_results (list[dict]): List of spacecraft to ground-station contact results.
+        contact_results (list[dict): List of spacecraft to ground-station contact results.
                         See `orbitpy.mission.Mission.execute_gs_contact_finder` for structure.
         out_dir (str): Output directory to save the CSV files.
         epoch_dict (dict): Dictionary representing the epoch (start time) of the mission.
@@ -338,3 +338,63 @@ def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict],
                         f.write(f"{time_idx} {source_name} {gp_str}\n")
 
             print(f"Wrote coverage CSV for {sc_name} sensor {sensor_name}: {out_fp}")
+
+            aggregate_gnssr_coverage_by_time(out_fp, os.path.join(coverage_dir, f"sensor{sensor_idx+1}_access_aggregated.csv"))
+
+
+def aggregate_gnssr_coverage_by_time(coverage_file: str, output_file: str) -> None:
+    """
+    Aggregate a GNSSR coverage CSV (write_dshield_format_of_gnssr_coverage_results output)
+    by time index, listing all source names and GP indices observed at each time.
+    """
+
+    # Preserve the original three metadata header lines so the aggregated file mirrors them.
+    with open(coverage_file, "r", encoding="utf-8") as f:
+        header_lines = [next(f) for _ in range(4)]
+
+    # Load the GNSSR coverage file while skipping the three metadata lines plus the column header.
+    # The D-SHIELD output uses whitespace as the delimiter, so we read with regex-based splitting
+    # and explicitly set the column names expected downstream.
+    df = pd.read_csv(
+        coverage_file,
+        skiprows=4,
+        sep=r"\s+",
+        names=["time index", "source name", "GP index"],
+        engine="python",
+        dtype={"time index": "int64", "source name": "string", "GP index": "string"},
+    )
+
+    # Helper that merges all comma-separated GP index strings in a pandas Series into one
+    # sorted, de-duplicated comma-separated string. Each GP index token is stripped of
+    # surrounding whitespace before being converted into an integer.
+    def _collect_gp(series: pd.Series) -> str:
+        gp_set: set[int] = set()
+        for value in series:
+            for token in str(value).split(","):
+                token = token.strip()
+                if token:
+                    gp_set.add(int(token))
+        return ",".join(str(idx) for idx in sorted(gp_set))
+
+    records: list[tuple[int, str, str]] = []
+    # Group every row by its time index. Within each group we aggregate the distinct source names
+    # and merge all GP indices using the helper above.
+    for time_idx, group in df.groupby("time index"):
+        # Returns a comma-separated, alphabetically sorted list of unique, non-empty source names found in the current time-index group
+        sources = ",".join(sorted(set(name.strip() for name in group["source name"] if name.strip())))
+        gp_indices = _collect_gp(group["GP index"])
+        records.append((int(time_idx), sources, gp_indices))
+
+    # Preserve chronological order
+    records.sort(key=lambda item: item[0])
+
+    # Write a space-delimited summary file that follows the D-SHIELD textual header style.
+    with open(output_file, "w", encoding="utf-8") as f:
+        # Reproduce the original metadata header lines.
+        for meta_line in header_lines[:3]:
+            f.write(meta_line)
+        # Write a simple space-delimited column header appropriate for the aggregated content.
+        f.write("\"time index\" \"source names\" \"GP index\"\n")
+        # Write each aggregated row.
+        for time_idx, sources, gp_indices in records:
+            f.write(f"{time_idx} {sources} {gp_indices}\n")
