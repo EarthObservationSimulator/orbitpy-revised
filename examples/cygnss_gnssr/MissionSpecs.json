@@ -1,10 +1,10 @@
 {
     "start_time": {
         "time_format": "GREGORIAN_DATE",
-        "calendar_date": "2025-01-08T09:00:00.00",
+        "calendar_date": "2025-01-08T07:00:00.00",
         "time_scale": "UTC"
     },
-    "duration_days": 0.1,
+    "duration_days": 0.25,
     "spacecrafts": {
         "relative_file_path": "cygnss_spacecrafts.json"
     },

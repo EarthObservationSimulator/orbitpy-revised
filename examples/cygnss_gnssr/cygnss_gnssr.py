@@ -26,7 +26,6 @@ import sys
 import os
 import time
 import json
-import pandas as pd
 
 from eosimutils.base import JsonSerializer
 
@@ -67,31 +66,72 @@ gnssr_coverage_calculator_results = results.get("coverage_calculator_results", {
 elapsed_time = time.process_time() - exec_start_time
 print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")
 
+##### Save complete results to JSON file. #####
+results_fp = os.path.join(results_dir, 'MissionOutput.json')
+time_start = time.process_time()
+JsonSerializer.save_to_json(results, results_fp)
+elapsed_time = time.process_time() - time_start
+print(f"Results written to MissionOutput.json. Time taken: {elapsed_time:.2f} seconds")
+
+
 ##### Save results to the format expected in the D-SHIELD project #####
-print("Writing results to output directory.")
-exec_start_time = time.process_time()
+print("Writing results in the format expected by the D-SHIELD project to output directory.")
 
 epoch = mission.start_time.to_dict(time_format="GREGORIAN_DATE", time_scale="UTC")
 step_size = mission.propagator.step_size
 
-results_fp = os.path.join(results_dir, 'coverage_calculator_results.json')
-JsonSerializer.save_to_json(gnssr_coverage_calculator_results, results_fp)
+#### Write propagation results using the in-memory propagator_results. ####
 
-
-# Write propagation results using the in-memory propagator_results.
+exec_start_time = time.process_time()
 propagator_results_serializable = JsonSerializer.to_serializable(propagator_results)
-write_dshield_format_of_propagator_results(propagator_results_serializable, results_dir)
-
-contact_finder_results_serializable = JsonSerializer.to_serializable(contact_finder_results)
-write_dshield_format_of_contact_results(contact_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
-
-eclipse_finder_results_serializable = JsonSerializer.to_serializable(eclipse_finder_results)
-write_dshield_format_of_eclipse_results(eclipse_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
-
-gnssr_coverage_calculator_results_serializable = JsonSerializer.to_serializable(gnssr_coverage_calculator_results)
-write_dshield_format_of_gnssr_coverage_results(gnssr_coverage_calculator_results_serializable, results_dir, epoch, step_size_seconds=step_size) 
-
 elapsed_time = time.process_time() - exec_start_time
-print(f"Results written to MissionOutput.json. Time taken: {elapsed_time:.2f} seconds")
+print(f'elapsed time for propagator_results_serializable is {elapsed_time}')
+
+exec_start_time = time.process_time()
+write_dshield_format_of_propagator_results(propagator_results_serializable, epoch, results_dir)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for converting to csv format and writing to disk is {elapsed_time}')
+#########################################################################################
+
+#### Write contact finder results using the in-memory contact_finder_results. ####
+exec_start_time = time.process_time()
+contact_finder_results_serializable = JsonSerializer.to_serializable(contact_finder_results)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for contact_finder_results_serializable is {elapsed_time}')
+
+exec_start_time = time.process_time()
+write_dshield_format_of_contact_results(contact_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for converting to csv format and writing to disk is {elapsed_time}')
+
+#########################################################################################
+
+#### Write eclipse finder results using the in-memory eclipse_finder_results. ####
+exec_start_time = time.process_time()
+eclipse_finder_results_serializable = JsonSerializer.to_serializable(eclipse_finder_results)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for eclipse_finder_results_serializable is {elapsed_time}')
+
+exec_start_time = time.process_time()
+write_dshield_format_of_eclipse_results(eclipse_finder_results_serializable, results_dir, epoch, step_size_seconds=step_size)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for converting to csv format and writing to disk is {elapsed_time}')
+
+#########################################################################################
+
+#### Write GNSSR coverage calculator results using the in-memory gnssr_coverage_calculator_results. ####
+
+exec_start_time = time.process_time()
+gnssr_coverage_calculator_results_serializable = JsonSerializer.to_serializable(gnssr_coverage_calculator_results)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for gnssr_coverage_calculator_results_serializable is {elapsed_time}')
+
+exec_start_time = time.process_time()
+epoch_ephemeris_seconds = mission.start_time.to_spice_ephemeris_time()
+write_dshield_format_of_gnssr_coverage_results(gnssr_coverage_calculator_results_serializable, results_dir, epoch, epoch_ephemeris_seconds, step_size_seconds=step_size)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for converting to csv format and writing to disk is {elapsed_time}')
+
+#########################################################################################
 
 

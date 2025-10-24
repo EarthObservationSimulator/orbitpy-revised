@@ -7,6 +7,9 @@ in discrete-time (boolean coverage status for each time point (TP) for each grid
 continuous-time (coverage intervals with real-valued boundaries for each GP). Discrete coverage
 can be stored in a TP-first format (lists of accessed GPs for each TP) or a GP-first format
 (lists of accessed TPs for each GP).
+
+The `to_dict' functions serialize the coverage object and the time arrays are serialized in the
+`SPICE_ET' format, `ET` time scale by default to allow for faster serialization.
 """
 
 from typing import List, Dict, Any
@@ -67,7 +70,7 @@ class DiscreteCoverageTP:
                 'grid_points': Dictionary representation of grid points.
         """
         return {
-            "time": self.time.to_dict(),
+            "time": self.time.to_dict(time_format="SPICE_ET", time_scale="ET"),
             "coverage": self.coverage,
             "grid_points": self.grid_points.to_dict(),
         }
@@ -180,7 +183,7 @@ class DiscreteCoverageGP:
                 'grid_points': Dictionary representation of grid points.
         """
         return {
-            "time": self.time.to_dict(),
+            "time": self.time.to_dict(time_format="SPICE_ET", time_scale="ET"),
             "coverage": self.coverage,
             "grid_points": self.grid_points.to_dict(),
         }

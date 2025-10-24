@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 # from eosimutils.base import JsonSerializer
-
+from eosimutils.time import AbsoluteDate
 from eosimutils.trajectory import StateSeries
 from eosimutils.state import (
     Cartesian3DPositionArray,
@@ -204,7 +204,12 @@ class TestMissionOne(unittest.TestCase):
         self.assertIsInstance(entry.get("spacecraft_id"), str)
         self.assertIn(entry.get("spacecraft_id"), m.spacecrafts[0].identifier)
         self.assertIn("eclipse_info", entry)
-        self.assertIsInstance(entry["eclipse_info"], EclipseInfo)
+        self.assertIsInstance(entry["eclipse_info"], list)
+        for interval in entry["eclipse_info"]:
+            self.assertIsInstance(interval, tuple)
+            self.assertEqual(len(interval), 2)
+            self.assertIsInstance(interval[0], AbsoluteDate)
+            self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_gs_contact_finder(self):
         m = Mission.from_dict(self.mission_dict)
@@ -234,7 +239,12 @@ class TestMissionOne(unittest.TestCase):
         gs_entry = contact_info[0]["contacts"][0]
         self.assertEqual(gs_entry.get("ground_station_id"), gs_id)
         self.assertIn("contact_info", gs_entry)
-        self.assertIsInstance(gs_entry["contact_info"], ContactInfo)
+        self.assertIsInstance(gs_entry["contact_info"], list)
+        for interval in gs_entry["contact_info"]:
+            self.assertIsInstance(interval, tuple)
+            self.assertEqual(len(interval), 2)
+            self.assertIsInstance(interval[0], AbsoluteDate)
+            self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_coverage_calculator(self):
         m = Mission.from_dict(self.mission_dict)
@@ -499,7 +509,12 @@ class TestMissionTwo(unittest.TestCase):
                 entry.get("spacecraft_id"), self.m.spacecrafts[idx].identifier
             )
             self.assertIn("eclipse_info", entry)
-            self.assertIsInstance(entry["eclipse_info"], EclipseInfo)
+            self.assertIsInstance(entry["eclipse_info"], list)
+            for interval in entry["eclipse_info"]:
+                self.assertIsInstance(interval, tuple)
+                self.assertEqual(len(interval), 2)
+                self.assertIsInstance(interval[0], AbsoluteDate)
+                self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_gs_contact_finder(self):
 
@@ -530,7 +545,12 @@ class TestMissionTwo(unittest.TestCase):
                     self.m.ground_stations[gs_idx].identifier,
                 )
                 self.assertIn("contact_info", gs_entry)
-                self.assertIsInstance(gs_entry["contact_info"], ContactInfo)
+                self.assertIsInstance(gs_entry["contact_info"], list)
+                for interval in gs_entry["contact_info"]:
+                    self.assertIsInstance(interval, tuple)
+                    self.assertEqual(len(interval), 2)
+                    self.assertIsInstance(interval[0], AbsoluteDate)
+                    self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_coverage_calculator(self):
 

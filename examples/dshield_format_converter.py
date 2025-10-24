@@ -2,7 +2,7 @@ import os
 import shutil
 import pandas as pd
 
-def write_dshield_format_of_propagator_results(propagator_results: list[dict], out_dir: str) -> None:
+def write_dshield_format_of_propagator_results(propagator_results: list[dict], epoch_dict: dict, out_dir: str) -> None:
     """
     Write one CSV file per spacecraft with the format requested by D-SHIELD project.
     Uses propagator_results in-memory structure (list of spacecraft dicts).
@@ -19,10 +19,18 @@ def write_dshield_format_of_propagator_results(propagator_results: list[dict], o
     Args:
         propagator_results (list[dict]): List of spacecraft propagation results.
                         See `orbitpy.mission.Mission.execute_propagation` for structure.
+        epoch_dict (dict): Dictionary containing epoch information in Gregorian date UTC format.
+                           See `eosimutils.time.AbsoluteDate.to_dict` for structure.
         out_dir (str): Output directory to save the CSV files.
     Returns:
         None
     """
+    epoch_str = epoch_dict.get("calendar_date")
+    if epoch_str is None:
+        raise ValueError("epoch_dict must contain 'calendar_date' key")
+    tf_label = epoch_dict.get("time_format", "UNKNOWN")
+    ts_label = epoch_dict.get("time_scale", "UNKNOWN")
+    
     for sc in propagator_results:
 
         # create directory and file path
@@ -40,20 +48,15 @@ def write_dshield_format_of_propagator_results(propagator_results: list[dict], o
         traj = sc.get("trajectory", {})
         frame = traj.get("frame", "UNKNOWN")
         time_info = traj.get("time", {})
-        times = traj.get("time", {}).get("calendar_date", [])
-        if not times:
-            print(f"Skipping {name}: no time array")
+        ephemeris_seconds = traj.get("time", {}).get("ephemeris_time", [])
+        if not ephemeris_seconds:
+            print(f"Skipping {name}: no ephemeris time array")
             continue
 
-        # obtain time format and scale from input (fallback to sensible defaults)
-        time_format = time_info.get("time_format", "UNKNOWN_TIME_FORMAT")
-        time_scale = time_info.get("time_scale", "")
-
         # parse times with pandas for robust ISO parsing
-        times_dt = pd.to_datetime(times)
-        if len(times_dt) >= 2:
-            step_seconds = (times_dt[1] - times_dt[0]).total_seconds()
-            mission_days = (times_dt[-1] - times_dt[0]).total_seconds() / 86400.0
+        if len(ephemeris_seconds) >= 2:
+            step_seconds = (ephemeris_seconds[1] - ephemeris_seconds[0])
+            mission_days = (ephemeris_seconds[-1] - ephemeris_seconds[0]) / 86400.0
         else:
             step_seconds = 0.0
             mission_days = 0.0
@@ -65,7 +68,7 @@ def write_dshield_format_of_propagator_results(propagator_results: list[dict], o
         with open(out_fp, "w", newline="") as f:
             # header lines (exact wording as requested by the D-SHIELD project)
             f.write(f"Satellite states are in {frame} frame\n")
-            f.write(f"Epoch [Format: {time_format}. Scale: {time_scale}] is {times[0]}\n")
+            f.write(f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n")
             f.write(f"Step size [s] is {float(step_seconds)}\n")
             f.write(f"Mission Duration [Days] is {mission_days}\n")
             # CSV header
@@ -256,29 +259,19 @@ def write_dshield_format_of_eclipse_results(eclipse_results: list[dict], out_dir
         print(f"Wrote eclipse CSV for {sc_name}: {out_fp}")
 
 
-def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict], out_dir: str, epoch_dict: dict, step_size_seconds: float) -> None:
+def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict], out_dir: str, epoch_dict: dict, epoch_ephemeris_seconds: float, step_size_seconds: float) -> None:
     """
     Write per-spacecraft, per-sensor coverage CSV files in the D-SHIELD style.
     """
     if step_size_seconds <= 0:
         raise ValueError("step_size_seconds must be positive to compute time indices.")
 
-    def _to_dt(value):
-        if isinstance(value, dict):
-            tf = value.get("time_format")
-            ts = value.get("time_scale")
-            if tf != "GREGORIAN_DATE" or ts != "UTC":
-                raise ValueError(f"Unsupported time format: {tf} and/or time scale: {ts}")
-            return pd.to_datetime(value.get("calendar_date"))
-        return pd.to_datetime(value)
-
     epoch_str = epoch_dict.get("calendar_date")
     if epoch_str is None:
         raise ValueError("epoch_dict must contain 'calendar_date' key")
     tf_label = epoch_dict.get("time_format", "UNKNOWN")
     ts_label = epoch_dict.get("time_scale", "UNKNOWN")
-    epoch_dt = _to_dt(epoch_dict)
-
+    
     for sc in coverage_results:
         sc_name = sc.get("spacecraft_name", sc.get("spacecraft_id", "spacecraft"))
         sc_id = sc.get("spacecraft_id", "")
@@ -317,23 +310,19 @@ def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict],
                     source_id = source.get("gnss_spacecraft_id")
                     coverage_info = source.get("coverage_info", {})
                     time_info = coverage_info.get("time", {})
-                    times = time_info.get("calendar_date", [])
-                    if not times:
-                        continue
-
-                    try:
-                        times_dt = pd.to_datetime(times)
-                    except Exception:
+                    # expected time format is 'SPICE_ET'
+                    ephemeris_seconds = time_info.get("ephemeris_time", [])
+                    if not ephemeris_seconds:
                         continue
 
                     coverage_lists = coverage_info.get("coverage", [])
-                    if len(times_dt) != len(coverage_lists):
+                    if len(ephemeris_seconds) != len(coverage_lists):
                         print(f"Warning: Mismatched lengths for coverage times and lists for {sc_name} sensor {sensor_name} source {source_name}")
-                    for idx in range(len(times_dt)):
+                    for idx in range(len(ephemeris_seconds)):
                         gp_indices = coverage_lists[idx]
                         if not gp_indices:
                             continue
-                        time_idx = int(round((times_dt[idx] - epoch_dt).total_seconds() / step_size_seconds))
+                        time_idx = int(round((ephemeris_seconds[idx] - epoch_ephemeris_seconds) / step_size_seconds))
                         gp_str = ",".join(str(int(gp)) for gp in gp_indices)
                         f.write(f"{time_idx} {source_name} {gp_str}\n")
 
