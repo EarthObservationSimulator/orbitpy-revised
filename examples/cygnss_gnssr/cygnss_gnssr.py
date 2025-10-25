@@ -32,7 +32,7 @@ from eosimutils.base import JsonSerializer
 from orbitpy.mission import Mission
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dshield_format_converter import write_dshield_format_of_propagator_results, write_dshield_format_of_contact_results, write_dshield_format_of_eclipse_results, write_dshield_format_of_gnssr_coverage_results
+from dshield_format_converter import write_dshield_format_of_propagator_results, write_dshield_format_of_contact_results, write_dshield_format_of_eclipse_results, write_dshield_format_of_gnssr_coverage_results, write_dshield_format_of_specular_trajectory_results
 
 exec_start_time = time.process_time()
 
@@ -62,6 +62,7 @@ propagator_results = results.get("propagator_results", [])
 contact_finder_results = results.get("contact_finder_results", {})
 eclipse_finder_results = results.get("eclipse_finder_results", {})
 gnssr_coverage_calculator_results = results.get("coverage_calculator_results", {})
+specular_trajectories = results.get("specular_trajectory_results", [])
 
 elapsed_time = time.process_time() - exec_start_time
 print(f"Mission complete. Time taken to execute in seconds: {elapsed_time:.2f}")
@@ -135,3 +136,17 @@ print(f'elapsed time for converting to csv format and writing to disk is {elapse
 #########################################################################################
 
 
+#### Write specular trajectory results using the in-memory specular_trajectories. ####
+
+exec_start_time = time.process_time()
+specular_trajectories_serializable = JsonSerializer.to_serializable(specular_trajectories)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for specular_trajectories_serializable is {elapsed_time}')
+
+exec_start_time = time.process_time()
+epoch_ephemeris_seconds = mission.start_time.to_spice_ephemeris_time()
+write_dshield_format_of_specular_trajectory_results(specular_trajectories_serializable, results_dir, epoch, epoch_ephemeris_seconds, step_size_seconds=step_size)
+elapsed_time = time.process_time() - exec_start_time
+print(f'elapsed time for converting to csv format and writing to disk is {elapsed_time}')
+
+#########################################################################################

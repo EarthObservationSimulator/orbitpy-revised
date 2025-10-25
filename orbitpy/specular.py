@@ -32,6 +32,8 @@ def get_specular_trajectory(
     returned as a PositionSeries. Time points for which there is no specular point (due to lack of
     line of sight) will be stored as NaN vectors in the PositionSeries.
 
+    Note that the input transmitter and receiver StateSeries must be in the **ITRF** frame.
+
     Args:
         transmitter (StateSeries): The GNSS satellite trajectory in ITRF frame.
         receiver (StateSeries): The Earth observation satellite trajectory in ITRF frame.

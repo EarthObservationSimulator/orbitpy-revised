@@ -387,3 +387,81 @@ def aggregate_gnssr_coverage_by_time(coverage_file: str, output_file: str) -> No
         # Write each aggregated row.
         for time_idx, sources, gp_indices in records:
             f.write(f"{time_idx} {sources} {gp_indices}\n")
+
+
+def write_dshield_format_of_specular_trajectory_results(
+    specular_trajectories: list[dict],
+    out_dir: str,
+    epoch_dict: dict,
+    epoch_ephemeris_seconds: float,
+    step_size_seconds: float
+) -> None:
+    """
+    Write a single CSV file per spacecraft with all specular points, including a column for GNSS spacecraft name.
+
+    The resulting files are produced within the following directory structure:
+        <out_dir>/<spacecraft_name>/specular/specular_points.csv
+
+    - Each spacecraft produces one CSV file named specular_points.csv containing all GNSS transmitters' specular points.
+    - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
+    - The '<specular>' folder is erased and recreated.
+
+    Args:
+        specular_trajectories (list[dict]): List of specular trajectory results as produced by Mission.execute_specular_trajectory_calculator (serialized version).
+        out_dir (str): Output directory to save the CSV files.
+        epoch_dict (dict): Dictionary representing the epoch (start time) of the mission in Gregorian (UTC) calendar date format.
+        epoch_ephemeris_seconds (float): Ephemeris time (SPICE ET) of the epoch.
+        step_size_seconds (float): Step size in seconds used to compute time indices.
+    """
+    if step_size_seconds <= 0:
+        raise ValueError("step_size_seconds must be positive to compute time indices.")
+
+    epoch_str = epoch_dict.get("calendar_date")
+    if epoch_str is None:
+        raise ValueError("epoch_dict must contain 'calendar_date' key")
+    tf_label = epoch_dict.get("time_format", "UNKNOWN")
+    ts_label = epoch_dict.get("time_scale", "UNKNOWN")
+
+    for sc in specular_trajectories: # iterate over all receiver spacecrafts
+        sc_name = sc.get("spacecraft_name", sc.get("spacecraft_id", "spacecraft"))
+        sc_folder = os.path.join(out_dir, sc_name)
+        os.makedirs(sc_folder, exist_ok=True)
+
+        # Create a fresh results folder.
+        results_dir = os.path.join(sc_folder, "specular")
+        if os.path.exists(results_dir) and os.path.isdir(results_dir):
+            shutil.rmtree(results_dir)
+        os.makedirs(results_dir, exist_ok=True)
+
+        all_spacecraft_specular_info = sc.get("all_spacecraft_specular_info", [])
+        if not all_spacecraft_specular_info:
+            print(f"Skipping {sc_name}: no specular trajectories")
+            continue
+
+        out_fp = os.path.join(results_dir, "specular_points.csv")
+        with open(out_fp, "w", newline="") as f:
+            f.write(f"Specular points between spacecraft {sc_name} and all GNSS transmitters\n")
+            f.write(f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n")
+            f.write(f"Step size [s] is {float(step_size_seconds)}\n")
+            f.write("time index,gnss_spacecraft_name,x [km],y [km],z [km]\n")
+
+            for gnss in all_spacecraft_specular_info: # iterate over all GNSS spacecrafts
+                gnss_name = gnss.get("gnss_spacecraft_name", gnss.get("gnss_spacecraft_id", "gnss"))
+                specular_info = gnss.get("specular_info", {})
+                if not specular_info:
+                    print(f"Skipping {sc_name} -> {gnss_name}: no specular info")
+                    continue
+
+                times = specular_info.get("time", {}).get("ephemeris_time", [])
+                positions = specular_info.get("data", [[]])  # positions: [N, 3]
+                if not times or not positions:
+                    print(f"Skipping {sc_name} -> {gnss_name}: missing times or positions")
+                    continue
+
+                for t, pos in zip(times, positions):
+                    time_idx = int(round((t - epoch_ephemeris_seconds) / step_size_seconds))
+                    px, py, pz = (pos + [None]*3)[:3]
+                    row = f"{time_idx},{gnss_name},{px},{py},{pz}\n"
+                    f.write(row)
+
+        print(f"Wrote specular CSV for {sc_name}: {out_fp}")

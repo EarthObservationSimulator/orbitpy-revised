@@ -39,12 +39,13 @@ mission settings.)
 
 import os
 from typing import Dict, Any, Union, List, Optional, Tuple
+import numpy as np
 
 from eosimutils.base import ReferenceFrame, SurfaceType, JsonSerializer
 from eosimutils.time import AbsoluteDate
 from eosimutils.state import Cartesian3DPositionArray, GeographicPositionArray
-from eosimutils.trajectory import StateSeries
 from eosimutils.framegraph import FrameGraph
+from eosimutils.trajectory import StateSeries
 
 from .propagator import PropagatorFactory, SGP4Propagator
 from .resources import Spacecraft, GroundStation
@@ -52,6 +53,7 @@ from .eclipsefinder import EclipseFinder, EclipseInfo
 from .contactfinder import ElevationAwareContactFinder, ContactInfo
 from .coveragecalculator import PointCoverage, SpecularCoverage, CoverageType
 from .orbits import SpaceTrackAPI, OrbitalMeanElementsMessage
+from .specular import get_specular_trajectory
 
 
 def auto_retrieve_orbit(
@@ -1041,6 +1043,155 @@ class Mission:
 
         return all_coverage_info
 
+    def execute_specular_trajectory_calculator(
+        self,
+        propagated_rx_trajectories: List[Dict[str, Union[str, StateSeries]]],
+        propagated_tx_trajectories: List[Dict[str, Union[str, StateSeries]]],
+    ) -> List[Dict[str, Any]]:
+        """Calculate specular points for pairs of (receiver: GNSSR) spacecrafts 
+            and (transmitter) GNSS spacecrafts.
+            This routine calculates **all possible** specular points between each, meaning the the field of view
+            of the GNSSR or the GNSS spacecrafts are not considered.
+
+        Args:
+            propagated_rx_trajectories:
+                Output of execute_propagation()[0].
+            propagated_tx_trajectories:
+                Output of execute_propagation()[1].
+
+        Returns:
+            List[Dict[str, Any]]: List of nested dictionary mapping (receiver) spacecraft IDs/names to
+                 a list of dictionaries that maps the (transmitter) GNSS spacecraft IDs/names 
+                 to their calculated specular point information.
+
+                Each item has:
+                - "spacecraft_id": str
+                - "spacecraft_name": str
+                - "all_specular_trajectories": List[Dict[str, Union[str, PositionSeries]]] where each dict has:
+                    - "gnss_spacecraft_id": str
+                    - "gnss_spacecraft_name": str
+                    - "specular_trajectory": PositionSeries
+
+
+            Example:
+            [
+                {
+                    "spacecraft_id": "04a388ad-...",
+                    "spacecraft_name": "receiver1",
+                    "all_spacecraft_specular_info": [
+                            {
+                                "gnss_spacecraft_id": "daea41f9-...",
+                                "gnss_spacecraft_name": "GNSS_01",
+                                "specular_info": PositionSeries(...)
+                            },
+                            {
+                                "gnss_spacecraft_id": "46c79a9f-...",
+                                "gnss_spacecraft_name": "GNSS_02",
+                                "specular_info": PositionSeries(...),
+                            },
+                            ...
+                    ]
+                },
+                {
+                    "spacecraft_id": "3381b372-...",
+                    ...
+                },
+                ...
+            ]
+
+        """
+        if not self.gnss_spacecrafts:
+            raise ValueError(
+                "No GNSS spacecrafts specified for GNSS-R coverage calculation."
+            )
+
+        # initialize the results dictionary
+        all_specular_info: List[Dict[str, Any]] = [] # accumulate results over all receiver spacecrafts
+        for rx_item in propagated_rx_trajectories:
+
+            rx_spc_id = rx_item["spacecraft_id"]
+            rx_spc_name = rx_item.get("spacecraft_name")
+            rx_trajectory_icrf = rx_item["trajectory"]
+            rx_times = (
+                rx_trajectory_icrf.time
+            )  # times at which coverage is to be calculated
+
+            # Convert the propgated trajectories from ICRF_EC frame to ITRF frame since the specular point calculation
+            # assumes the input trajectories are in the ITRF frame.
+            rx_rot_array, rx_w_array = self.frame_graph.get_orientation_transform(
+                from_frame = ReferenceFrame.get("ICRF_EC"),
+                to_frame = ReferenceFrame.get("ITRF"),
+                t = rx_times
+            )
+
+            # Convert the propgated trajectories from ICRF_EC frame to ITRF frame since the specular point calculation
+            # assumes the input trajectories are in the ITRF frame.
+            rx_pos_icrf = rx_trajectory_icrf.data[0]
+            rx_vel_icrf = rx_trajectory_icrf.data[1]
+            rx_rot_array, rx_w_array = self.frame_graph.get_orientation_transform(
+                from_frame = ReferenceFrame.get("ICRF_EC"),
+                to_frame = ReferenceFrame.get("ITRF"),
+                t = rx_times
+            )
+            pos_itrf = rx_rot_array.apply(rx_pos_icrf)
+            vel_itrf = rx_rot_array.apply(rx_vel_icrf) + np.cross(rx_w_array, rx_pos_icrf)
+            rx_trajectory_itrf = StateSeries(
+                time=rx_trajectory_icrf.time,
+                data=[pos_itrf, vel_itrf],
+                frame=ReferenceFrame.get("ITRF")
+            )
+
+            all_spacecraft_specular_info: List[Dict[str, Any]] = [] # accumulate results for this receiver spacecrafts for all the GNSS transmitters
+            for tx_item in propagated_tx_trajectories:
+
+                tx_spc_id = tx_item["spacecraft_id"]
+                tx_spc_name = tx_item.get("spacecraft_name")
+                tx_trajectory_icrf = tx_item["trajectory"]
+                
+                # Convert the propagated trajectories from ICRF_EC frame to ITRF frame since the specular point calculation
+                # assumes the input trajectories are in the ITRF frame.
+                tx_pos_icrf = tx_trajectory_icrf.data[0]
+                tx_vel_icrf = tx_trajectory_icrf.data[1]
+                tx_rot_array, tx_w_array = self.frame_graph.get_orientation_transform(
+                    from_frame = ReferenceFrame.get("ICRF_EC"),
+                    to_frame = ReferenceFrame.get("ITRF"),
+                    t = rx_times
+                )
+                pos_itrf = tx_rot_array.apply(tx_pos_icrf)
+                vel_itrf = tx_rot_array.apply(tx_vel_icrf) + np.cross(tx_w_array, tx_pos_icrf)
+                tx_trajectory_itrf = StateSeries(
+                    time=tx_trajectory_icrf.time,
+                    data=[pos_itrf, vel_itrf],
+                    frame=ReferenceFrame.get("ITRF")
+                )
+
+                # Compute specular points
+                sp_posseries = get_specular_trajectory(
+                    transmitter=tx_trajectory_itrf,
+                    receiver=rx_trajectory_itrf,
+                    times=rx_times,
+                    surface=SurfaceType.SPHERE
+                )
+
+                all_spacecraft_specular_info.append(
+                    {
+                        "gnss_spacecraft_id": tx_spc_id,
+                        "gnss_spacecraft_name": tx_spc_name,
+                        "specular_info": sp_posseries,
+                    }
+                )
+            
+            all_specular_info.append(
+                {
+                    "spacecraft_id": rx_spc_id,
+                    "spacecraft_name": rx_spc_name,
+                    "all_spacecraft_specular_info": all_spacecraft_specular_info,
+                }
+            )  # append results for this spacecraft
+
+        return all_specular_info
+
+
     def execute_all(self) -> Dict[str, Any]:
         """Run all configured mission analyses and return a structured result bundle.
 
@@ -1092,6 +1243,10 @@ class Mission:
                     raise ValueError(
                         "No GNSS spacecraft trajectories available for GNSS-R coverage calculation."
                     )
+                specular_trajectories = self.execute_specular_trajectory_calculator(
+                    propagated_rx_trajectories=propagated_trajectories,
+                    propagated_tx_trajectories=gnss_trajectories,
+                )
                 coverage = self.execute_gnssr_coverage_calculator(
                     propagated_rx_trajectories=propagated_trajectories,
                     propagated_tx_trajectories=gnss_trajectories,
@@ -1103,6 +1258,7 @@ class Mission:
                     "eclipse_finder_results": eclipse,
                     "contact_finder_results": contacts,
                     "coverage_calculator_results": coverage,
+                    "specular_trajectory_results": specular_trajectories,
                 }
                 
             else:
