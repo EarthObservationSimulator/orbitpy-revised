@@ -1,0 +1,104 @@
+[
+    {
+        "name": "SKYSATC1",
+        "norad_id": "41601",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SKYSATC1"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 1.116,
+                "cross_angle": 0.7935,
+                "frame": "LVLH_SKYSATC1"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC2",
+        "norad_id": "41773",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SKYSATC2"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 1.116,
+                "cross_angle": 0.7935,
+                "frame": "LVLH_SKYSATC2"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC3",
+        "norad_id": "41774",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SKYSATC3"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 1.116,
+                "cross_angle": 0.7935,
+                "frame": "LVLH_SKYSATC3"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC4",
+        "norad_id": "41771",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SKYSATC4"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 1.116,
+                "cross_angle": 0.7935,
+                "frame": "LVLH_SKYSATC4"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC5",
+        "norad_id": "41772",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SKYSATC5"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 1.116,
+                "cross_angle": 0.7935,
+                "frame": "LVLH_SKYSATC5"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC6",
+        "norad_id": "42992",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_SKYSATC6"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 1.116,
+                "cross_angle": 0.7935,
+                "frame": "LVLH_SKYSATC6"
+            }
+        }
+        ]
+    }
+]

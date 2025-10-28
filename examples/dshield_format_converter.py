@@ -49,7 +49,7 @@ def write_dshield_format_of_propagator_results(propagator_results: list[dict], e
         frame = traj.get("frame", "UNKNOWN")
         time_info = traj.get("time", {})
         ephemeris_seconds = traj.get("time", {}).get("ephemeris_time", [])
-        if not ephemeris_seconds:
+        if not ephemeris_seconds: 
             print(f"Skipping {name}: no ephemeris time array")
             continue
 
@@ -258,10 +258,73 @@ def write_dshield_format_of_eclipse_results(eclipse_results: list[dict], out_dir
 
         print(f"Wrote eclipse CSV for {sc_name}: {out_fp}")
 
+def write_dshield_format_of_point_coverage_results(coverage_results: list[dict], out_dir: str, epoch_dict: dict, epoch_ephemeris_seconds: float, step_size_seconds: float) -> None:
+    """
+    Write per-spacecraft, per-sensor coverage CSV files in the D-SHIELD style.
+    """
+    if step_size_seconds <= 0:
+        raise ValueError("step_size_seconds must be positive to compute time indices.")
+
+    epoch_str = epoch_dict.get("calendar_date")
+    if epoch_str is None:
+        raise ValueError("epoch_dict must contain 'calendar_date' key")
+    tf_label = epoch_dict.get("time_format", "UNKNOWN")
+    ts_label = epoch_dict.get("time_scale", "UNKNOWN")
+    
+    for sc in coverage_results:
+        sc_name = sc.get("spacecraft_name", sc.get("spacecraft_id", "spacecraft"))
+        sc_id = sc.get("spacecraft_id", "")
+        sc_folder = os.path.join(out_dir, sc_name)
+        os.makedirs(sc_folder, exist_ok=True)
+
+        coverage_dir = os.path.join(sc_folder, "access")
+        if os.path.exists(coverage_dir) and os.path.isdir(coverage_dir):
+            shutil.rmtree(coverage_dir)
+        os.makedirs(coverage_dir, exist_ok=True)
+
+        sensors = sc.get("total_spacecraft_coverage", [])
+        if not sensors:
+            print(f"Skipping {sc_name}: no sensor coverage data")
+            continue
+
+        for sensor_idx, sensor in enumerate(sensors):
+            sensor_name = sensor.get("sensor_name") or ""
+            sensor_id = sensor.get("sensor_id")
+            out_fp = os.path.join(coverage_dir, f"sensor{sensor_idx+1}_access.csv")
+
+            coverage_info = sensor.get("coverage_info", [])
+            if not coverage_info:
+                print(f"Skipping {sc_name} sensor {sensor_name} id: {sensor_id}: no coverage data")
+                continue
+
+            with open(out_fp, "w", newline="") as f:
+                f.write(f"Spacecraft with name {sc_name}, id {sc_id}. Sensor with name {sensor_name}, id {sensor_id} \n")
+                f.write(f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n")
+                f.write(f"Step size [s] is {float(step_size_seconds)}\n")
+                f.write("\"time index\" \"GP index\"\n")
+
+                time_info = coverage_info.get("time", {})
+                # expected time format is 'SPICE_ET'
+                ephemeris_seconds = time_info.get("ephemeris_time", [])
+                if not ephemeris_seconds: # no coverage logged
+                    continue
+
+                coverage_lists = coverage_info.get("coverage", [])
+                if len(ephemeris_seconds) != len(coverage_lists):
+                    print(f"Warning: Mismatched lengths for coverage times and lists for {sc_name} sensor {sensor_name}")
+                for idx in range(len(ephemeris_seconds)):
+                    gp_indices = coverage_lists[idx]
+                    if not gp_indices:
+                        continue
+                    time_idx = int(round((ephemeris_seconds[idx] - epoch_ephemeris_seconds) / step_size_seconds))
+                    gp_str = ",".join(str(int(gp)) for gp in gp_indices)
+                    f.write(f"{time_idx} {gp_str}\n")
+
+            print(f"Wrote coverage CSV for {sc_name} sensor {sensor_name}: {out_fp}")
 
 def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict], out_dir: str, epoch_dict: dict, epoch_ephemeris_seconds: float, step_size_seconds: float) -> None:
     """
-    Write per-spacecraft, per-sensor coverage CSV files in the D-SHIELD style.
+    Write per-spacecraft, per-sensor coverage CSV files in the D-SHIELD format.
     """
     if step_size_seconds <= 0:
         raise ValueError("step_size_seconds must be positive to compute time indices.")
@@ -312,7 +375,7 @@ def write_dshield_format_of_gnssr_coverage_results(coverage_results: list[dict],
                     time_info = coverage_info.get("time", {})
                     # expected time format is 'SPICE_ET'
                     ephemeris_seconds = time_info.get("ephemeris_time", [])
-                    if not ephemeris_seconds:
+                    if not ephemeris_seconds:  # no coverage logged
                         continue
 
                     coverage_lists = coverage_info.get("coverage", [])

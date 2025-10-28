@@ -11,13 +11,14 @@ from eosimutils.state import (
     Cartesian3DPositionArray,
     GeographicPosition,
 )
+from eosimutils.base import SurfaceType
 
 from orbitpy.mission import Mission
 from orbitpy.eclipsefinder import EclipseInfo
 from orbitpy.contactfinder import ContactInfo
 from orbitpy.coverage import DiscreteCoverageTP
-
-
+from orbitpy.coveragecalculator import CoverageType
+        
 def uniform_lat_lon_spacing_grid(
     lat_lower_bound: float,
     lat_upper_bound: float,
@@ -173,6 +174,16 @@ class TestMissionOne(unittest.TestCase):
             m_dict.get("spatial_points"),
             self.mission_dict.get("spatial_points"),
         )
+        # Test defaults for mission settings
+        # Since no "settings" key is provided in self.mission_dict, defaults should be used
+        settings = m.settings
+        self.assertIsNotNone(settings)
+        self.assertEqual(settings.coverage_type, CoverageType.POINT_COVERAGE)
+        self.assertIsNone(settings.specular_radius_km)
+        self.assertIsNone(settings.spacetrack_credentials_relative_path)
+        self.assertIsNone(settings.user_dir)
+        self.assertEqual(settings.surface_type, SurfaceType.WGS84)
+        
 
     def test_execute_propagation(self):
         m = Mission.from_dict(self.mission_dict)

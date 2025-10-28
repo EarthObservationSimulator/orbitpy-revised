@@ -1,0 +1,27 @@
+{
+    "start_time": {
+        "time_format": "GREGORIAN_DATE",
+        "calendar_date": "2021-08-19T07:12:00.00",
+        "time_scale": "UTC"
+    },
+    "duration_days": 0.5,
+    "spacecrafts": {
+        "relative_file_path": "skysat_spacecrafts.json"
+    },
+    "propagator": {
+        "propagator_type": "SGP4_PROPAGATOR",
+        "step_size": 5
+    },
+    "spatial_points": {
+        "geographic_array": {
+            "relative_file_path": "spatial_points.json"
+        }
+    },
+    "ground_stations": {
+        "relative_file_path": "ground_stations.json"
+    },
+    "settings": {
+        "coverage_type": "POINT_COVERAGE",
+        "spacetrack_credentials_relative_path": "../spacetrack/credentials.json"
+    }
+}

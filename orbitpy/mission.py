@@ -18,6 +18,10 @@ Base reference frames with which the module works are:
 1/ ICRF_EC (Earth-Centered Inertial Frame) as defined in eosimutils.base.ReferenceFrame
 2/ ITRF (Earth-Centered Earth-Fixed Frame) as defined in eosimutils.base.ReferenceFrame
 
+The default surface type used for Earth surface representation is WGS84 ellipsoid.
+**To do**: Update about the caveats of using WGS84 vs Sphere. For example, if WGS84 is used,
+currently cell-based preprocessing in coverage calculations is skipped.
+
 The features currently supported are:
 - Mission with one or more spacecraft, each with one or more sensors.
 - Orbit propagation using SGP4 propagator.
@@ -180,16 +184,17 @@ class Settings:
     def __init__(
         self,
         user_dir: Optional[str] = None,
-        coverage_type: Optional[Union[CoverageType, str]] = None,
+        coverage_type: Optional[Union[CoverageType, str]] = CoverageType.POINT_COVERAGE,
         specular_radius_km: Optional[float] = None,
         spacetrack_credentials_relative_path: Optional[str] = None,
+        surface_type: Optional[SurfaceType] = SurfaceType.WGS84,
     ):
         """
         Args:
             user_dir (Optional[str]): Absolute user directory path.
             coverage_type (Optional[Union[CoverageType, str]]): Type of coverage.
                                                 See `orbitpy.coveragecalculator.CoverageType`.
-                                                Defaults to POINT_COVERAGE if input is None.
+                                                Defaults to POINT_COVERAGE.
             specular_radius_km (Optional[float]): Specular radius in kilometers
                                                 (applicable for GNSSR coverage).
             spacetrack_credentials_relative_path (Optional[str]): Relative file path
@@ -199,15 +204,18 @@ class Settings:
                                         "username": "xxxx",
                                         "password": "xxxx"
                                     }
+            surface_type (Optional[SurfaceType]): Type of Earth surface model to use.
+                                                See `eosimutils.base.SurfaceType`.
+                                                Defaults to WGS84.
+
         """
         self.user_dir: str = user_dir
-        self.coverage_type = (
-            coverage_type if coverage_type else CoverageType.POINT_COVERAGE
-        )
+        self.coverage_type = coverage_type
         self.specular_radius_km = specular_radius_km
         self.spacetrack_credentials_relative_path = (
             spacetrack_credentials_relative_path
         )
+        self.surface_type = surface_type
 
     @classmethod
     def from_dict(cls, dict_in: Dict[str, Any]) -> "Settings":
@@ -215,6 +223,13 @@ class Settings:
 
         Args:
             dict_in (Dict[str, Any]): Dictionary containing miscellaneous mission settings.
+                        Expected keys are:
+                - user_dir (Optional[str]): Absolute user directory path.
+                - coverage_type (Optional[Union[CoverageType, str]]): Type of coverage. If None, POINT_COVERAGE is used.
+                - specular_radius_km (Optional[float]): Specular radius in kilometers.
+                - spacetrack_credentials_relative_path (Optional[str]): Relative file path for Space-Track.org credentials.
+                - surface_type (Optional[SurfaceType]): Type of Earth surface model to use. If None, WGS84 is used.
+
         Returns:
             Settings: An instance of the Settings class.
         """
@@ -229,11 +244,18 @@ class Settings:
         spacetrack_credentials_relative_path = dict_in.get(
             "spacetrack_credentials_relative_path", None
         )
+        surface_type = dict_in.get("surface_type", None)
+        surface_type = (
+            SurfaceType.get(surface_type)
+            if surface_type
+            else SurfaceType.WGS84
+        )
         return cls(
             user_dir=user_dir,
             coverage_type=coverage_type,
             specular_radius_km=specular_radius_km,
             spacetrack_credentials_relative_path=spacetrack_credentials_relative_path,
+            surface_type=surface_type
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -249,6 +271,9 @@ class Settings:
             ),
             "specular_radius_km": self.specular_radius_km,
             "spacetrack_credentials_relative_path": self.spacetrack_credentials_relative_path,
+            "surface_type": (
+                self.surface_type.to_string() if self.surface_type else None
+            ),
         }
     
 class Mission:
@@ -790,7 +815,7 @@ class Mission:
                     fov=sensor.fov,
                     frame_graph=self.frame_graph,
                     times=times,
-                    surface=SurfaceType.SPHERE,
+                    surface=self.settings.surface_type,
                 )
                 sensor_cov.append(
                     {
@@ -1004,7 +1029,7 @@ class Mission:
                     times=rx_times,
                     transmitter_frames=gnss_frames,
                     specular_radius=self.settings.specular_radius_km,
-                    surface=SurfaceType.SPHERE,
+                    surface=self.settings.surface_type,
                 )
 
                 # Structure the result as a list of dictionaries for clarity
@@ -1170,7 +1195,7 @@ class Mission:
                     transmitter=tx_trajectory_itrf,
                     receiver=rx_trajectory_itrf,
                     times=rx_times,
-                    surface=SurfaceType.SPHERE
+                    surface=self.settings.surface_type
                 )
 
                 all_spacecraft_specular_info.append(
