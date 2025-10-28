@@ -424,7 +424,11 @@ class Mission:
         # setup the frames and the transformations
         # The spacecrafts need to be setup before this so that their
         # local orbit frames are registered.
-        transform_dict = dict_in.get("frame_transforms", None)
+        _transform_dict = dict_in.get("frame_transforms", None)
+        transform_dict = Mission.load_object(
+            dict, _transform_dict, settings.user_dir
+        )
+
         # add reference frames from the user-specified transforms if not already present
         if transform_dict is not None:
             orientation_transforms = transform_dict.get(
