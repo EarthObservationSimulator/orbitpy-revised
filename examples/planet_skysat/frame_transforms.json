@@ -1,43 +1,43 @@
 {
     "orientation_transforms": [
         {
-        "orientation_type": "constant", "rotations": [5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [0.0, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C1_P1", "to": "LVLH_C1", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [-5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [0.0, 0.0, 1.57079632679],
         "rotations_type": "EULER", "from": "SEN_FR_C1_P2", "to": "LVLH_C1", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C2_P1", "to": "LVLH_C2", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [-5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [-0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C2_P2", "to": "LVLH_C2", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C3_P1", "to": "LVLH_C3", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [-5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [-0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C3_P2", "to": "LVLH_C3", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C4_P1", "to": "LVLH_C4", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [-5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [-0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C4_P2", "to": "LVLH_C4", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C5_P1", "to": "LVLH_C5", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [-5.0, 0.0, 0.0],
+        "orientation_type": "constant", "rotations": [-0.78539816339, 0.0, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C5_P2", "to": "LVLH_C5", "euler_order": "xyz"
         },
         {
@@ -45,7 +45,7 @@
         "rotations_type": "EULER", "from": "SEN_FR_C6_P1", "to": "LVLH_C6", "euler_order": "xyz"
         },
         {
-        "orientation_type": "constant", "rotations": [0.0, 0.0, 45.0],
+        "orientation_type": "constant", "rotations": [0.0, 0.08726646259, 0.0],
         "rotations_type": "EULER", "from": "SEN_FR_C6_P2", "to": "LVLH_C6", "euler_order": "xyz"
         }
     ],
