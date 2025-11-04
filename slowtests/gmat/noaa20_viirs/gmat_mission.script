@@ -1,0 +1,507 @@
+%General Mission Analysis Tool(GMAT) Script
+%Created: 2025-10-31 14:55:05
+
+
+%----------------------------------------
+%---------- Spacecraft
+%----------------------------------------
+
+Create Spacecraft DefaultSC;
+DefaultSC.DateFormat = UTCGregorian;
+DefaultSC.Epoch = '31 Oct 2025 15:04:39.427';
+DefaultSC.CoordinateSystem = EarthMJ2000Eq;
+DefaultSC.DisplayStateType = Keplerian;
+DefaultSC.SMA = 7205.15199999999;
+DefaultSC.ECC = 9.810000000093502e-05;
+DefaultSC.INC = 98.7527;
+DefaultSC.RAAN = 241.3999999999997;
+DefaultSC.AOP = 146.8615000001167;
+DefaultSC.TA = 213.2621999998832;
+DefaultSC.DryMass = 850;
+DefaultSC.Cd = 2.2;
+DefaultSC.Cr = 1.8;
+DefaultSC.DragArea = 15;
+DefaultSC.SRPArea = 1;
+DefaultSC.SPADDragScaleFactor = 1;
+DefaultSC.SPADSRPScaleFactor = 1;
+DefaultSC.AtmosDensityScaleFactor = 1;
+DefaultSC.ExtendedMassPropertiesModel = 'None';
+DefaultSC.NAIFId = -10001001;
+DefaultSC.NAIFIdReferenceFrame = -9001001;
+DefaultSC.OrbitColor = Red;
+DefaultSC.TargetColor = Teal;
+DefaultSC.OrbitErrorCovariance = [ 1e+70 0 0 0 0 0 ; 0 1e+70 0 0 0 0 ; 0 0 1e+70 0 0 0 ; 0 0 0 1e+70 0 0 ; 0 0 0 0 1e+70 0 ; 0 0 0 0 0 1e+70 ];
+DefaultSC.CdSigma = 1e+70;
+DefaultSC.CrSigma = 1e+70;
+DefaultSC.Id = 'SatId';
+DefaultSC.Attitude = CoordinateSystemFixed;
+DefaultSC.SPADSRPInterpolationMethod = Bilinear;
+DefaultSC.SPADSRPScaleFactorSigma = 1e+70;
+DefaultSC.SPADDragInterpolationMethod = Bilinear;
+DefaultSC.SPADDragScaleFactorSigma = 1e+70;
+DefaultSC.AtmosDensityScaleFactorSigma = 1e+70;
+DefaultSC.ModelFile = 'aura.3ds';
+DefaultSC.ModelOffsetX = 0;
+DefaultSC.ModelOffsetY = 0;
+DefaultSC.ModelOffsetZ = 0;
+DefaultSC.ModelRotationX = 0;
+DefaultSC.ModelRotationY = 0;
+DefaultSC.ModelRotationZ = 0;
+DefaultSC.ModelScale = 1;
+DefaultSC.AttitudeDisplayStateType = 'Quaternion';
+DefaultSC.AttitudeRateDisplayStateType = 'AngularVelocity';
+DefaultSC.AttitudeCoordinateSystem = EarthMJ2000Eq;
+DefaultSC.EulerAngleSequence = '321';
+
+%----------------------------------------
+%---------- GroundStations
+%----------------------------------------
+
+Create GroundStation GroundStation1;
+GroundStation1.OrbitColor = Thistle;
+GroundStation1.TargetColor = DarkGray;
+GroundStation1.CentralBody = Earth;
+GroundStation1.StateType = Spherical;
+GroundStation1.HorizonReference = Sphere;
+GroundStation1.Location1 = 0;
+GroundStation1.Location2 = 0;
+GroundStation1.Location3 = 0;
+GroundStation1.Id = 'StationID1';
+GroundStation1.IonosphereModel = 'None';
+GroundStation1.TroposphereModel = 'None';
+GroundStation1.DataSource = 'Constant';
+GroundStation1.Temperature = 295.1;
+GroundStation1.Pressure = 1013.5;
+GroundStation1.Humidity = 55;
+GroundStation1.MinimumElevationAngle = 7;
+
+Create GroundStation GroundStation2;
+GroundStation2.OrbitColor = Thistle;
+GroundStation2.TargetColor = DarkGray;
+GroundStation2.CentralBody = Earth;
+GroundStation2.StateType = Spherical;
+GroundStation2.HorizonReference = Sphere;
+GroundStation2.Location1 = 45;
+GroundStation2.Location2 = 45;
+GroundStation2.Location3 = 0.35;
+GroundStation2.Id = 'StationID2';
+GroundStation2.IonosphereModel = 'None';
+GroundStation2.TroposphereModel = 'None';
+GroundStation2.DataSource = 'Constant';
+GroundStation2.Temperature = 295.1;
+GroundStation2.Pressure = 1013.5;
+GroundStation2.Humidity = 55;
+GroundStation2.MinimumElevationAngle = 15;
+
+Create GroundStation GroundStation3;
+GroundStation3.OrbitColor = Thistle;
+GroundStation3.TargetColor = DarkGray;
+GroundStation3.CentralBody = Earth;
+GroundStation3.StateType = Spherical;
+GroundStation3.HorizonReference = Sphere;
+GroundStation3.Location1 = 45;
+GroundStation3.Location2 = 315;
+GroundStation3.Location3 = 0.1;
+GroundStation3.Id = 'StationID3';
+GroundStation3.IonosphereModel = 'None';
+GroundStation3.TroposphereModel = 'None';
+GroundStation3.DataSource = 'Constant';
+GroundStation3.Temperature = 295.1;
+GroundStation3.Pressure = 1013.5;
+GroundStation3.Humidity = 55;
+GroundStation3.MinimumElevationAngle = 30;
+
+Create GroundStation GroundStation4;
+GroundStation4.OrbitColor = Thistle;
+GroundStation4.TargetColor = DarkGray;
+GroundStation4.CentralBody = Earth;
+GroundStation4.StateType = Spherical;
+GroundStation4.HorizonReference = Sphere;
+GroundStation4.Location1 = -45;
+GroundStation4.Location2 = 45;
+GroundStation4.Location3 = 1;
+GroundStation4.Id = 'StationID4';
+GroundStation4.IonosphereModel = 'None';
+GroundStation4.TroposphereModel = 'None';
+GroundStation4.DataSource = 'Constant';
+GroundStation4.Temperature = 295.1;
+GroundStation4.Pressure = 1013.5;
+GroundStation4.Humidity = 55;
+GroundStation4.MinimumElevationAngle = 0;
+
+Create GroundStation GroundStation5;
+GroundStation5.OrbitColor = Thistle;
+GroundStation5.TargetColor = DarkGray;
+GroundStation5.CentralBody = Earth;
+GroundStation5.StateType = Spherical;
+GroundStation5.HorizonReference = Sphere;
+GroundStation5.Location1 = -45;
+GroundStation5.Location2 = 315;
+GroundStation5.Location3 = 10;
+GroundStation5.Id = 'StationID5';
+GroundStation5.IonosphereModel = 'None';
+GroundStation5.TroposphereModel = 'None';
+GroundStation5.DataSource = 'Constant';
+GroundStation5.Temperature = 295.1;
+GroundStation5.Pressure = 1013.5;
+GroundStation5.Humidity = 55;
+GroundStation5.MinimumElevationAngle = 10;
+
+Create GroundStation GroundStation6;
+GroundStation6.OrbitColor = Thistle;
+GroundStation6.TargetColor = DarkGray;
+GroundStation6.CentralBody = Earth;
+GroundStation6.StateType = Spherical;
+GroundStation6.HorizonReference = Sphere;
+GroundStation6.Location1 = 90;
+GroundStation6.Location2 = 90;
+GroundStation6.Location3 = 0.5;
+GroundStation6.Id = 'StationId6';
+GroundStation6.IonosphereModel = 'None';
+GroundStation6.TroposphereModel = 'None';
+GroundStation6.DataSource = 'Constant';
+GroundStation6.Temperature = 295.1;
+GroundStation6.Pressure = 1013.5;
+GroundStation6.Humidity = 55;
+GroundStation6.MinimumElevationAngle = 7;
+
+Create GroundStation GroundStation7;
+GroundStation7.OrbitColor = Thistle;
+GroundStation7.TargetColor = DarkGray;
+GroundStation7.CentralBody = Earth;
+GroundStation7.StateType = Spherical;
+GroundStation7.HorizonReference = Sphere;
+GroundStation7.Location1 = -90;
+GroundStation7.Location2 = 180;
+GroundStation7.Location3 = 0.5;
+GroundStation7.Id = 'StationId7';
+GroundStation7.IonosphereModel = 'None';
+GroundStation7.TroposphereModel = 'None';
+GroundStation7.DataSource = 'Constant';
+GroundStation7.Temperature = 295.1;
+GroundStation7.Pressure = 1013.5;
+GroundStation7.Humidity = 55;
+GroundStation7.MinimumElevationAngle = 7;
+
+%----------------------------------------
+%---------- ForceModels
+%----------------------------------------
+
+Create ForceModel DefaultProp_ForceModel;
+DefaultProp_ForceModel.CentralBody = Earth;
+DefaultProp_ForceModel.PrimaryBodies = {Earth};
+DefaultProp_ForceModel.Drag = None;
+DefaultProp_ForceModel.SRP = Off;
+DefaultProp_ForceModel.RelativisticCorrection = Off;
+DefaultProp_ForceModel.ErrorControl = RSSStep;
+DefaultProp_ForceModel.GravityField.Earth.Degree = 4;
+DefaultProp_ForceModel.GravityField.Earth.Order = 4;
+DefaultProp_ForceModel.GravityField.Earth.StmLimit = 100;
+DefaultProp_ForceModel.GravityField.Earth.PotentialFile = 'JGM2.cof';
+DefaultProp_ForceModel.GravityField.Earth.TideModel = 'None';
+
+Create ForceModel InternalODEModel;
+InternalODEModel.CentralBody = Earth;
+InternalODEModel.PrimaryBodies = {Earth};
+InternalODEModel.Drag = None;
+InternalODEModel.SRP = Off;
+InternalODEModel.RelativisticCorrection = Off;
+InternalODEModel.ErrorControl = RSSStep;
+InternalODEModel.GravityField.Earth.Degree = 4;
+InternalODEModel.GravityField.Earth.Order = 4;
+InternalODEModel.GravityField.Earth.StmLimit = 100;
+InternalODEModel.GravityField.Earth.PotentialFile = 'JGM2.cof';
+InternalODEModel.GravityField.Earth.TideModel = 'None';
+
+%----------------------------------------
+%---------- Propagators
+%----------------------------------------
+
+Create Propagator DefaultProp;
+DefaultProp.FM = InternalODEModel;
+DefaultProp.Type = RungeKutta89;
+DefaultProp.InitialStepSize = 10;
+DefaultProp.Accuracy = 9.999999999999999e-12;
+DefaultProp.MinStep = 0.001;
+DefaultProp.MaxStep = 10;
+DefaultProp.MaxStepAttempts = 50;
+DefaultProp.StopIfAccuracyIsViolated = true;
+
+%----------------------------------------
+%---------- EventLocators
+%----------------------------------------
+
+Create EclipseLocator EclipseLocator1;
+EclipseLocator1.Spacecraft = DefaultSC;
+EclipseLocator1.Filename = 'EclipseLocator1.txt';
+EclipseLocator1.OccultingBodies = {Earth};
+EclipseLocator1.InputEpochFormat = 'TAIModJulian';
+EclipseLocator1.InitialEpoch = '21545';
+EclipseLocator1.StepSize = 10;
+EclipseLocator1.FinalEpoch = '21545.138';
+EclipseLocator1.UseLightTimeDelay = true;
+EclipseLocator1.UseStellarAberration = true;
+EclipseLocator1.WriteReport = true;
+EclipseLocator1.RunMode = Automatic;
+EclipseLocator1.UseEntireInterval = true;
+EclipseLocator1.EclipseTypes = {'Umbra', 'Penumbra', 'Antumbra'};
+
+Create ContactLocator ContactLocator1;
+ContactLocator1.Target = DefaultSC;
+ContactLocator1.Filename = 'ContactLocator1.txt';
+ContactLocator1.OccultingBodies = {Earth};
+ContactLocator1.InputEpochFormat = 'TAIModJulian';
+ContactLocator1.InitialEpoch = '21545';
+ContactLocator1.StepSize = 10;
+ContactLocator1.FinalEpoch = '21545.138';
+ContactLocator1.UseLightTimeDelay = true;
+ContactLocator1.UseStellarAberration = true;
+ContactLocator1.WriteReport = true;
+ContactLocator1.RunMode = Automatic;
+ContactLocator1.UseEntireInterval = true;
+ContactLocator1.Observers = {GroundStation1};
+ContactLocator1.LightTimeDirection = Transmit;
+ContactLocator1.LeftJustified = false;
+ContactLocator1.ReportPrecision = 6;
+ContactLocator1.ReportFormat = 'Legacy';
+ContactLocator1.IntervalStepSize = 0;
+ContactLocator1.ReportTimeFormat = 'UTCGregorian';
+
+Create ContactLocator ContactLocator2;
+ContactLocator2.Target = DefaultSC;
+ContactLocator2.Filename = 'ContactLocator2.txt';
+ContactLocator2.OccultingBodies = {Earth};
+ContactLocator2.InputEpochFormat = 'TAIModJulian';
+ContactLocator2.InitialEpoch = '21545';
+ContactLocator2.StepSize = 10;
+ContactLocator2.FinalEpoch = '21545.138';
+ContactLocator2.UseLightTimeDelay = true;
+ContactLocator2.UseStellarAberration = true;
+ContactLocator2.WriteReport = true;
+ContactLocator2.RunMode = Automatic;
+ContactLocator2.UseEntireInterval = true;
+ContactLocator2.Observers = {GroundStation2};
+ContactLocator2.LightTimeDirection = Transmit;
+ContactLocator2.LeftJustified = false;
+ContactLocator2.ReportPrecision = 6;
+ContactLocator2.ReportFormat = 'Legacy';
+ContactLocator2.IntervalStepSize = 0;
+ContactLocator2.ReportTimeFormat = 'UTCGregorian';
+
+Create ContactLocator ContactLocator3;
+ContactLocator3.Target = DefaultSC;
+ContactLocator3.Filename = 'ContactLocator3.txt';
+ContactLocator3.OccultingBodies = {Earth};
+ContactLocator3.InputEpochFormat = 'TAIModJulian';
+ContactLocator3.InitialEpoch = '21545';
+ContactLocator3.StepSize = 10;
+ContactLocator3.FinalEpoch = '21545.138';
+ContactLocator3.UseLightTimeDelay = true;
+ContactLocator3.UseStellarAberration = true;
+ContactLocator3.WriteReport = true;
+ContactLocator3.RunMode = Automatic;
+ContactLocator3.UseEntireInterval = true;
+ContactLocator3.Observers = {GroundStation3};
+ContactLocator3.LightTimeDirection = Transmit;
+ContactLocator3.LeftJustified = false;
+ContactLocator3.ReportPrecision = 6;
+ContactLocator3.ReportFormat = 'Legacy';
+ContactLocator3.IntervalStepSize = 0;
+ContactLocator3.ReportTimeFormat = 'UTCGregorian';
+
+Create ContactLocator ContactLocator4;
+ContactLocator4.Target = DefaultSC;
+ContactLocator4.Filename = 'ContactLocator4.txt';
+ContactLocator4.OccultingBodies = {Earth};
+ContactLocator4.InputEpochFormat = 'TAIModJulian';
+ContactLocator4.InitialEpoch = '21545';
+ContactLocator4.StepSize = 10;
+ContactLocator4.FinalEpoch = '21545.138';
+ContactLocator4.UseLightTimeDelay = true;
+ContactLocator4.UseStellarAberration = true;
+ContactLocator4.WriteReport = true;
+ContactLocator4.RunMode = Automatic;
+ContactLocator4.UseEntireInterval = true;
+ContactLocator4.Observers = {GroundStation4};
+ContactLocator4.LightTimeDirection = Transmit;
+ContactLocator4.LeftJustified = false;
+ContactLocator4.ReportPrecision = 6;
+ContactLocator4.ReportFormat = 'Legacy';
+ContactLocator4.IntervalStepSize = 0;
+ContactLocator4.ReportTimeFormat = 'UTCGregorian';
+
+Create ContactLocator ContactLocator5;
+ContactLocator5.Target = DefaultSC;
+ContactLocator5.Filename = 'ContactLocator5.txt';
+ContactLocator5.OccultingBodies = {Earth};
+ContactLocator5.InputEpochFormat = 'TAIModJulian';
+ContactLocator5.InitialEpoch = '21545';
+ContactLocator5.StepSize = 10;
+ContactLocator5.FinalEpoch = '21545.138';
+ContactLocator5.UseLightTimeDelay = true;
+ContactLocator5.UseStellarAberration = true;
+ContactLocator5.WriteReport = true;
+ContactLocator5.RunMode = Automatic;
+ContactLocator5.UseEntireInterval = true;
+ContactLocator5.Observers = {GroundStation5};
+ContactLocator5.LightTimeDirection = Transmit;
+ContactLocator5.LeftJustified = false;
+ContactLocator5.ReportPrecision = 6;
+ContactLocator5.ReportFormat = 'Legacy';
+ContactLocator5.IntervalStepSize = 0;
+ContactLocator5.ReportTimeFormat = 'UTCGregorian';
+
+Create ContactLocator ContactLocator6;
+ContactLocator6.Target = DefaultSC;
+ContactLocator6.Filename = 'ContactLocator6.txt';
+ContactLocator6.OccultingBodies = {Earth};
+ContactLocator6.InputEpochFormat = 'TAIModJulian';
+ContactLocator6.InitialEpoch = '21545';
+ContactLocator6.StepSize = 10;
+ContactLocator6.FinalEpoch = '21545.138';
+ContactLocator6.UseLightTimeDelay = true;
+ContactLocator6.UseStellarAberration = true;
+ContactLocator6.WriteReport = true;
+ContactLocator6.RunMode = Automatic;
+ContactLocator6.UseEntireInterval = true;
+ContactLocator6.Observers = {GroundStation6};
+ContactLocator6.LightTimeDirection = Transmit;
+ContactLocator6.LeftJustified = false;
+ContactLocator6.ReportPrecision = 6;
+ContactLocator6.ReportFormat = 'Legacy';
+ContactLocator6.IntervalStepSize = 0;
+ContactLocator6.ReportTimeFormat = 'UTCGregorian';
+
+Create ContactLocator ContactLocator7;
+ContactLocator7.Target = DefaultSC;
+ContactLocator7.Filename = 'ContactLocator7.txt';
+ContactLocator7.OccultingBodies = {Earth};
+ContactLocator7.InputEpochFormat = 'TAIModJulian';
+ContactLocator7.InitialEpoch = '21545';
+ContactLocator7.StepSize = 10;
+ContactLocator7.FinalEpoch = '21545.138';
+ContactLocator7.UseLightTimeDelay = true;
+ContactLocator7.UseStellarAberration = true;
+ContactLocator7.WriteReport = true;
+ContactLocator7.RunMode = Automatic;
+ContactLocator7.UseEntireInterval = true;
+ContactLocator7.Observers = {GroundStation7};
+ContactLocator7.LightTimeDirection = Transmit;
+ContactLocator7.LeftJustified = false;
+ContactLocator7.ReportPrecision = 6;
+ContactLocator7.ReportFormat = 'Legacy';
+ContactLocator7.IntervalStepSize = 0;
+ContactLocator7.ReportTimeFormat = 'UTCGregorian';
+
+%----------------------------------------
+%---------- Subscribers
+%----------------------------------------
+
+Create OrbitView DefaultOrbitView;
+DefaultOrbitView.SolverIterations = Current;
+DefaultOrbitView.UpperLeft = [ 0.08 0.01608910891089109 ];
+DefaultOrbitView.Size = [ 0.1823529411764706 0.3948019801980198 ];
+DefaultOrbitView.RelativeZOrder = 151;
+DefaultOrbitView.Maximized = false;
+DefaultOrbitView.Add = {DefaultSC, Earth};
+DefaultOrbitView.CoordinateSystem = EarthMJ2000Eq;
+DefaultOrbitView.DrawObject = [ true true ];
+DefaultOrbitView.DataCollectFrequency = 1;
+DefaultOrbitView.UpdatePlotFrequency = 50;
+DefaultOrbitView.NumPointsToRedraw = 0;
+DefaultOrbitView.ShowPlot = true;
+DefaultOrbitView.MaxPlotPoints = 20000;
+DefaultOrbitView.ShowLabels = true;
+DefaultOrbitView.ViewPointReference = Earth;
+DefaultOrbitView.ViewPointVector = [ 30000 0 0 ];
+DefaultOrbitView.ViewDirection = Earth;
+DefaultOrbitView.ViewScaleFactor = 1;
+DefaultOrbitView.ViewUpCoordinateSystem = EarthMJ2000Eq;
+DefaultOrbitView.ViewUpAxis = Z;
+DefaultOrbitView.EclipticPlane = Off;
+DefaultOrbitView.XYPlane = On;
+DefaultOrbitView.WireFrame = Off;
+DefaultOrbitView.Axes = On;
+DefaultOrbitView.Grid = Off;
+DefaultOrbitView.SunLine = Off;
+DefaultOrbitView.UseInitialView = On;
+DefaultOrbitView.StarCount = 7000;
+DefaultOrbitView.EnableStars = On;
+DefaultOrbitView.EnableConstellations = On;
+
+Create GroundTrackPlot DefaultGroundTrackPlot;
+DefaultGroundTrackPlot.SolverIterations = Current;
+DefaultGroundTrackPlot.UpperLeft = [ 0.08235294117647059 0.426980198019802 ];
+DefaultGroundTrackPlot.Size = [ 0.1829411764705882 0.3948019801980198 ];
+DefaultGroundTrackPlot.RelativeZOrder = 7;
+DefaultGroundTrackPlot.Maximized = false;
+DefaultGroundTrackPlot.Add = {DefaultSC};
+DefaultGroundTrackPlot.DataCollectFrequency = 1;
+DefaultGroundTrackPlot.UpdatePlotFrequency = 50;
+DefaultGroundTrackPlot.NumPointsToRedraw = 0;
+DefaultGroundTrackPlot.ShowPlot = true;
+DefaultGroundTrackPlot.MaxPlotPoints = 20000;
+DefaultGroundTrackPlot.CentralBody = Earth;
+DefaultGroundTrackPlot.TextureMap = 'ModifiedBlueMarble.jpg';
+
+Create ReportFile ReportFile1;
+ReportFile1.SolverIterations = Current;
+ReportFile1.UpperLeft = [ 0.08525345622119816 0.1553884711779449 ];
+ReportFile1.Size = [ 0.5967741935483871 0.7944862155388471 ];
+ReportFile1.RelativeZOrder = 71;
+ReportFile1.Maximized = false;
+ReportFile1.Filename = 'Cartesian.txt';
+ReportFile1.Precision = 16;
+ReportFile1.Add = {DefaultSC.UTCGregorian, DefaultSC.EarthMJ2000Eq.X, DefaultSC.EarthMJ2000Eq.Y, DefaultSC.EarthMJ2000Eq.Z, DefaultSC.EarthMJ2000Eq.VX, DefaultSC.EarthMJ2000Eq.VY, DefaultSC.EarthMJ2000Eq.VZ};
+ReportFile1.WriteHeaders = true;
+ReportFile1.LeftJustify = On;
+ReportFile1.ZeroFill = Off;
+ReportFile1.FixedWidth = true;
+ReportFile1.Delimiter = ' ';
+ReportFile1.ColumnWidth = 23;
+ReportFile1.WriteReport = true;
+ReportFile1.AppendToExistingFile = false;
+
+Create ReportFile ReportFile2;
+ReportFile2.SolverIterations = Current;
+ReportFile2.UpperLeft = [ 0.1474654377880184 0.2406015037593985 ];
+ReportFile2.Size = [ 0.5990783410138248 0.7982456140350878 ];
+ReportFile2.RelativeZOrder = 65;
+ReportFile2.Maximized = false;
+ReportFile2.Filename = 'Keplerian.txt';
+ReportFile2.Precision = 16;
+ReportFile2.Add = {DefaultSC.UTCGregorian, DefaultSC.Earth.SMA, DefaultSC.Earth.ECC, DefaultSC.EarthMJ2000Eq.INC, DefaultSC.EarthMJ2000Eq.RAAN, DefaultSC.EarthMJ2000Eq.AOP, DefaultSC.Earth.TA, DefaultSC.Earth.MA};
+ReportFile2.WriteHeaders = true;
+ReportFile2.LeftJustify = On;
+ReportFile2.ZeroFill = Off;
+ReportFile2.FixedWidth = true;
+ReportFile2.Delimiter = ' ';
+ReportFile2.ColumnWidth = 23;
+ReportFile2.WriteReport = true;
+ReportFile2.AppendToExistingFile = false;
+
+Create ReportFile ReportFile3;
+ReportFile3.SolverIterations = Current;
+ReportFile3.UpperLeft = [ 0.1228878648233487 0.2005012531328321 ];
+ReportFile3.Size = [ 0.5990783410138248 0.7982456140350878 ];
+ReportFile3.RelativeZOrder = 59;
+ReportFile3.Maximized = false;
+ReportFile3.Filename = 'Misc.txt';
+ReportFile3.Precision = 16;
+ReportFile3.Add = {DefaultSC.UTCGregorian, DefaultSC.Earth.Altitude, DefaultSC.Earth.BetaAngle, DefaultSC.Earth.Latitude, DefaultSC.Earth.Longitude, DefaultSC.Earth.LST};
+ReportFile3.WriteHeaders = true;
+ReportFile3.LeftJustify = On;
+ReportFile3.ZeroFill = Off;
+ReportFile3.FixedWidth = true;
+ReportFile3.Delimiter = ' ';
+ReportFile3.ColumnWidth = 23;
+ReportFile3.WriteReport = true;
+ReportFile3.AppendToExistingFile = false;
+
+
+%----------------------------------------
+%---------- Mission Sequence
+%----------------------------------------
+
+BeginMissionSequence;
+Propagate DefaultProp(DefaultSC) {DefaultSC.ElapsedDays = 0.5};

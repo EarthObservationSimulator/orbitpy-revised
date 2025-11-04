@@ -348,6 +348,8 @@ class Mission:
             loaded_object = JsonSerializer.load_from_json(other_cls, file_path)
             return loaded_object
 
+        if other_cls is dict:
+            return dict_in
         if isinstance(dict_in, list):
             # If dict_in is a list, return a list of objects
             return [other_cls.from_dict(item) for item in dict_in]

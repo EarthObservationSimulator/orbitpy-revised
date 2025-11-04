@@ -162,3 +162,6 @@ class TestSGP4Propagator(unittest.TestCase):
         self.assertIn(
             "Invalid orbit type for SGP4 propagation", str(context.exception)
         )
+
+if __name__ == "__main__":
+    unittest.main()
