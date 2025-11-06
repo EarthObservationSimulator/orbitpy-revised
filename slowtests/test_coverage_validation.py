@@ -21,7 +21,7 @@ from eosimutils.trajectory import StateSeries
 from eosimutils.base import ReferenceFrame
 from eosimutils.framegraph import FrameGraph
 from eosimutils.standardframes import get_lvlh
-from eosimutils.fieldofview import CircularFieldOfView, RectangularFieldOfView
+from eosimutils.fieldofview import CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView
 from eosimutils.orientation import Orientation, ConstantOrientation
 
 import orbitpy.coveragecalculator
@@ -321,11 +321,16 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        fov = PolygonFieldOfView.from_rectangular(fov)
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 2)
+        self.get_metrics(orbitpycov_poly, stkcov, 2)
 
     def test_3(self):
         """Test a near-equatorial orbit on a global grid with a 20 degree diameter conical 
@@ -395,10 +400,15 @@ class STKValidation(unittest.TestCase):
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
 
+        fov = PolygonFieldOfView.from_rectangular(fov)
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
+
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 4)
+        self.get_metrics(orbitpycov_poly, stkcov, 4)
 
     def test_5(self):
         """Test an inclined orbit on a US grid with a 20 degree diameter conical sensor."""
@@ -466,11 +476,16 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        fov = PolygonFieldOfView.from_rectangular(fov)
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 6)
+        self.get_metrics(orbitpycov_poly, stkcov, 6)
 
     def test_7(self):
         """Test a sun-sync orbit on an equatorial grid with a 20 degree diameter conical sensor."""
@@ -615,17 +630,23 @@ class STKValidation(unittest.TestCase):
             True,
         )
 
+        fov = PolygonFieldOfView.from_rectangular(fov)
+
         # Calculate point coverage
         target_point_array = create_cartesian_position_array_from_csv(grid_path)
         orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 9)
+        self.get_metrics(orbitpycov_poly, stkcov, 9)
 
     def test_10(self):
         """Test a sun-sync orbit on a US grid with a 30 deg AT, 20 deg CT sensor."""
@@ -658,11 +679,16 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        fov = PolygonFieldOfView.from_rectangular(fov)
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 10)
+        self.get_metrics(orbitpycov_poly, stkcov, 10)
 
     def test_11(self):
         """Test a sun-sync orbit on a US grid with a 20 deg AT, 30 deg CT pointed sensor."""
@@ -718,11 +744,16 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        fov = PolygonFieldOfView.from_rectangular(fov)
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 11)
+        self.get_metrics(orbitpycov_poly, stkcov, 11)
 
     def test_12(self):
         """Test a sun-sync orbit on a US grid with a 30 deg AT, 20 deg CT pointed sensor."""
@@ -778,11 +809,16 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        fov = PolygonFieldOfView.from_rectangular(fov)
+        orbitpycov_poly = cov.calculate_coverage(
+            target_point_array, fov=fov, frame_graph=registry, times=times)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
         self.get_metrics(orbitpycov, stkcov, 12)
+        self.get_metrics(orbitpycov_poly, stkcov, 12)
 
 if __name__ == "__main__":
     unittest.main()
