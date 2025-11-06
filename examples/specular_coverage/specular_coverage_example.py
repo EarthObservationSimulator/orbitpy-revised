@@ -13,7 +13,7 @@ from orbitpy.coveragecalculator import CoverageFactory, CoverageType
 
 from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame, SPHERICAL_EARTH_MEAN_RADIUS
-from eosimutils.standardframes import get_lvlh
+from eosimutils.standardframes import LVLHType1FrameHandler
 from eosimutils.framegraph import FrameGraph
 from eosimutils.fieldofview import CircularFieldOfView, OmnidirectionalFieldOfView
 from eosimutils.state import Cartesian3DPositionArray
@@ -209,8 +209,9 @@ registry = FrameGraph()
 gps_fovs = []
 for i in range(len(gps_stateseries)):
     # Create frame graph and add LVLH frame
-    lvlh_frame = ReferenceFrame.add(f"LVLH_GPS_{gps_ids[i]}")
-    att_lvlh, pos_lvlh = get_lvlh(gps_stateseries[i], lvlh_frame)
+    handler = LVLHType1FrameHandler(f"LVLH_GPS_{gps_ids[i]}")
+    att_lvlh, pos_lvlh = handler.get_transform(gps_stateseries[i])
+    lvlh_frame = handler.get_frame()
     registry.add_orientation_transform(att_lvlh)
     from_frame = ReferenceFrame.get("ICRF_EC")
     to_frame = lvlh_frame
@@ -218,8 +219,9 @@ for i in range(len(gps_stateseries)):
     gps_fovs.append(OmnidirectionalFieldOfView(frame=lvlh_frame))
 
 # Fill frame graph with transforms for CYGNSS satellite
-lvlh_cygnss = ReferenceFrame.add("LVLH_CYGNSS")
-att_lvlh_cygnss, pos_lvlh_cygnss = get_lvlh(cygnss_stateseries, lvlh_cygnss)
+handler_cygnss = LVLHType1FrameHandler("LVLH_CYGNSS")
+att_lvlh_cygnss, pos_lvlh_cygnss = handler_cygnss.get_transform(cygnss_stateseries)
+lvlh_cygnss = handler_cygnss.get_frame()
 registry.add_orientation_transform(att_lvlh_cygnss)
 from_frame = ReferenceFrame.get("ICRF_EC")
 to_frame = lvlh_cygnss

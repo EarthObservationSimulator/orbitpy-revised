@@ -20,7 +20,7 @@ from eosimutils.state import Cartesian3DPosition, Cartesian3DPositionArray, Geog
 from eosimutils.trajectory import StateSeries
 from eosimutils.base import ReferenceFrame
 from eosimutils.framegraph import FrameGraph
-from eosimutils.standardframes import get_lvlh
+from eosimutils.standardframes import LVLHType1FrameHandler
 from eosimutils.fieldofview import CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView
 from eosimutils.orientation import Orientation, ConstantOrientation
 
@@ -126,7 +126,8 @@ class STKValidation(unittest.TestCase):
         """
 
         result = result.to_frame(ReferenceFrame.get("ITRF"))
-        att_lvlh, pos_lvlh = get_lvlh(result,self.lvlh_frame)
+        handler = LVLHType1FrameHandler("LVLH")
+        att_lvlh, pos_lvlh = handler.get_transform(result)
         registry   = FrameGraph()
         registry.add_orientation_transform(att_lvlh)
         from_frame = ReferenceFrame.get("ITRF")

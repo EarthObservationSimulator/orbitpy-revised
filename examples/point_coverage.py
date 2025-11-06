@@ -9,7 +9,7 @@ from orbitpy.orbits import TwoLineElementSet
 from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame, WGS84_EARTH_RADIUS
 from eosimutils.framegraph import FrameGraph
-from eosimutils.standardframes import get_lvlh
+from eosimutils.standardframes import LVLHType1FrameHandler
 from eosimutils.fieldofview import CircularFieldOfView
 from eosimutils.state import Cartesian3DPositionArray
 
@@ -75,8 +75,9 @@ print("Finished propagation...")
 times = sat_state_series.time
 
 # Create frame graph and add LVLH frame
-lvlh_frame = ReferenceFrame.add("LVLH")
-att_lvlh, pos_lvlh = get_lvlh(sat_state_series, lvlh_frame)
+handler = LVLHType1FrameHandler("LVLH")
+att_lvlh, pos_lvlh = handler.get_transform(sat_state_series)
+lvlh_frame = handler.get_frame()
 registry = FrameGraph()
 registry.add_orientation_transform(att_lvlh)
 from_frame = ReferenceFrame.get("ICRF_EC")
