@@ -15,7 +15,7 @@ from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame, SPHERICAL_EARTH_MEAN_RADIUS
 from eosimutils.standardframes import get_lvlh
 from eosimutils.framegraph import FrameGraph
-from eosimutils.fieldofview import CircularFieldOfView
+from eosimutils.fieldofview import CircularFieldOfView, OmnidirectionalFieldOfView
 from eosimutils.state import Cartesian3DPositionArray
 
 
@@ -206,7 +206,7 @@ cygnss_stateseries = get_stateseries([cygnss_id], start_date)[0]
 
 # Fill frame graph with transforms for GPS satellites
 registry = FrameGraph()
-gps_frames = []
+gps_fovs = []
 for i in range(len(gps_stateseries)):
     # Create frame graph and add LVLH frame
     lvlh_frame = ReferenceFrame.add(f"LVLH_GPS_{gps_ids[i]}")
@@ -215,7 +215,7 @@ for i in range(len(gps_stateseries)):
     from_frame = ReferenceFrame.get("ICRF_EC")
     to_frame = lvlh_frame
     registry.add_pos_transform(from_frame, to_frame, pos_lvlh)
-    gps_frames.append(lvlh_frame)
+    gps_fovs.append(OmnidirectionalFieldOfView(frame=lvlh_frame))
 
 # Fill frame graph with transforms for CYGNSS satellite
 lvlh_cygnss = ReferenceFrame.add("LVLH_CYGNSS")
@@ -247,7 +247,7 @@ specular_radius = 10
 print("Calculating coverage for target points using circular sensor...")
 start_time = timer()
 coverage = cov.calculate_coverage(
-    points_array, fov, registry, times, gps_frames, specular_radius
+    points_array, fov, registry, times, gps_fovs, specular_radius
 )
 
 # Sum up total coverage time

@@ -23,6 +23,7 @@ from eosimutils.fieldofview import (
     CircularFieldOfView,
     RectangularFieldOfView,
     PolygonFieldOfView,
+    OmnidirectionalFieldOfView
 )
 from eosimutils.framegraph import FrameGraph
 from eosimutils.time import AbsoluteDateArray
@@ -123,7 +124,7 @@ class SpecularCoverage:
         fov: CircularFieldOfView,
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
-        transmitters: List[ReferenceFrame],
+        transmitters: List[OmnidirectionalFieldOfView],
         specular_radius: float,
         surface: SurfaceType = SurfaceType.SPHERE,
         buff_size=100,
@@ -151,7 +152,7 @@ class SpecularCoverage:
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
                 calculated at discrete instances.
-            transmitters (List[ReferenceFrame]): A list of ReferenceFrame objects used to lookup
+            transmitters (List[OmnidirectionalFieldOfView]): A list of OmnidirectionalFieldOfView objects used to lookup
                 trajectories of the GNSS transmitters to be used for specular coverage calculation.
                 Transmitter trajectories must first be added to the frame graph for this to work.
             specular_radius (float): The radius of the specular reflection area ("glistening zone")
@@ -297,7 +298,9 @@ class SpecularCoverage:
         # the object goes out of scope in Python, it is deleted, even if it is still referenced in
         # C++.
         source_refs = []
-        for tx_frame in transmitters:
+        for transmitter in transmitters:
+
+            tx_frame = transmitter.frame
 
             # Get the position of the tx frame origin in the target frame
             # expressed in target frame coordinates
@@ -392,11 +395,11 @@ class SpecularCoverage:
         # Prepare coverage output
         for idx in range(len(cov_sources)):
             coverage_kcl = [cov_sources[idx].get(i) for i in range(len(times))]
-            distance = [rcg_sources[idx].get(i) for i in range(len(times))]
+            rcg_factor = [rcg_sources[idx].get(i) for i in range(len(times))]
             coverage = DiscreteCoverageTP(
                 times, coverage_kcl, target_point_array
             )
-            output_list.append((coverage, distance))
+            output_list.append((coverage, rcg_factor))
 
         return output_list
 
@@ -416,7 +419,7 @@ class PointCoverage:
     def calculate_coverage(
         self,
         target_point_array: Cartesian3DPositionArray,
-        fov: Union[CircularFieldOfView, RectangularFieldOfView],
+        fov: Union[CircularFieldOfView, RectangularFieldOfView, OmnidirectionalFieldOfView, PolygonFieldOfView],
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
         surface: SurfaceType = SurfaceType.SPHERE,
@@ -439,8 +442,8 @@ class PointCoverage:
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
-            fov (Union[CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView]): The field of view to use for
-                coverage calculation.
+            fov (Union[CircularFieldOfView, RectangularFieldOfView, OmnidirectionalFieldOfView,
+                PolygonFieldOfView]): The field of view to use for coverage calculation.
             frame_graph (FrameGraph): The frame graph containing the necessary transformations
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
@@ -632,6 +635,8 @@ class PointCoverage:
             # Add variables to list
             variables.append(fov_source)
 
+        elif isinstance(fov, OmnidirectionalFieldOfView):
+            fov_viewer = None
         else:
             raise ValueError("Unsupported field of view type.")
 
@@ -640,7 +645,11 @@ class PointCoverage:
         # (union, intersection, compliment)
         horizon_viewer = kcl.ViewerHalfspace3d(horizon_source)
         # Points are considered to be covered if they are in the horizon AND the FOV
-        total_view = kcl.Intersection([horizon_viewer, fov_viewer])
+        # If there is no FOV, only check horizon
+        if fov_viewer is None:
+            total_view = horizon_viewer
+        else:
+            total_view = kcl.Intersection([horizon_viewer, fov_viewer])
 
         # Get the position of the grid points in the target frame
         target_points_list_gte = [
