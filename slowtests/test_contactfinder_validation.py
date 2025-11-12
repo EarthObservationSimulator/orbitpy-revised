@@ -23,6 +23,8 @@ class TestElevationAwareContactFinder(unittest.TestCase):
 
     def setUp(self):
 
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+
         self.elevation_contact_finder = ElevationAwareContactFinder()
         self.frame_graph = FrameGraph()
         
@@ -31,7 +33,7 @@ class TestElevationAwareContactFinder(unittest.TestCase):
             with open("noaa_trajectory.pkl", "rb") as f:
                 self.noaa_trajectory = pickle.load(f)
         else:
-            self.noaa_trajectory = parse_gmat_state_file("gmat/noaa20_viirs/Cartesian.txt")
+            self.noaa_trajectory = parse_gmat_state_file(os.path.join(self.script_dir, "gmat/noaa20_viirs/Cartesian.txt"))
             with open("noaa_trajectory.pkl", "wb") as f:
                 pickle.dump(self.noaa_trajectory, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -92,7 +94,7 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         trajectory time-steps only and evaluates the contact interval, whereas GMAT possibly 
         uses a continuous technique to find more accurate contact times.
         """
-        gmat_contacts = parse_gmat_contact_file("gmat/noaa20_viirs/ContactLocator1.txt")
+        gmat_contacts = parse_gmat_contact_file(os.path.join(self.script_dir, "gmat/noaa20_viirs/ContactLocator1.txt"))
 
         result = self.elevation_contact_finder.execute(
             frame_graph=self.frame_graph,
@@ -134,9 +136,9 @@ class TestElevationAwareContactFinder(unittest.TestCase):
             ]:
                 with self.subTest(station=station.name):
                     gmat_contacts = parse_gmat_contact_file(
-                        f"gmat/noaa20_viirs/ContactLocator{station.name[-1]}.txt"
+                        os.path.join(self.script_dir, f"gmat/noaa20_viirs/ContactLocator{station.name[-1]}.txt")
                     )
-
+                    print(f"Testing station: {station.name}")
                     result = self.elevation_contact_finder.execute(
                         frame_graph=self.frame_graph,
                         observer_state=station.geographic_position,

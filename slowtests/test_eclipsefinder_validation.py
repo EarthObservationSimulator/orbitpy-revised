@@ -1,7 +1,7 @@
 """ Validation tests for the eclipsefinder module using GMAT-generated data.
 Maximum deviation in eclipse interval start and stop times were found to be within 6 seconds.
-This is likely due to the different methods used by GMAT (continuous domain)
-and OrbitPy's EclipseFinder (computation at discrete times).
+This is likely due to the different methods used by GMAT (continuous domain, more accurate computation of umbra, penumbra)
+and OrbitPy's EclipseFinder (computation at discrete times, and point model of Sun).
 """
 
 import os
@@ -18,6 +18,8 @@ from gmatutil import parse_gmat_state_file, parse_gmat_eclipse_file
 class TestEclipseFinder(unittest.TestCase):
 
     def setUp(self):
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+
         self.eclipse_finder = EclipseFinder()
         self.frame_graph = FrameGraph()
 
@@ -26,7 +28,7 @@ class TestEclipseFinder(unittest.TestCase):
             with open("noaa_trajectory.pkl", "rb") as f:
                 self.noaa_trajectory = pickle.load(f)
         else:
-            self.noaa_trajectory = parse_gmat_state_file("gmat/noaa20_viirs/Cartesian.txt")
+            self.noaa_trajectory = parse_gmat_state_file(os.path.join(self.script_dir, "gmat/noaa20_viirs/Cartesian.txt"))
             with open("noaa_trajectory.pkl", "wb") as f:
                 pickle.dump(self.noaa_trajectory, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -34,7 +36,7 @@ class TestEclipseFinder(unittest.TestCase):
         """Compare GMAT EclipseLocator results with EclipseFinder results.
         Small differences are expected due to discrete time steps in OrbitPy versus GMAT which possibly uses continuous search.
         """
-        gmat_eclipses = parse_gmat_eclipse_file("gmat/noaa20_viirs/EclipseLocator1.txt")
+        gmat_eclipses = parse_gmat_eclipse_file(os.path.join(self.script_dir, "gmat/noaa20_viirs/EclipseLocator1.txt"))
 
         result: EclipseInfo = self.eclipse_finder.execute(
             frame_graph=self.frame_graph,
