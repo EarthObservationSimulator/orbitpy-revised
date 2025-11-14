@@ -50,6 +50,7 @@ from eosimutils.time import AbsoluteDate
 from eosimutils.state import Cartesian3DPositionArray, GeographicPositionArray
 from eosimutils.framegraph import FrameGraph
 from eosimutils.trajectory import StateSeries
+from eosimutils.fieldofview import OmnidirectionalFieldOfView
 
 from .propagator import PropagatorFactory, SGP4Propagator
 from .resources import Spacecraft, GroundStation
@@ -938,6 +939,7 @@ class Mission:
 
         # load the GNSS info (names, id and frames)
         gnss_frames = []
+        gnss_fovs = []
         tx_spacecraft_id = []
         tx_spacecraft_name = []
         for tx_item in propagated_tx_trajectories:
@@ -982,6 +984,8 @@ class Mission:
             )
 
             gnss_frames.append(tx_local_orbital_frame)
+            gnss_fovs.append(OmnidirectionalFieldOfView(frame=tx_local_orbital_frame))
+
 
         # initialize the results dictionary
         all_coverage_info: List[Dict[str, Any]] = []
@@ -1033,7 +1037,7 @@ class Mission:
                     fov=rx_sensor.fov,
                     frame_graph=self.frame_graph,
                     times=rx_times,
-                    transmitter_frames=gnss_frames,
+                    transmitters=gnss_fovs,
                     specular_radius=self.settings.specular_radius_km,
                     surface=self.settings.surface_type,
                 )
