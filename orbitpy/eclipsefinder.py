@@ -158,6 +158,7 @@ class EclipseFinder:
         state: Optional[
             Union[StateSeries, PositionSeries, CartesianState]
         ] = None,
+        interpolator: str = "linear",
     ) -> EclipseInfo:
         """Run the eclipse detection algorithm with Earth (spherical model with the
         radius as the Polar radius) as the occluding body.
@@ -169,7 +170,11 @@ class EclipseFinder:
         or the mean radius to prevent errors in the checks involving testing presence of
         objects inside the Earth.
 
-        Either 'time' and 'position' or 'state' must be provided.
+        The following combinations of inputs are supported:
+            1. 'time' and 'position' provided as inputs. Eclipse is evaluated at the given time(s) for the input position.
+            2. 'state' provided as input. Eclipse is evaluated at the time(s) and position(s) in the state/ state-series.
+            3. 'time' and 'state' provided as inputs. Eclipse is evaluated at the given time(s) for the position(s) in the state(series).
+                                                        The time(s) in the state(series) are ignored. 
 
         References:
             https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/spkpos_c.html
@@ -184,30 +189,49 @@ class EclipseFinder:
                                     geographic or Cartesian position (default is None).
             state (Optional[Union[StateSeries, PositionSeries, CartesianState]]): The state
                     containing time(s) and position(s) for eclipse evaluation (default is None).
+            interpolator (str, optional): Interpolation method used when resampling state data
+                    onto the requested time grid (default is "linear").
 
         Returns:
             Union[bool, list[bool]]: (List of) True or False indicating whether the location
                                                         is in eclipse at the specified times.
         """
         # Validate input arguments
-        if (time is None or position is None) and state is None:
-            raise ValueError(
-                "Either 'time' and 'position' or 'state' must be provided."
-            )
+        # Supported:
+        # 1. 'time' and 'position' provided (state is None)
+        # 2. 'state' provided (time and position are None)
+        # 3. 'time' and 'state' provided (position is None)
         if (
-            (time is not None and position is not None)
-            and state is not None
-            or (time is not None and position is None)
-            and state is not None
-            or (time is None and position is not None)
-            and state is not None
+            (time is not None and position is not None and state is None)
+            or (time is None and position is None and state is not None)
+            or (time is not None and position is None and state is not None)
         ):
+            pass  # valid combinations
+        else:
             raise ValueError(
-                "Only one of 'time' and 'position' or 'state' should be provided."
+                "Supported input combinations are: "
+                "1) 'time' and 'position', "
+                "2) 'state', "
+                "3) 'time' and 'state'."
             )
 
         # Load SPICE kernel files
         load_spice_kernels()
+
+        # Helper function to normalize time input as AbsoluteDateArray
+        def _as_absolute_date_array(
+            time_value: Union[AbsoluteDate, AbsoluteDateArray]
+        ) -> AbsoluteDateArray:
+            """Normalize a time input to an AbsoluteDateArray."""
+            if isinstance(time_value, AbsoluteDateArray):
+                return time_value
+            if isinstance(time_value, AbsoluteDate):
+                return AbsoluteDateArray(
+                    np.array([time_value.to_spice_ephemeris_time()], dtype=float)
+                )
+            raise TypeError(
+                "time must be an AbsoluteDate or AbsoluteDateArray when provided."
+            )
 
         # Helper function to transform position vectors to the ICRF_EC frame
         def in_icrf_ec_frame(frame_graph, from_frame, input_pos_vector, times):
@@ -241,17 +265,39 @@ class EclipseFinder:
         # Handle state input
         if state is not None:
             if isinstance(state, StateSeries):
-                time = state.time
-                e2o_vector = state.position.to_numpy()
                 e2o_frame = state.frame
+                if time is None:
+                    time = state.time
+                    e2o_vector = state.position.to_numpy()
+                else:
+                    eval_time = _as_absolute_date_array(time)
+                    resampled_state = state.resample(
+                        eval_time, method=interpolator
+                    )
+                    time = resampled_state.time
+                    e2o_vector = resampled_state.position.to_numpy()
             elif isinstance(state, PositionSeries):
-                time = state.time
-                e2o_vector = state.position.to_numpy()
                 e2o_frame = state.frame
+                if time is None:
+                    time = state.time
+                    e2o_vector = state.position.to_numpy()
+                else:
+                    eval_time = _as_absolute_date_array(time)
+                    resampled_series = state.resample(
+                        eval_time, method=interpolator
+                    )
+                    time = resampled_series.time
+                    e2o_vector = resampled_series.position.to_numpy()
             elif isinstance(state, CartesianState):
-                time = state.time
-                e2o_vector = state.position.to_numpy()
                 e2o_frame = state.frame
+                state_position = state.position.to_numpy()
+                if time is None:
+                    time = state.time
+                    e2o_vector = state_position
+                else:
+                    eval_time = _as_absolute_date_array(time)
+                    time = eval_time
+                    e2o_vector = np.tile(state_position, (eval_time.length, 1)) # the position is assumed constant over the eval times
             else:
                 raise TypeError(
                     "State must be of type StateSeries, PositionSeries, or CartesianState."

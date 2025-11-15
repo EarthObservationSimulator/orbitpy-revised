@@ -260,6 +260,53 @@ class TestEclipseFinder(unittest.TestCase):
         self.assertIsInstance(result, EclipseInfo)
         self.assertTrue(np.array_equal(result.data[0], [True, False, False]))
 
+    def test_eclipse_with_time_and_state_series(self):
+        """Test that eclipse detection works with both time and StateSeries inputs and that
+            the evaluations happen at the requested times and not at the times in the state."""
+        time = AbsoluteDateArray.from_dict(
+            {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": [
+                    "2025-03-17T04:00:00.000", # Early morning
+                    "2025-03-17T08:00:00.000", # Morning
+                    "2025-03-17T14:00:00.000", # Afternoon
+                    "2025-03-17T20:00:00.000", # Night
+                ],
+                "time_scale": "UTC",
+            }
+        )
+        state_series = StateSeries.from_dict(
+            {
+                "time": {
+                    "time_format": "GREGORIAN_DATE",
+                    "calendar_date": [
+                        "2025-03-17T03:00:00.000",  # Early morning
+                        "2025-03-17T15:00:00.000",  # Afternoon
+                    ],
+                    "time_scale": "UTC",
+                },
+                "data": [
+                    [
+                        [7000.0, 50.0, 0.0],
+                        [7000.0, 100.0, 0.0],
+                    ],  # Positions, close to the 0 deg longitude.
+                    [[1, 7, 0], [0, 7, 1]],  # Velocities
+                ],
+                "frame": "ITRF",
+                "headers": [
+                    ["pos_x", "pos_y", "pos_z"],
+                    ["vel_x", "vel_y", "vel_z"],
+                ],
+            }
+        )
+        result = self.eclipse_finder.execute(
+            frame_graph=self.registry, time=time, state=state_series
+        )
+        self.assertIsInstance(result, EclipseInfo)
+        self.assertEqual(result.time.length, time.length)
+        self.assertEqual(result.time, time)
+        self.assertTrue(np.array_equal(result.data[0], [True, False, False, True]))
+
     def test_invalid_inputs(self):
         """Test invalid input combinations."""
         with self.assertRaises(ValueError):
@@ -309,14 +356,7 @@ class TestEclipseFinder(unittest.TestCase):
                 state=cartesian_state,
             )
 
-        with self.assertRaises(ValueError):
-            self.eclipse_finder.execute(
-                frame_graph=self.registry,
-                time=time,
-                position=None,
-                state=cartesian_state,
-            )
-
+    
     def test_object_inside_earth(self):
         """Test eclipse detection for an object inside the Earth."""
         inside_earth_position = Cartesian3DPosition.from_dict(
