@@ -12,6 +12,7 @@ from eosimutils.state import (
     Cartesian3DPosition,
     GeographicPosition,
     Cartesian3DPositionArray,
+    GeographicPositionArray,
 )
 from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.framegraph import FrameGraph
@@ -181,12 +182,14 @@ class TestLineOfSightContactFinder(unittest.TestCase):
                 ],
             }
         )
-        positions = Cartesian3DPositionArray.from_geographic_positions(
-            [
-                GeographicPosition(0, 0, 10000),
-                GeographicPosition(0, 180, 10000),
-                GeographicPosition(90, 0, 10000),
-            ]
+        positions = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                [
+                    GeographicPosition(0, 0, 10000),
+                    GeographicPosition(0, 180, 10000),
+                    GeographicPosition(90, 0, 10000),
+                ]
+            )
         ).to_numpy()
         position_series = PositionSeries(times, positions, frame)
 

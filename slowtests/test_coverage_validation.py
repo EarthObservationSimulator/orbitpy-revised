@@ -16,7 +16,7 @@ import csv
 import os
 
 from eosimutils.time import AbsoluteDate, AbsoluteDateArray
-from eosimutils.state import Cartesian3DPosition, Cartesian3DPositionArray, GeographicPosition
+from eosimutils.state import Cartesian3DPosition, Cartesian3DPositionArray, GeographicPosition, GeographicPositionArray
 from eosimutils.trajectory import StateSeries
 from eosimutils.base import ReferenceFrame
 from eosimutils.framegraph import FrameGraph
@@ -55,7 +55,7 @@ def create_cartesian_position_array_from_csv(file_path: str) -> Cartesian3DPosit
     Returns:
         Cartesian3DPositionArray: The resulting array of 3D Cartesian positions.
     """
-    geographic_positions = []
+    geographic_position_list = []
 
     with open(file_path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -64,9 +64,11 @@ def create_cartesian_position_array_from_csv(file_path: str) -> Cartesian3DPosit
             lon = float(row['lon [deg]'])
             geo_pos = GeographicPosition(
                 latitude_degrees=lat, longitude_degrees=lon, elevation_m=0.0)
-            geographic_positions.append(geo_pos)
+            geographic_position_list.append(geo_pos)
+    
+    geographic_positions_array = GeographicPositionArray.from_geographic_position_list(geographic_position_list)
 
-    return Cartesian3DPositionArray.from_geographic_positions(geographic_positions)
+    return Cartesian3DPositionArray.from_geographic_position_array(geographic_positions_array)
 
 def create_stateseries_from_txt_file(filepath: str, frame: str = "ICRF_EC") -> StateSeries:
     """

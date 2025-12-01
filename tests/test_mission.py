@@ -1,6 +1,7 @@
 """Unit tests for orbitpy.orbits module."""
 
 import os
+from typing import List
 import unittest
 import numpy as np
 
@@ -10,6 +11,7 @@ from eosimutils.trajectory import StateSeries
 from eosimutils.state import (
     Cartesian3DPositionArray,
     GeographicPosition,
+    GeographicPositionArray,
 )
 from eosimutils.base import SurfaceType
 
@@ -26,7 +28,7 @@ def uniform_lat_lon_spacing_grid(
     lon_lower_bound: float,
     lon_upper_bound: float,
     lon_step_deg: float,
-) -> Cartesian3DPositionArray:
+) -> List[GeographicPosition]:
     """Return uniformly spaced GeographicPosition points
     on a latitude/longitude grid given the bounds."""
     latitudes = np.arange(
@@ -50,22 +52,24 @@ class TestMissionOne(unittest.TestCase):
 
     def setUp(self):
 
-        self.points_array = Cartesian3DPositionArray.from_geographic_positions(
-            [
-                GeographicPosition(
-                    latitude_degrees=45.0,
-                    longitude_degrees=45.0,
-                    elevation_m=0.0,
-                ),
-                GeographicPosition(
-                    latitude_degrees=-45.0,
-                    longitude_degrees=-45.0,
-                    elevation_m=0.0,
-                ),
-                GeographicPosition(
-                    latitude_degrees=0.0, longitude_degrees=0.0, elevation_m=0.0
-                ),
-            ]
+        self.points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                [
+                    GeographicPosition(
+                        latitude_degrees=45.0,
+                        longitude_degrees=45.0,
+                        elevation_m=0.0,
+                    ),
+                    GeographicPosition(
+                        latitude_degrees=-45.0,
+                        longitude_degrees=-45.0,
+                        elevation_m=0.0,
+                    ),
+                    GeographicPosition(
+                        latitude_degrees=0.0, longitude_degrees=0.0, elevation_m=0.0
+                    ),
+                ]
+            )
         )
 
         # For purposes of the `test_from_dict_and_to_dict_roundtrip` test, below dictionary
@@ -310,11 +314,13 @@ class TestMissionTwo(unittest.TestCase):
     def setUp(self):
 
         # Generate uniformly spaced points on a latitude/longitude grid
-        self.all_geo_points_array = uniform_lat_lon_spacing_grid(
+        self.all_geo_points_list = uniform_lat_lon_spacing_grid(
             -90, 90, 1, -180, 180, 1
         )
-        points_array = Cartesian3DPositionArray.from_geographic_positions(
-            self.all_geo_points_array
+        points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                self.all_geo_points_list
+            )
         )
 
         self.mission_dict = {
@@ -643,11 +649,11 @@ class TestMissionTwo(unittest.TestCase):
         )  # unique indices
         # print(covered_point_indices)
 
-        # Find indices of the points in the original self.all_geo_points_array
+        # Find indices of the points in the original self.all_geo_points_list
         # with latitude less than 60 degrees
         lat_bound_indices = [
             i
-            for i, geo_pos in enumerate(self.all_geo_points_array)
+            for i, geo_pos in enumerate(self.all_geo_points_list)
             if geo_pos.latitude > -60 and geo_pos.latitude < 60
         ]
 
@@ -673,13 +679,14 @@ class TestMissionGNSSR(unittest.TestCase):
     def setUp(self):
 
         # Generate uniformly spaced points on a latitude/longitude grid
-        self.all_geo_points_array = uniform_lat_lon_spacing_grid(
+        self.all_geo_points_list = uniform_lat_lon_spacing_grid(
             -35, 35, 1, -180, 180, 1
         )
-        points_array = Cartesian3DPositionArray.from_geographic_positions(
-            self.all_geo_points_array
+        points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                self.all_geo_points_list
+            )
         )
-
         self.mission_dict = {
             "start_time": {
                 "time_format": "GREGORIAN_DATE",
