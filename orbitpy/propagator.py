@@ -132,6 +132,20 @@ class SGP4Propagator:
         step_size = specs.get("step_size", 60.0)
         return cls(step_size=step_size)
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Converts the SGP4Propagator object to a dictionary.
+
+        Returns:
+            dict: A dictionary representation of the SGP4Propagator object.
+                The dictionary contains the following key-value pairs:
+                - "propagator_type" (str): Type of propagator. Value is always 'SGP4_PROPAGATOR'.
+                - "step_size" (float): Orbit propagation time-step in seconds.
+        """
+        return {
+            "propagator_type": PropagatorType.SGP4_PROPAGATOR.value,
+            "step_size": self.step_size,
+        }
+
     def execute(
         self,
         t0: AbsoluteDate,

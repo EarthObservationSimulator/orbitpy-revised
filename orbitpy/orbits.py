@@ -139,6 +139,7 @@ class TwoLineElementSet:
                 - "TLE_LINE2" (str): The second line of the TLE.
         """
         return {
+            "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
             "TLE_LINE0": self.line0,
             "TLE_LINE1": self.line1,
             "TLE_LINE2": self.line2,
@@ -229,7 +230,11 @@ class OrbitalMeanElementsMessage:
         Returns:
             Dict[str, Any]: The OMM as a dictionary.
         """
-        return self.omm_dict
+        out_dict = {
+            "orbit_type": OrbitType.ORBITAL_MEAN_ELEMENTS_MESSAGE.value,
+            **self.omm_dict,
+        }
+        return out_dict
 
     def to_json(self) -> str:
         """
@@ -324,10 +329,10 @@ class SpaceTrackAPI:
         response = self.session.post(login_url, data=payload)
 
         if response.status_code == 200:
-            print("Login successful.")
+            print("Spacetrack login successful.")
         else:
             raise RuntimeError(
-                f"Login failed with status code {response.status_code}:"
+                f"Spacetrack login failed with status code {response.status_code}:"
                 f"{response.text}"
             )
 
@@ -342,6 +347,9 @@ class SpaceTrackAPI:
             norad_id (int): NORAD catalog ID of the satellite.
             target_datetime (str): Target datetime in ISO 8601 format
                                    (e.g., "2024-04-08T19:28:18").
+            within_days (int): Maximum number of days before the target
+                               datetime to consider for the OMM data.
+                               Default is 1 day.
 
         Returns:
             Optional[Dict[str, Any]]: The OMM data as a dictionary,
@@ -354,17 +362,26 @@ class SpaceTrackAPI:
         if not self.session:
             raise RuntimeError("Session not initialized. Please login first.")
 
-        # Validate that target_date_time is a string in the format %Y-%m-%dT%H:%M:%S
+        # Validate that target_date_time is a string in the
+        # format %Y-%m-%dT%H:%M:%S.%f or %Y-%m-%dT%H:%M:%S
         try:
+            # Try parsing with fractional seconds
             tdt_datetime = datetime.strptime(
-                target_date_time, "%Y-%m-%dT%H:%M:%S"
-            )  # datetime object
-        except ValueError:
-            print(
-                "Invalid target_date_time format. It should be a string in the format"
-                "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
+                target_date_time, "%Y-%m-%dT%H:%M:%S.%f"
             )
-            return None
+        except ValueError:
+            try:
+                # Fallback to parsing without fractional seconds
+                tdt_datetime = datetime.strptime(
+                    target_date_time, "%Y-%m-%dT%H:%M:%S"
+                )
+            except ValueError:
+                print(
+                    "SpaceTrack: Invalid target_date_time format. "
+                    "It should be a string in the format"
+                    "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
+                )
+                return None
 
         tdt = tdt_datetime.strftime(
             "%Y-%m-%dT%H:%M:%S"
@@ -392,7 +409,7 @@ class SpaceTrackAPI:
 
             closest_omm = omm_list[0]  # The first OMM in the list
             if closest_omm:
-                print(closest_omm)
+                # print(closest_omm)
                 retrieved_cd = closest_omm["CREATION_DATE"]
                 retrieved_cd_datetime = datetime.strptime(
                     retrieved_cd, "%Y-%m-%dT%H:%M:%S"
@@ -548,6 +565,7 @@ class OsculatingElements:
             dict: Dictionary containing the state information.
         """
         return {
+            "orbit_type": OrbitType.OSCULATING_ELEMENTS.value,
             "time": self.time.to_dict(),
             "semi_major_axis": self.semi_major_axis,
             "eccentricity": self.eccentricity,

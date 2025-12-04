@@ -7,7 +7,7 @@ from orbitpy.propagator import PropagatorFactory
 from orbitpy.orbits import TwoLineElementSet
 
 from eosimutils.time import AbsoluteDate
-from eosimutils.base import ReferenceFrame, WGS84_EARTH_RADIUS
+from eosimutils.base import ReferenceFrame, WGS84_EARTH_EQUATORIAL_RADIUS
 from eosimutils.framegraph import FrameGraph
 from eosimutils.standardframes import LVLHType1FrameHandler
 from eosimutils.fieldofview import CircularFieldOfView
@@ -16,7 +16,7 @@ from eosimutils.state import Cartesian3DPositionArray
 import numpy as np
 
 
-def random_points_on_sphere(n, r=WGS84_EARTH_RADIUS):
+def random_points_on_sphere(n, r=WGS84_EARTH_EQUATORIAL_RADIUS):
     """
     Generate n random points uniformly on the surface of a sphere with radius R.
 
@@ -48,7 +48,7 @@ cov = orbitpy.coveragecalculator.CoverageFactory.from_dict(
 # Create a propagator
 factory = PropagatorFactory()
 specs = {"propagator_type": "SGP4_PROPAGATOR", "step_size": 1}
-sgp4_prop = factory.get_propagator(specs)
+sgp4_prop = factory.from_dict(specs)
 
 tle = TwoLineElementSet(
     line0="0 LANDSAT 9",

@@ -8,3 +8,6 @@ __pycache__/
 docs/build/
 htmlcov/
 .coverage
+
+# ignore output files of example scripts
+MissionOutput.json

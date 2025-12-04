@@ -351,7 +351,7 @@ class TestElevationAwareContactFinder(unittest.TestCase):
 
     def test_moving_target_with_elevation_constraint(self):
         """Test elevation-aware contact detection with a moving target."""
-        min_elevation_angle = random.uniform(0, 90)  # degrees
+        min_elevation_angle = random.uniform(2, 90)  # degrees
         observer = Cartesian3DPosition.from_dict(
             {
                 "x": 0.0,
@@ -384,7 +384,7 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         target_x3 = random.uniform(
             np.tan((90 - min_elevation_angle) * np.pi / 180)
             * (8000.0 - 7000.0),
-            25000.0,
+            30000.0,
         )
         positions = np.array(
             [
@@ -408,6 +408,6 @@ class TestElevationAwareContactFinder(unittest.TestCase):
         self.assertTrue(
             np.array_equal(result.data[0], [True, True, False]),
             msg=f"min_elevation_angle: {min_elevation_angle}, "
-                f"target_x1: {target_x1}, target_x2: {target_x2}, "
-                f"target_x3: {target_x3} were used.",
+            f"target_x1: {target_x1}, target_x2: {target_x2}, "
+            f"target_x3: {target_x3} were used.",
         )

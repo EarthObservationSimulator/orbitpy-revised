@@ -114,7 +114,9 @@ class SpecularCoverage:
     points."""
 
     @classmethod
-    def from_dict(cls, specs: Dict[str, Any]) -> "SpecularCoverage":
+    def from_dict(
+        cls, specs: Dict[str, Any]  # pylint: disable=unused-argument
+    ) -> "SpecularCoverage":
         # Empty since class does not require any initialization parameters
         return cls()
 
@@ -156,7 +158,7 @@ class SpecularCoverage:
                 trajectories of the GNSS transmitters to be used for specular coverage calculation.
                 Transmitter trajectories must first be added to the frame graph for this to work.
             specular_radius (float): The radius of the specular reflection area ("glistening zone")
-                around each target point.
+                around each target point. Corresponds to a 3D sphere around the specular point.
             surface (SurfaceType): The type of surface to consider for coverage calculation.
                 Defaults to SurfaceType.SPHERE. Surface type will affect the horizon check, which
                 checks that the points are not occluded by the surface. Points are not necessarily
@@ -168,9 +170,25 @@ class SpecularCoverage:
         Returns:
             List[Tuple[DiscreteCoverageTP, List[float]]]: A list of tuples containing (1) the
                 coverage for each GPS transmitter and (2) the radar's range-corrected
-                gain (RCG) at the input time points.
+                gain (RCG), assuming unity gain, at the input time points.
 
-        For reference on RCG calculation, see https://ieeexplore.ieee.org/abstract/document/8370081
+        For reference on RCG formula, see https://ieeexplore.ieee.org/abstract/document/8370081.
+        Formula for RCG is G/(R_t^2 * R_r^2), where R_t is the distance between the transmitter
+        and the specular point, and R_r is the distance between the receiver and the specular
+        point. Here G is assumed to be 1.0 (unity gain).
+
+        Coverage is calculated by the following steps at each time step:
+
+        1. Get the position/orientation of all relevant objects in the
+        target frame (receiver, transmitters, target points)
+        2. Check line-of-sight (LOS) between each transmitter and the receiver
+        3. Calculate the specular point between each transmitter and the
+        receiver, if LOS is available. Also calculate the RCG factor at the specular point.
+        4. Create a sphere around the specular point with radius specular_radius.
+        5. Check which target points are in the sphere, the receiver FOV, and have LOS
+        to the receiver (i.e. are in the horizon). Points which satisfy all three conditions are
+        considered covered.
+
         """
 
         # Store all coverage output in memory
@@ -330,14 +348,14 @@ class SpecularCoverage:
                 buff_size,
             )
 
-            # Returns the range-corrected gain (RCG) for the radar.
+            # Returns the range-corrected gain (RCG) factor for the radar.
             radar_gain = 1.0  # Placeholder value
             rcg_source = kcl.RCGSource(
                 pos_tx_target_source,
                 pos_fov_target_source,
                 specular_source,
                 radar_gain,
-                buff_size
+                buff_size,
             )
 
             radius_source = kcl.ConstantSourced(specular_radius)
@@ -469,9 +487,9 @@ class PointCoverage:
             of cells in the grid approximately equal to the specified value.
             surface (SurfaceType): The type of surface to consider for coverage calculation.
                 Defaults to SurfaceType.SPHERE. Surface type will affect the horizon check, which
-                checks that the points are not occluded by the surface. Points are not necessarily
-                required to be on the surface. Surface is assumed to be fixed to the frame of the
-                target points.
+                checks that the points aren't occluded by the surface. Points in target_point_array
+                are not necessarily required to be on the surface. Surface is assumed to be fixed
+                to the frame of the target points.
             buff_size (int): Specifies the buffer size for parallel computation. For optimal
                 performance, it should be at least equal to the number of CPU cores available
                 on the executing machine. Defaults to len(times).
