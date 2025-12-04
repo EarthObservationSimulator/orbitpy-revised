@@ -441,7 +441,8 @@ class PointCoverage:
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
         surface: SurfaceType = SurfaceType.SPHERE,
-        buff_size=86401,
+        cbpa_cells: float = 0,
+        buff_size=None,
     ) -> DiscreteCoverageTP:
         """Calculates the coverage over an array of target points given a field of view.
 
@@ -457,6 +458,21 @@ class PointCoverage:
         method, which takes the simulation time index as input and updates the object for that
         time step.
 
+        Notes on CBPA: The cell-based preprocessing algorithm (CBPA) is used to speed up coverage
+        calculation, especially for small-FOV sensors. It works by pre-loading all of the target 
+        points into a spherical grid with equal latitude spacing and equal longitude spacing withing
+        each latitude band. During each time step, the sensor profile is projected onto the sphere 
+        and a tight spherical bounding box is created, which is used to quickly lookup the target
+        points which fall in the box in sublinear time. The algorithm has been tested extensively
+        and is exact for a spherical earth. On the ellipsoidal earth, the algorithm is run using
+        a mean-radius approximation of the ellipsoid, which can lead to small errors which are
+        corrected by adding a 25% increase in the box length in both dimensions. The 25% growth
+        was selected using probabilistic unit tests as follows. (1) Generate 10 million random
+        points on WGS-84; (2) Generate a satellite at a random direction and altitude between
+        100 and 35000 km; (3) Generate random pointing angles between 0.001 and pi-0.001; (4)
+        (4) Generate random FOV angles between 0.001 and pi-0.001; (5) Check that every point
+        inside the FOV is inside the bounding box.
+
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
@@ -466,6 +482,9 @@ class PointCoverage:
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
                 calculated at discrete instances.
+            cbpa_cells (float): Only supported for circular and rectangular FOVs. If set to zero,
+            will not use CBPA. If set to a positive value, will use CBPA with the number
+            of cells in the grid approximately equal to the specified value.
             surface (SurfaceType): The type of surface to consider for coverage calculation.
                 Defaults to SurfaceType.SPHERE. Surface type will affect the horizon check, which
                 checks that the points aren't occluded by the surface. Points in target_point_array
@@ -473,10 +492,15 @@ class PointCoverage:
                 to the frame of the target points.
             buff_size (int): Specifies the buffer size for parallel computation. For optimal
                 performance, it should be at least equal to the number of CPU cores available
-                on the executing machine.
+                on the executing machine. Defaults to len(times).
         Returns:
             DiscreteCoverageTP: An object reporting the grid points covered at each time point.
         """
+
+        if buff_size is None:
+            buff_size = len(times)
+
+        use_cbpa = cbpa_cells > 0
 
         fov_frame = fov.frame
         target_frame = target_point_array.frame
@@ -504,6 +528,7 @@ class PointCoverage:
         ]
         fov_to_target_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
 
+        sphere_source = None
         # Setup horizon source. A point and a ellipsoid/sphere are sufficient to define a polar
         # plane, which divides the ellipsoid/sphere into a region visible from that point
         # and a region not visible (no LOS). The halfspace supported by that plane can be used
@@ -547,6 +572,7 @@ class PointCoverage:
         else:
             raise ValueError(f"Unsupported surface type: {surface}")
 
+        box_source = None
         if isinstance(fov, CircularFieldOfView):
             deg2rad = math.pi / 180.0
             half_angle_rad = fov.diameter * 0.5 * deg2rad
@@ -580,6 +606,23 @@ class PointCoverage:
             # Add variables to list
             variables.append(boresight_target_source)
             variables.append(fov_source)
+            if use_cbpa:
+                
+                earth_sphere_cbpa = gte.Sphere3d(
+                gte.Vector3d.Zero(), SPHERICAL_EARTH_MEAN_RADIUS)
+                # The sphere source is a constant source, since the sphere's
+                # parameters remain the same for all time steps
+                sphere_source_cbpa = kcl.ConstantSourceSphere3d(earth_sphere_cbpa)
+
+                box_source = kcl.Cone3dSourceAlignedBoxS2d(
+                    fov_source, sphere_source_cbpa, buff_size
+                )
+
+                if (surface == SurfaceType.WGS84):
+                    # Increase box size by 25% to account for ellipsoidal earth approximation
+                    box_source.setFactor(.25)
+
+                variables.append(box_source)
 
         elif isinstance(fov, RectangularFieldOfView):
             deg2rad = math.pi / 180.0
@@ -632,6 +675,23 @@ class PointCoverage:
             variables.append(up_target_source)
             variables.append(right_target_source)
             variables.append(fov_source)
+            if use_cbpa:
+
+                earth_sphere_cbpa = gte.Sphere3d(
+                gte.Vector3d.Zero(), SPHERICAL_EARTH_MEAN_RADIUS)
+                # The sphere source is a constant source, since the sphere's
+                # parameters remain the same for all time steps
+                sphere_source_cbpa = kcl.ConstantSourceSphere3d(earth_sphere_cbpa)
+
+                box_source = kcl.RectView3dSourceAlignedBoxS2d(
+                    fov_source, sphere_source_cbpa, buff_size
+                )
+
+                if (surface == SurfaceType.WGS84):
+                    # Increase box size by 25% to account for ellipsoidal earth approximation
+                    box_source.setFactor(.25)
+
+                variables.append(box_source)
 
         elif isinstance(fov, PolygonFieldOfView):
 
@@ -652,6 +712,11 @@ class PointCoverage:
 
             # Add variables to list
             variables.append(fov_source)
+
+            if (use_cbpa):
+                raise ValueError(
+                    "CBPA preprocessor is only supported for circular or rectangular FOVs."
+                )
 
         elif isinstance(fov, OmnidirectionalFieldOfView):
             fov_viewer = None
@@ -681,6 +746,16 @@ class PointCoverage:
         buff_size_coverage = len(times)
 
         preprocessor = None
+        if use_cbpa:
+            if box_source is None:
+                raise ValueError(
+                    "CBPA preprocessor is only supported for circular or rectangular FOVs."
+                )
+            cellgrid = kcl.CellGrid(cbpa_cells)
+            cellgrid.AddPoints(target_points_list_gte)
+            preprocessor = kcl.RangeCovSource(cellgrid, box_source, buff_size)
+            variables.append(preprocessor)
+
         cov_source = kcl.CovSource(
             grid_source, preprocessor, total_view, buff_size_coverage
         )
