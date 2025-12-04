@@ -23,6 +23,7 @@ from eosimutils.fieldofview import (
     CircularFieldOfView,
     RectangularFieldOfView,
     PolygonFieldOfView,
+    OmnidirectionalFieldOfView
 )
 from eosimutils.framegraph import FrameGraph
 from eosimutils.time import AbsoluteDateArray
@@ -125,7 +126,7 @@ class SpecularCoverage:
         fov: CircularFieldOfView,
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
-        transmitter_frames: List[ReferenceFrame],
+        transmitters: List[OmnidirectionalFieldOfView],
         specular_radius: float,
         surface: SurfaceType = SurfaceType.SPHERE,
         buff_size=100,
@@ -153,10 +154,9 @@ class SpecularCoverage:
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
                 calculated at discrete instances.
-            transmitter_frames (List[ReferenceFrame]): A list of ReferenceFrame objects used to
-                lookup trajectories of the GNSS transmitters to be used for specular coverage
-                calculation. Transmitter trajectories must first be added to the frame graph
-                for this to work.
+            transmitters (List[OmnidirectionalFieldOfView]): A list of OmnidirectionalFieldOfView objects used to lookup
+                trajectories of the GNSS transmitters to be used for specular coverage calculation.
+                Transmitter trajectories must first be added to the frame graph for this to work.
             specular_radius (float): The radius of the specular reflection area ("glistening zone")
                 around each target point. Corresponds to a 3D sphere around the specular point.
             surface (SurfaceType): The type of surface to consider for coverage calculation.
@@ -316,7 +316,9 @@ class SpecularCoverage:
         # the object goes out of scope in Python, it is deleted, even if it is still referenced in
         # C++.
         source_refs = []
-        for tx_frame in transmitter_frames:
+        for transmitter in transmitters:
+
+            tx_frame = transmitter.frame
 
             # Get the position of the tx frame origin in the target frame
             # expressed in target frame coordinates
@@ -411,11 +413,11 @@ class SpecularCoverage:
         # Prepare coverage output
         for idx in range(len(cov_sources)):
             coverage_kcl = [cov_sources[idx].get(i) for i in range(len(times))]
-            distance = [rcg_sources[idx].get(i) for i in range(len(times))]
+            rcg_factor = [rcg_sources[idx].get(i) for i in range(len(times))]
             coverage = DiscreteCoverageTP(
                 times, coverage_kcl, target_point_array
             )
-            output_list.append((coverage, distance))
+            output_list.append((coverage, rcg_factor))
 
         return output_list
 
@@ -435,11 +437,12 @@ class PointCoverage:
     def calculate_coverage(
         self,
         target_point_array: Cartesian3DPositionArray,
-        fov: Union[CircularFieldOfView, RectangularFieldOfView],
+        fov: Union[CircularFieldOfView, RectangularFieldOfView, OmnidirectionalFieldOfView, PolygonFieldOfView],
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
         surface: SurfaceType = SurfaceType.SPHERE,
-        buff_size=86401,
+        cbpa_cells: float = 0,
+        buff_size=None,
     ) -> DiscreteCoverageTP:
         """Calculates the coverage over an array of target points given a field of view.
 
@@ -455,15 +458,33 @@ class PointCoverage:
         method, which takes the simulation time index as input and updates the object for that
         time step.
 
+        Notes on CBPA: The cell-based preprocessing algorithm (CBPA) is used to speed up coverage
+        calculation, especially for small-FOV sensors. It works by pre-loading all of the target 
+        points into a spherical grid with equal latitude spacing and equal longitude spacing withing
+        each latitude band. During each time step, the sensor profile is projected onto the sphere 
+        and a tight spherical bounding box is created, which is used to quickly lookup the target
+        points which fall in the box in sublinear time. The algorithm has been tested extensively
+        and is exact for a spherical earth. On the ellipsoidal earth, the algorithm is run using
+        a mean-radius approximation of the ellipsoid, which can lead to small errors which are
+        corrected by adding a 25% increase in the box length in both dimensions. The 25% growth
+        was selected using probabilistic unit tests as follows. (1) Generate 10 million random
+        points on WGS-84; (2) Generate a satellite at a random direction and altitude between
+        100 and 35000 km; (3) Generate random pointing angles between 0.001 and pi-0.001; (4)
+        (4) Generate random FOV angles between 0.001 and pi-0.001; (5) Check that every point
+        inside the FOV is inside the bounding box.
+
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
-            fov (Union[CircularFieldOfView, RectangularFieldOfView]): The field of view to use for
-                coverage calculation.
+            fov (Union[CircularFieldOfView, RectangularFieldOfView, OmnidirectionalFieldOfView,
+                PolygonFieldOfView]): The field of view to use for coverage calculation.
             frame_graph (FrameGraph): The frame graph containing the necessary transformations
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
                 calculated at discrete instances.
+            cbpa_cells (float): Only supported for circular and rectangular FOVs. If set to zero,
+            will not use CBPA. If set to a positive value, will use CBPA with the number
+            of cells in the grid approximately equal to the specified value.
             surface (SurfaceType): The type of surface to consider for coverage calculation.
                 Defaults to SurfaceType.SPHERE. Surface type will affect the horizon check, which
                 checks that the points aren't occluded by the surface. Points in target_point_array
@@ -471,10 +492,15 @@ class PointCoverage:
                 to the frame of the target points.
             buff_size (int): Specifies the buffer size for parallel computation. For optimal
                 performance, it should be at least equal to the number of CPU cores available
-                on the executing machine.
+                on the executing machine. Defaults to len(times).
         Returns:
             DiscreteCoverageTP: An object reporting the grid points covered at each time point.
         """
+
+        if buff_size is None:
+            buff_size = len(times)
+
+        use_cbpa = cbpa_cells > 0
 
         fov_frame = fov.frame
         target_frame = target_point_array.frame
@@ -502,6 +528,7 @@ class PointCoverage:
         ]
         fov_to_target_source = kcl.ListSourceMatrix3x3d(fov_to_target_gte)
 
+        sphere_source = None
         # Setup horizon source. A point and a ellipsoid/sphere are sufficient to define a polar
         # plane, which divides the ellipsoid/sphere into a region visible from that point
         # and a region not visible (no LOS). The halfspace supported by that plane can be used
@@ -545,6 +572,7 @@ class PointCoverage:
         else:
             raise ValueError(f"Unsupported surface type: {surface}")
 
+        box_source = None
         if isinstance(fov, CircularFieldOfView):
             deg2rad = math.pi / 180.0
             half_angle_rad = fov.diameter * 0.5 * deg2rad
@@ -578,6 +606,23 @@ class PointCoverage:
             # Add variables to list
             variables.append(boresight_target_source)
             variables.append(fov_source)
+            if use_cbpa:
+                
+                earth_sphere_cbpa = gte.Sphere3d(
+                gte.Vector3d.Zero(), SPHERICAL_EARTH_MEAN_RADIUS)
+                # The sphere source is a constant source, since the sphere's
+                # parameters remain the same for all time steps
+                sphere_source_cbpa = kcl.ConstantSourceSphere3d(earth_sphere_cbpa)
+
+                box_source = kcl.Cone3dSourceAlignedBoxS2d(
+                    fov_source, sphere_source_cbpa, buff_size
+                )
+
+                if (surface == SurfaceType.WGS84):
+                    # Increase box size by 25% to account for ellipsoidal earth approximation
+                    box_source.setFactor(.25)
+
+                variables.append(box_source)
 
         elif isinstance(fov, RectangularFieldOfView):
             deg2rad = math.pi / 180.0
@@ -630,11 +675,51 @@ class PointCoverage:
             variables.append(up_target_source)
             variables.append(right_target_source)
             variables.append(fov_source)
+            if use_cbpa:
+
+                earth_sphere_cbpa = gte.Sphere3d(
+                gte.Vector3d.Zero(), SPHERICAL_EARTH_MEAN_RADIUS)
+                # The sphere source is a constant source, since the sphere's
+                # parameters remain the same for all time steps
+                sphere_source_cbpa = kcl.ConstantSourceSphere3d(earth_sphere_cbpa)
+
+                box_source = kcl.RectView3dSourceAlignedBoxS2d(
+                    fov_source, sphere_source_cbpa, buff_size
+                )
+
+                if (surface == SurfaceType.WGS84):
+                    # Increase box size by 25% to account for ellipsoidal earth approximation
+                    box_source.setFactor(.25)
+
+                variables.append(box_source)
 
         elif isinstance(fov, PolygonFieldOfView):
-            raise NotImplementedError(
-                "PolygonFieldOfView is not yet implemented."
+
+            # Define the polygon vertices and interior point in the FOV frame
+            vertices_fov = [gte.Vector3d(v) for v in fov.boundary_corners]
+            interior_fov = gte.Vector3d(fov.boresight)
+
+            # Define a source which builds a spherical polygon object using the FOV position,
+            # polygon vertices and interior point.
+            # This is a Variable object so it must be added to the variables list to be updated.
+            fov_source = kcl.SphericalPolySource(
+                vertices_fov, interior_fov, pos_fov_target_source,fov_to_target_source, buff_size
             )
+
+            # Define a Viewer object for the polygon shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
+            fov_viewer = kcl.ViewerSphericalPolygond(fov_source)
+
+            # Add variables to list
+            variables.append(fov_source)
+
+            if (use_cbpa):
+                raise ValueError(
+                    "CBPA preprocessor is only supported for circular or rectangular FOVs."
+                )
+
+        elif isinstance(fov, OmnidirectionalFieldOfView):
+            fov_viewer = None
         else:
             raise ValueError("Unsupported field of view type.")
 
@@ -643,7 +728,11 @@ class PointCoverage:
         # (union, intersection, compliment)
         horizon_viewer = kcl.ViewerHalfspace3d(horizon_source)
         # Points are considered to be covered if they are in the horizon AND the FOV
-        total_view = kcl.Intersection([horizon_viewer, fov_viewer])
+        # If there is no FOV, only check horizon
+        if fov_viewer is None:
+            total_view = horizon_viewer
+        else:
+            total_view = kcl.Intersection([horizon_viewer, fov_viewer])
 
         # Get the position of the grid points in the target frame
         target_points_list_gte = [
@@ -657,6 +746,16 @@ class PointCoverage:
         buff_size_coverage = len(times)
 
         preprocessor = None
+        if use_cbpa:
+            if box_source is None:
+                raise ValueError(
+                    "CBPA preprocessor is only supported for circular or rectangular FOVs."
+                )
+            cellgrid = kcl.CellGrid(cbpa_cells)
+            cellgrid.AddPoints(target_points_list_gte)
+            preprocessor = kcl.RangeCovSource(cellgrid, box_source, buff_size)
+            variables.append(preprocessor)
+
         cov_source = kcl.CovSource(
             grid_source, preprocessor, total_view, buff_size_coverage
         )

@@ -13,9 +13,9 @@ from orbitpy.coveragecalculator import CoverageFactory, CoverageType
 
 from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame, SPHERICAL_EARTH_MEAN_RADIUS
-from eosimutils.standardframes import get_lvlh
+from eosimutils.standardframes import LVLHType1FrameHandler
 from eosimutils.framegraph import FrameGraph
-from eosimutils.fieldofview import CircularFieldOfView
+from eosimutils.fieldofview import CircularFieldOfView, OmnidirectionalFieldOfView
 from eosimutils.state import Cartesian3DPositionArray
 
 
@@ -208,20 +208,22 @@ cygnss_stateseries = get_stateseries([cygnss_id], start_date)[0]
 
 # Fill frame graph with transforms for GPS satellites
 registry = FrameGraph()
-gps_frames = []
+gps_fovs = []
 for i in range(len(gps_stateseries)):
     # Create frame graph and add LVLH frame
-    lvlh_frame = ReferenceFrame.add(f"LVLH_GPS_{gps_ids[i]}")
-    att_lvlh, pos_lvlh = get_lvlh(gps_stateseries[i], lvlh_frame)
+    handler = LVLHType1FrameHandler(f"LVLH_GPS_{gps_ids[i]}")
+    att_lvlh, pos_lvlh = handler.get_transform(gps_stateseries[i])
+    lvlh_frame = handler.get_frame()
     registry.add_orientation_transform(att_lvlh)
     from_frame = ReferenceFrame.get("ICRF_EC")
     to_frame = lvlh_frame
     registry.add_pos_transform(from_frame, to_frame, pos_lvlh)
-    gps_frames.append(lvlh_frame)
+    gps_fovs.append(OmnidirectionalFieldOfView(frame=lvlh_frame))
 
 # Fill frame graph with transforms for CYGNSS satellite
-lvlh_cygnss = ReferenceFrame.add("LVLH_CYGNSS")
-att_lvlh_cygnss, pos_lvlh_cygnss = get_lvlh(cygnss_stateseries, lvlh_cygnss)
+handler_cygnss = LVLHType1FrameHandler("LVLH_CYGNSS")
+att_lvlh_cygnss, pos_lvlh_cygnss = handler_cygnss.get_transform(cygnss_stateseries)
+lvlh_cygnss = handler_cygnss.get_frame()
 registry.add_orientation_transform(att_lvlh_cygnss)
 from_frame = ReferenceFrame.get("ICRF_EC")
 to_frame = lvlh_cygnss
@@ -249,7 +251,7 @@ specular_radius = 10
 print("Calculating coverage for target points using circular sensor...")
 start_time = timer()
 coverage = cov.calculate_coverage(
-    points_array, fov, registry, times, gps_frames, specular_radius
+    points_array, fov, registry, times, gps_fovs, specular_radius
 )
 
 # Sum up total coverage time
