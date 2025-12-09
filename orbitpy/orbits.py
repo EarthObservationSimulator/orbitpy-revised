@@ -10,7 +10,7 @@ by using the :class:eosimutils.state.CartesianState class.
 
 import json
 import requests
-from typing import Dict, Tuple, Any, Optional, Type, Callable
+from typing import Dict, Tuple, Any, Optional, Type, Callable, Union
 import numpy as np
 from datetime import datetime
 
@@ -20,6 +20,8 @@ from skyfield.elementslib import (
     mean_anomaly as skyfield_mean_anomaly,
 )
 import spiceypy as spice
+from sgp4.api import Satrec as Sgp4_Satrec
+from sgp4.conveniences import check_satrec as Sgp4_check_satrec
 
 from eosimutils.base import ReferenceFrame, EnumBase
 from eosimutils.state import CartesianState
@@ -680,4 +682,234 @@ class OsculatingElements:
             array_in=state_vec,
             time=self.time,
             frame=self.inertial_frame,
+        )
+
+class Sgp4SatrecOrbitalParameters:
+    """Container for the orbital elements required by ``sgp4.Satrec``.
+
+    All angular values (``inclo``, ``nodeo``, ``argpo``, ``mo``) are stored
+    in **degrees**. ``no_kozai`` is in **degrees per minute**.
+
+    Note that these are mean Keplerian elements in the True Equator, Mean Equinox (TEME) 
+    earth centered inertial frame.
+
+    The epoch is stored as an :class:`~eosimutils.time.AbsoluteDate` object.
+
+    The epoch required for the Satrec object is computed using the function
+    :meth:`_derive_epoch_satrec_repr`.
+
+    References:
+        - https://pypi.org/project/sgp4/#providing-your-own-elements
+    """
+
+    def __init__(
+        self,
+        epoch: AbsoluteDate,
+        ndot: float,
+        nddot: float,
+        bstar: float,
+        inclo: float,
+        nodeo: float,
+        ecco: float,
+        argpo: float,
+        mo: float,
+        no_kozai: float,
+    ) -> None:
+        if not isinstance(epoch, AbsoluteDate):
+            raise TypeError("epoch must be an AbsoluteDate instance")
+
+        self.epoch = epoch
+        self.ndot = float(ndot)
+        self.nddot = float(nddot)
+        self.bstar = float(bstar)        
+        self.inclo = inclo
+        self.nodeo = self._wrap_angle_0_360_deg(nodeo)
+        self.ecco = float(ecco)
+        self.argpo = self._wrap_angle_0_360_deg(argpo)
+        self.mo = self._wrap_angle_0_360_deg(mo)
+        self.no_kozai = float(no_kozai)
+        self.epoch_satrec_repr = self._derive_epoch_satrec_repr(epoch)
+
+    @staticmethod
+    def _wrap_angle_0_360_deg(angle: float) -> float:
+        """Wrap an angle to the range [0, 360) degrees."""
+        try:
+            v = float(angle) % 360.0
+        except Exception:
+            raise TypeError("Angle must be a number")
+        # modulo can return negative for some floats in Python; ensure non-negative
+        if v < 0.0:
+            v += 360.0
+        # treat 360 as 0
+        if v == 360.0:
+            v = 0.0
+        return v
+
+    @staticmethod
+    def compute_no_kozai_from_semi_major_axis(
+        semi_major_axis_km: float, gm_km3_s2: float = GM_EARTH
+    ) -> float:
+        """Compute the Kozai mean motion (`no_kozai`) from semi-major axis.
+
+        The classical Keplerian mean motion is n = sqrt(mu / a^3) [rad/s].
+        This helper returns the value converted to **degrees per minute** to
+        match the `Sgp4SatrecOrbitalParameters.no_kozai` convention used in
+        this module.
+
+        TODO: Verify that the gravity parameter used in SGP4 can be that corresponding
+                to WGS84 and not WGS72. The SGP4 model uses WGS72.
+
+        Args:
+            semi_major_axis_km: Semi-major axis in kilometers.
+            gm_km3_s2: Gravitational parameter in km^3/s^2 (defaults to Earth).
+
+        Returns:
+            float: Mean motion in degrees per minute.
+        """
+        if semi_major_axis_km <= 0.0:
+            raise ValueError("semi_major_axis_km must be positive")
+
+        n_rad_per_s = np.sqrt(gm_km3_s2 / (semi_major_axis_km ** 3))
+        # convert rad/s -> deg/min
+        n_deg_per_min = np.rad2deg(n_rad_per_s) * 60.0
+        return n_deg_per_min
+
+    @classmethod
+    def from_dict(cls, values: Dict[str, Any]) -> "Sgp4SatrecOrbitalParameters":
+        """Instantiate the parameter set from a dictionary.
+
+        Args:
+            values (Dict[str, Any]): Dictionary containing the orbital parameters.
+                Expected keys:
+                - "epoch" (Dict[str, Any]): The epoch as an dictionary for AbsoluteDate.from_dict.
+                - "ndot" (float): Optional. First time derivative of the mean motion (loaded from the TLE, but otherwise ignored).
+                - "nddot" (float): Optional. Second time derivative of the mean motion  (loaded from the TLE, but otherwise ignored).
+                - "bstar" (float): Optional. Ballistic drag coefficient B* (1/earth radii).
+                - "inclo" (float): Inclination in degrees (0 to 180 degrees).
+                - "nodeo" (float): Right Ascension of the Ascending Node in degrees ( 0 to 360 degrees).
+                - "ecco" (float): Eccentricity (dimensionless).
+                - "argpo" (float): Argument of Perigee in degrees (0 to 360 degrees).
+                - "mo" (float): Mean Anomaly in degrees (0 to 360 degrees).
+                - Either "no_kozai" (float): Mean Motion in degrees per minute,
+                  or "sma" (float): semi-major axis in kilometers. 
+                                    If `sma` is provided `no_kozai` will be computed.
+
+        """
+        # Determine no_kozai: accept explicit value or compute from semi-major axis
+        if "no_kozai" in values and values["no_kozai"] is not None:
+            no_kozai_val = float(values["no_kozai"])
+        elif "sma" in values and values["sma"] is not None:
+            sma = float(values["sma"])
+            no_kozai_val = cls.compute_no_kozai_from_semi_major_axis(sma)
+        else:
+            raise KeyError("Either 'no_kozai' or 'sma' (semi-major axis in km) must be provided")
+
+        return cls(
+            epoch=AbsoluteDate.from_dict(values["epoch"]),
+            ndot=float(values.get("ndot", 0.0)),
+            nddot=float(values.get("nddot", 0.0)),
+            bstar=float(values.get("bstar", 0.0)),
+            inclo=float(values["inclo"]),
+            nodeo=float(values["nodeo"]),
+            ecco=float(values["ecco"]),
+            argpo=float(values["argpo"]),
+            mo=float(values["mo"]),
+            no_kozai=no_kozai_val,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize the parameters."""
+        return {
+            "epoch": self.epoch.to_dict(),
+            "ndot": self.ndot,
+            "nddot": self.nddot,
+            "bstar": self.bstar,
+            "inclo": self.inclo,
+            "nodeo": self.nodeo,
+            "ecco": self.ecco,
+            "argpo": self.argpo,
+            "mo": self.mo,
+            "no_kozai": self.no_kozai,
+        }
+
+    @staticmethod
+    def _derive_epoch_satrec_repr(epoch: AbsoluteDate) ->  float:
+        """
+        Compute the epoch representation required by the SGP4 `Satrec` class.
+
+        This method calculates the epoch as the number of days since 1949 December 31 00:00 UT.
+        The calculation is based on the Julian date of the provided epoch, adjusted by subtracting
+        2433281.5 days, as specified in the below webpage.
+            https://pypi.org/project/sgp4/#providing-your-own-elements:
+
+        Args:
+            epoch (AbsoluteDate): The epoch for which the representation is to be computed.
+                It should be an instance of `AbsoluteDate`.
+
+        Returns:
+            float: A float representing the epoch in the format required by the SGP4 `Satrec` class.
+        """
+        julian_date = epoch.to_dict(time_format="JULIAN_DATE", time_scale="UTC")["jd"]
+        return julian_date - 2433281.5
+    
+    def to_sgp4_satrec(self) -> Sgp4_Satrec:
+        """Create and return an `sgp4.api.Satrec` object initialized with
+        the stored orbital parameters.
+
+        'WGS72' gravity model and 'i' (improved) mode are used by default.
+        THe reason for using WGS72 is outlined in:
+            https://pypi.org/project/sgp4/#providing-your-own-elements
+        
+        Returns:
+            Sgp4_Satrec: An instance of `sgp4.api.Satrec` initialized with
+                         the stored orbital parameters.
+        """
+        satrec = Sgp4_Satrec()
+        satrec.sgp4init(
+            'wgs72',  # gravity model WGS-72
+            'i',         # 'a' = old AFSPC mode, 'i' = improved mode
+            0,      # satnum: Satellite number (not used here)
+            self.epoch_satrec_repr, # epoch: days since 1949 December 31 00:00 UT
+            self.bstar, # bstar: drag coefficient (1/earth radii)
+            self.ndot, # ndot: ballistic coefficient (radians/minute^2)
+            self.nddot,  # nddot: mean motion 2nd derivative (radians/minute^3)
+            self.ecco, # ecco: eccentricity
+            np.deg2rad(self.argpo), # argpo: argument of perigee (radians 0..2pi)
+            np.deg2rad(self.inclo), # inclo: inclination (radians 0..pi)
+            np.deg2rad(self.mo), # mo: mean anomaly (radians 0..2pi)
+            np.deg2rad(self.no_kozai),  # no_kozai: mean motion (radians/minute)
+            np.deg2rad(self.nodeo), # nodeo: R.A. of ascending node (radians 0..2pi)
+        )
+        Sgp4_check_satrec(satrec) # validate that the elements are acceptable
+        return satrec
+
+    @classmethod
+    def tle_lines_to_satrec_orbital_parameters(cls, tle_line1: str, tle_line2: str) -> "Sgp4SatrecOrbitalParameters":
+        """Create an instance of `Sgp4SatrecOrbitalParameters` from TLE lines.
+
+        Args:
+            tle_line1 (str): The first line of the TLE.
+            tle_line2 (str): The second line of the TLE.
+        Returns:
+            Sgp4SatrecOrbitalParameters: An instance initialized with
+                                         parameters extracted from the TLE.
+        """
+        satrec = Sgp4_Satrec.twoline2rv(tle_line1, tle_line2)
+        # Extract epoch as AbsoluteDate
+        epoch = AbsoluteDate.from_dict({
+            "time_format": "JULIAN_DATE",
+            "time_scale": "UTC",
+            "jd": satrec.jdsatepoch  + satrec.jdsatepochF,
+        })
+        return cls(
+            epoch=epoch,
+            ndot=satrec.ndot,
+            nddot=satrec.nddot,
+            bstar=satrec.bstar,
+            inclo=np.rad2deg(satrec.inclo),
+            nodeo=np.rad2deg(satrec.nodeo),
+            ecco=satrec.ecco,
+            argpo=np.rad2deg(satrec.argpo),
+            mo=np.rad2deg(satrec.mo),
+            no_kozai=np.rad2deg(satrec.no_kozai),
         )

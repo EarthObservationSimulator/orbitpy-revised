@@ -1,8 +1,10 @@
 """Unit tests for orbitpy.orbits module."""
 
 import unittest
+import os
 import random
 import numpy as np
+import json
 
 from eosimutils.base import ReferenceFrame
 from eosimutils.time import AbsoluteDate
@@ -16,10 +18,10 @@ from orbitpy.orbits import (
     TwoLineElementSet,
     OrbitalMeanElementsMessage,
     OsculatingElements,
+    Sgp4SatrecOrbitalParameters,
     OrbitFactory,
     OrbitType,
 )
-
 
 class TestOrbitFactory(unittest.TestCase):
     """Unit tests for the OrbitFactory class."""
@@ -554,6 +556,131 @@ class TestOsculatingElements(unittest.TestCase):
             cartesian_state_original.time, cartesian_state_converted.time
         )
 
+class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
+    def setUp(self):
+        # common epoch dictionary used in several tests
+        self.epoch_dict = AbsoluteDate.from_dict(
+            {
+                "time_format": "Gregorian_Date",
+                "calendar_date": "2025-01-01T00:00:00",
+                "time_scale": "utc",
+            }
+        ).to_dict()
+
+        # Sample TLE lines (taken from other tests in the repo)
+        self.tle_line1 = (
+            "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997"
+        )
+        self.tle_line2 = (
+            "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
+        )
+
+        # Load example OMMs
+        test_dir = os.path.dirname(__file__)
+        example_path = os.path.join(test_dir, "example_omm_list.json")
+        with open(example_path, "r", encoding="utf8") as fh:
+            self.omm_list = json.load(fh)
+
+    def test_init_requires_absolute_date(self):
+        with self.assertRaises(TypeError):
+            # epoch must be an AbsoluteDate instance
+            Sgp4SatrecOrbitalParameters(
+                epoch="not-a-date",
+                ndot=0.0,
+                nddot=0.0,
+                bstar=0.0,
+                inclo=0.0,
+                nodeo=0.0,
+                ecco=0.0,
+                argpo=0.0,
+                mo=0.0,
+                no_kozai=0.0,
+            )
+
+    def test_wrap_angle_0_360_deg(self):
+        wrap = Sgp4SatrecOrbitalParameters._wrap_angle_0_360_deg
+        self.assertAlmostEqual(wrap(370.0), 10.0)
+        self.assertAlmostEqual(wrap(-10.0), 350.0)
+        self.assertAlmostEqual(wrap(360.0), 0.0)
+        self.assertAlmostEqual(wrap(0.0), 0.0)
+
+    def test_compute_no_kozai_from_semi_major_axis(self):
+        """ Load example OMMs and compare the mean motion derived from
+        MEAN_MOTION and the SEMIMAJOR_AXIS present in the OMM."""
+            
+        for omm in self.omm_list:
+            sma = float(omm.get("SEMIMAJOR_AXIS"))
+            computed_no = Sgp4SatrecOrbitalParameters.compute_no_kozai_from_semi_major_axis(
+                sma
+            )
+            computed_no = computed_no * 1440.0 / 360.0 # convert from deg per minute to revolutions per day
+            expected_no = float(omm.get("MEAN_MOTION"))
+
+            # Compare values. 1e-4 tolerance has been found to be sufficient.
+            self.assertAlmostEqual(expected_no, computed_no, delta=1e-4)
+            #print(f"Computed no_kozai: {computed_no}, Expected no_kozai: {expected_no}")
+
+    def test_tle_lines_to_satrec_orbital_parameters(self):
+        
+        for omm in self.omm_list:
+            tle_line1 = omm.get("TLE_LINE1")
+            tle_line2 = omm.get("TLE_LINE2")
+            params = Sgp4SatrecOrbitalParameters.tle_lines_to_satrec_orbital_parameters(
+                tle_line1, tle_line2
+            )
+            self.assertIsInstance(params, Sgp4SatrecOrbitalParameters)
+            # fields should be populated
+            self.assertIsInstance(params.epoch, AbsoluteDate)
+            expected_epoch = AbsoluteDate.from_dict(
+                {
+                    "time_format": "Gregorian_Date",
+                    "calendar_date": omm.get("EPOCH"),
+                    "time_scale": "utc",
+                }
+            )
+            self.assertAlmostEqual(
+                params.epoch.to_spice_ephemeris_time(), expected_epoch.to_spice_ephemeris_time(), delta=1e-3
+            )
+            #print(f"EPOCH: {params.epoch.to_dict()}, Expected EPOCH: {omm.get('EPOCH')}")
+
+            self.assertIsInstance(params.ndot, float)
+            self.assertAlmostEqual(params.ndot, float(omm.get("MEAN_MOTION_DOT")), delta=1e-6)
+            #print(f"NDOT: {params.ndot}, Expected NDOT: {float(omm.get('MEAN_MOTION_DOT'))}")
+
+            self.assertIsInstance(params.nddot, float)
+            self.assertAlmostEqual(params.nddot, float(omm.get("MEAN_MOTION_DDOT")), delta=1e-6)
+            #print(f"NDDOT: {params.nddot}, Expected NDDOT: {float(omm.get('MEAN_MOTION_DDOT'))}")
+
+            self.assertIsInstance(params.bstar, float)
+            self.assertAlmostEqual(params.bstar, float(omm.get("BSTAR")), delta=1e-8)
+            #print(f"BSTAR: {params.bstar}, Expected BSTAR: {float(omm.get('BSTAR'))}")
+
+            self.assertIsInstance(params.inclo, float)
+            self.assertAlmostEqual(params.inclo, float(omm.get("INCLINATION")), delta=1e-6)
+            #print(f"INCLINATION: {params.inclo}, Expected INCLINATION: {float(omm.get('INCLINATION'))}")
+
+            self.assertIsInstance(params.nodeo, float)
+            self.assertAlmostEqual(params.nodeo, float(omm.get("RA_OF_ASC_NODE")), delta=1e-6)
+            #print(f"RA_OF_ASC_NODE: {params.nodeo}, Expected RA_OF_ASC_NODE: {float(omm.get('RA_OF_ASC_NODE'))}")
+
+            self.assertIsInstance(params.ecco, float)
+            self.assertAlmostEqual(params.ecco, float(omm.get("ECCENTRICITY")), delta=1e-6)
+            #print(f"ECCENTRICITY: {params.ecco}, Expected ECCENTRICITY: {float(omm.get('ECCENTRICITY'))}")
+
+            self.assertIsInstance(params.argpo, float)
+            self.assertAlmostEqual(params.argpo, float(omm.get("ARG_OF_PERICENTER")), delta=1e-6)
+            #print(f"ARG_OF_PERICENTER: {params.argpo}, Expected ARG_OF_PERICENTER: {float(omm.get('ARG_OF_PERICENTER'))}")
+
+            self.assertIsInstance(params.mo, float)
+            self.assertAlmostEqual(params.mo, float(omm.get("MEAN_ANOMALY")), delta=1e-6)
+            #print(f"MEAN_ANOMALY: {params.mo}, Expected MEAN_ANOMALY: {float(omm.get('MEAN_ANOMALY'))}")
+
+            self.assertIsInstance(params.no_kozai, float)
+            self.assertAlmostEqual(params.no_kozai* 1440.0 / 360.0, float(omm.get("MEAN_MOTION")), delta=1e-4)
+            #print(f"NO_KOZAI: {params.no_kozai}, Expected NO_KOZAI: {float(omm.get('MEAN_MOTION'))}")
+
+
+    
 
 if __name__ == "__main__":
     unittest.main()
