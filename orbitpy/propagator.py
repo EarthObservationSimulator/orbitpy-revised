@@ -15,7 +15,7 @@ from eosimutils.base import EnumBase, ReferenceFrame
 from eosimutils.time import AbsoluteDate, AbsoluteDateArray
 from eosimutils.trajectory import StateSeries
 
-from .orbits import TwoLineElementSet, OrbitalMeanElementsMessage
+from .orbits import TwoLineElementSet, OrbitalMeanElementsMessage, Sgp4SatrecOrbitalParameters
 
 NUMBER_OF_SECONDS_IN_A_DAY = 86400.0
 
@@ -150,16 +150,17 @@ class SGP4Propagator:
         self,
         t0: AbsoluteDate,
         duration_days: float,
-        orbit: Union[TwoLineElementSet, OrbitalMeanElementsMessage],
+        orbit: Union[TwoLineElementSet, OrbitalMeanElementsMessage, Sgp4SatrecOrbitalParameters],
     ) -> StateSeries:
         """Propagates the orbit from t0 to t1 using the SGP4 propagator.
 
         Args:
             t0 (AbsoluteDate): Start time for propagation.
             duration_days (float): Duration of propagation in days.
-            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage]):
+            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage, Sgp4SatrecOrbitalParameters]):
                     Orbital specifications to be propagated.
-                    This can be either a TLE set or an Orbital Mean Elements Message.
+                    This can be either a TLE set or an Orbital Mean Elements Message or classical orbital
+                    elements compatible with SGP4.
 
         Returns:
             StateSeries: A StateSeries object containing the propagated trajectory.
@@ -167,63 +168,66 @@ class SGP4Propagator:
         Raises:
             ValueError: If the orbit type is invalid for SGP4 propagation.
         """
+        
+        skyfield_ts = Skyfield_load.timescale()
         if isinstance(orbit, TwoLineElementSet) or isinstance(
             orbit, OrbitalMeanElementsMessage
         ):
-            skyfield_ts = Skyfield_load.timescale()
-
-            skyfield_t0 = t0.to_skyfield_time()
-            skyfield_t1 = (
-                t0 + duration_days * NUMBER_OF_SECONDS_IN_A_DAY
-            ).to_skyfield_time()
-            propagate_time = skyfield_ts.linspace(
-                skyfield_t0,
-                skyfield_t1,
-                num=math.floor(
-                    duration_days * NUMBER_OF_SECONDS_IN_A_DAY / self.step_size
-                )
-                + 1,
-            )
-
             tle = orbit.get_tle_as_tuple()
             skyfield_sat = Skyfield_EarthSatellite(
                 tle[0], tle[1], None, skyfield_ts
             )
-
-            geocentric = skyfield_sat.at(
-                propagate_time
-            )  # in GCRS (ECI) coordinates
-            pos = geocentric.position.km
-            vel = geocentric.velocity.km_per_s
-
-            # Convert Skyfield Time object to AbsoluteDateArray
-            absolute_date_array = AbsoluteDateArray.from_dict(
-                {
-                    "time_format": "Gregorian_Date",
-                    "calendar_date": propagate_time.utc_strftime(
-                        format="%Y-%m-%dT%H:%M:%S"
-                    ),
-                    "time_scale": "utc",
-                }
-            )
-
-            # Define the reference frame. GCRS of Skyfield is considered
-            # equivalent to ReferenceFrame.get("ICRF_EC")
-            # See: https://rhodesmill.org/skyfield/earth-satellites.html#generating-a-satellite-position # pylint: disable=line-too-long
-            reference_frame = ReferenceFrame.get("ICRF_EC")
-
-            # Instantiate the StateSeries object
-            state_series = StateSeries(
-                time=absolute_date_array,
-                data=[
-                    pos.T,
-                    vel.T,
-                ],  # Transpose pos and vel to match StateSeries format
-                frame=reference_frame,
-            )
-            return state_series
-
+        elif isinstance(orbit, Sgp4SatrecOrbitalParameters):
+            # get satrec object from Sgp4SatrecOrbitalParameters
+            satrec = orbit.get_sgp4_satrec()
+            skyfield_sat = Skyfield_EarthSatellite.from_satrec(satrec, skyfield_ts) # wrap into a Skyfield object
         else:
             raise ValueError(
                 "Invalid orbit type for SGP4 propagation. Must be TLE or mean elements message."
             )
+
+        skyfield_t0 = t0.to_skyfield_time()
+        skyfield_t1 = (
+            t0 + duration_days * NUMBER_OF_SECONDS_IN_A_DAY
+        ).to_skyfield_time()
+        propagate_time = skyfield_ts.linspace(
+            skyfield_t0,
+            skyfield_t1,
+            num=math.floor(
+                duration_days * NUMBER_OF_SECONDS_IN_A_DAY / self.step_size
+            )
+            + 1,
+        )
+
+        geocentric = skyfield_sat.at(
+            propagate_time
+        )  # in GCRS (ECI) coordinates
+        pos = geocentric.position.km
+        vel = geocentric.velocity.km_per_s
+
+        # Convert Skyfield Time object to AbsoluteDateArray
+        absolute_date_array = AbsoluteDateArray.from_dict(
+            {
+                "time_format": "Gregorian_Date",
+                "calendar_date": propagate_time.utc_strftime(
+                    format="%Y-%m-%dT%H:%M:%S"
+                ),
+                "time_scale": "utc",
+            }
+        )
+
+        # Define the reference frame. GCRS of Skyfield is considered
+        # equivalent to ReferenceFrame.get("ICRF_EC")
+        # See: https://rhodesmill.org/skyfield/earth-satellites.html#generating-a-satellite-position # pylint: disable=line-too-long
+        reference_frame = ReferenceFrame.get("ICRF_EC")
+
+        # Instantiate the StateSeries object
+        state_series = StateSeries(
+            time=absolute_date_array,
+            data=[
+                pos.T,
+                vel.T,
+            ],  # Transpose pos and vel to match StateSeries format
+            frame=reference_frame,
+        )
+        return state_series

@@ -689,7 +689,8 @@ class Sgp4SatrecOrbitalParameters:
     """Container for the orbital elements required by ``sgp4.Satrec``.
 
     All angular values (``inclo``, ``nodeo``, ``argpo``, ``mo``) are stored
-    in **degrees**. ``no_kozai`` is in **degrees per minute**.
+    in **degrees**. ``no_kozai`` is in **revolutions per day**.
+    The units are chosen to match those used in the OMM format.
 
     Note that these are mean Keplerian elements in the True Equator, Mean Equinox (TEME) 
     earth centered inertial frame.
@@ -765,7 +766,7 @@ class Sgp4SatrecOrbitalParameters:
             gm_km3_s2: Gravitational parameter in km^3/s^2 (defaults to Earth).
 
         Returns:
-            float: Mean motion in degrees per minute.
+            float: Mean motion in revolutions per day.
         """
         if semi_major_axis_km <= 0.0:
             raise ValueError("semi_major_axis_km must be positive")
@@ -773,7 +774,9 @@ class Sgp4SatrecOrbitalParameters:
         n_rad_per_s = np.sqrt(gm_km3_s2 / (semi_major_axis_km ** 3))
         # convert rad/s -> deg/min
         n_deg_per_min = np.rad2deg(n_rad_per_s) * 60.0
-        return n_deg_per_min
+        # convert deg/min to revolutions-per-day
+        n_rev_per_day = n_deg_per_min * 1440.0 / 360.0
+        return n_rev_per_day
 
     @classmethod
     def from_dict(cls, values: Dict[str, Any]) -> "Sgp4SatrecOrbitalParameters":
@@ -791,7 +794,7 @@ class Sgp4SatrecOrbitalParameters:
                 - "ecco" (float): Eccentricity (dimensionless).
                 - "argpo" (float): Argument of Perigee in degrees (0 to 360 degrees).
                 - "mo" (float): Mean Anomaly in degrees (0 to 360 degrees).
-                - Either "no_kozai" (float): Mean Motion in degrees per minute,
+                - Either "no_kozai" (float): Mean Motion in revolutions per day,
                   or "sma" (float): semi-major axis in kilometers. 
                                     If `sma` is provided `no_kozai` will be computed.
 
@@ -866,6 +869,7 @@ class Sgp4SatrecOrbitalParameters:
                          the stored orbital parameters.
         """
         satrec = Sgp4_Satrec()
+        no_kozai_rad_per_min = np.deg2rad(self.no_kozai * 360.0) / 1440.0  # rev/day -> rad/min
         satrec.sgp4init(
             Sgp4_WGS72,  # gravity model WGS-72
             'i',         # 'a' = old AFSPC mode, 'i' = improved mode
@@ -878,7 +882,7 @@ class Sgp4SatrecOrbitalParameters:
             np.deg2rad(self.argpo), # argpo: argument of perigee (radians 0..2pi)
             np.deg2rad(self.inclo), # inclo: inclination (radians 0..pi)
             np.deg2rad(self.mo), # mo: mean anomaly (radians 0..2pi)
-            np.deg2rad(self.no_kozai),  # no_kozai: mean motion (radians/minute)
+            no_kozai_rad_per_min,  # no_kozai: mean motion (radians/minute)
             np.deg2rad(self.nodeo), # nodeo: R.A. of ascending node (radians 0..2pi)
         )
         Sgp4_check_satrec(satrec) # validate that the elements are acceptable
@@ -912,5 +916,5 @@ class Sgp4SatrecOrbitalParameters:
             ecco=satrec.ecco,
             argpo=np.rad2deg(satrec.argpo),
             mo=np.rad2deg(satrec.mo),
-            no_kozai=np.rad2deg(satrec.no_kozai),
+            no_kozai=np.rad2deg(satrec.no_kozai)*1440.0/360.0,  # rad/min -> rev/day
         )

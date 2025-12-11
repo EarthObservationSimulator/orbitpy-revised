@@ -587,7 +587,6 @@ class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
             computed_no = Sgp4SatrecOrbitalParameters.compute_no_kozai_from_semi_major_axis(
                 sma
             )
-            computed_no = computed_no * 1440.0 / 360.0 # convert from deg per minute to revolutions per day
             expected_no = float(omm.get("MEAN_MOTION"))
 
             # Compare values. 1e-4 tolerance has been found to be sufficient.
@@ -650,8 +649,8 @@ class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
             #print(f"MEAN_ANOMALY: {params.mo}, Expected MEAN_ANOMALY: {float(omm.get('MEAN_ANOMALY'))}")
 
             self.assertIsInstance(params.no_kozai, float)
-            self.assertAlmostEqual(params.no_kozai* 1440.0 / 360.0, float(omm.get("MEAN_MOTION")), delta=1e-4)
             #print(f"NO_KOZAI: {params.no_kozai}, Expected NO_KOZAI: {float(omm.get('MEAN_MOTION'))}")
+            self.assertAlmostEqual(params.no_kozai, float(omm.get("MEAN_MOTION")), delta=1e-4)
 
     def test_get_sgp4_satrec(self):
         values = {
@@ -689,7 +688,7 @@ class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
         self.assertAlmostEqual(satrec.ecco, 0.001)
         self.assertAlmostEqual(np.rad2deg(satrec.argpo), 170.0)
         self.assertAlmostEqual(np.rad2deg(satrec.mo), 40.0)
-        self.assertAlmostEqual(np.rad2deg(satrec.no_kozai), 15.0)
+        self.assertAlmostEqual(np.rad2deg(satrec.no_kozai) * 1440.0 / 360.0, 15.0)
 
     def test_from_dict_with_sma_and_to_dict(self):
         values = {
