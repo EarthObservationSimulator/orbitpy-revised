@@ -288,7 +288,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -330,7 +330,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -376,7 +376,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -418,7 +418,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -464,7 +464,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -506,7 +506,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
@@ -551,7 +551,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -615,7 +615,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
@@ -681,7 +681,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
@@ -728,7 +728,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
@@ -798,7 +798,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
@@ -868,7 +868,7 @@ class STKValidation(unittest.TestCase):
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
         orbitpycov_cbpa = cov.calculate_coverage(
-            target_point_array,fov=fov,frame_graph=registry,times=times, cbpa_cells=10000)
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
         
         self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
