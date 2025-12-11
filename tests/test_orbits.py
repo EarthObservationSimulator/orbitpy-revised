@@ -558,15 +558,6 @@ class TestOsculatingElements(unittest.TestCase):
 
 class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
     def setUp(self):
-        # common epoch dictionary used in several tests
-        self.epoch_dict = AbsoluteDate.from_dict(
-            {
-                "time_format": "Gregorian_Date",
-                "calendar_date": "2025-01-01T00:00:00",
-                "time_scale": "utc",
-            }
-        ).to_dict()
-
         # Sample TLE lines (taken from other tests in the repo)
         self.tle_line1 = (
             "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997"
@@ -574,28 +565,11 @@ class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
         self.tle_line2 = (
             "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
         )
-
         # Load example OMMs
         test_dir = os.path.dirname(__file__)
         example_path = os.path.join(test_dir, "example_omm_list.json")
         with open(example_path, "r", encoding="utf8") as fh:
             self.omm_list = json.load(fh)
-
-    def test_init_requires_absolute_date(self):
-        with self.assertRaises(TypeError):
-            # epoch must be an AbsoluteDate instance
-            Sgp4SatrecOrbitalParameters(
-                epoch="not-a-date",
-                ndot=0.0,
-                nddot=0.0,
-                bstar=0.0,
-                inclo=0.0,
-                nodeo=0.0,
-                ecco=0.0,
-                argpo=0.0,
-                mo=0.0,
-                no_kozai=0.0,
-            )
 
     def test_wrap_angle_0_360_deg(self):
         wrap = Sgp4SatrecOrbitalParameters._wrap_angle_0_360_deg
@@ -679,7 +653,100 @@ class TestSgp4SatrecOrbitalParameters(unittest.TestCase):
             self.assertAlmostEqual(params.no_kozai* 1440.0 / 360.0, float(omm.get("MEAN_MOTION")), delta=1e-4)
             #print(f"NO_KOZAI: {params.no_kozai}, Expected NO_KOZAI: {float(omm.get('MEAN_MOTION'))}")
 
+    def test_get_sgp4_satrec(self):
+        values = {
+            "epoch": {
+                "time_format": "JULIAN_DATE",
+                "time_scale": "UTC",
+                "jd": 2461000.370671,
+            },
+            "ndot": -0.00000049,
+            "nddot": 0.0,
+            "bstar": 0.000015,
+            "inclo": 98.0,
+            "nodeo": 310.0,
+            "ecco": 0.001,
+            "argpo": 170.0,
+            "mo": 40.0,
+            "no_kozai": 15.0,
+        }
+        saterec_params = Sgp4SatrecOrbitalParameters.from_dict(values)
+        satrec = saterec_params.get_sgp4_satrec()
 
+        # satrec should have an epoch attribute matching the derived representation
+        satrec.jdsatepoch  + satrec.jdsatepochF
+        satrec_epoch = AbsoluteDate.from_dict({
+            "time_format": "JULIAN_DATE",
+            "time_scale": "UTC",
+            "jd": satrec.jdsatepoch  + satrec.jdsatepochF,
+        })
+        self.assertAlmostEqual(satrec_epoch, AbsoluteDate.from_dict({"time_format": "JULIAN_DATE", "time_scale": "UTC", "jd": 2461000.370671}))
+        self.assertAlmostEqual(satrec.ndot, -0.00000049)
+        self.assertAlmostEqual(satrec.nddot, 0.0)
+        self.assertAlmostEqual(satrec.bstar, 0.000015)
+        self.assertAlmostEqual(np.rad2deg(satrec.inclo), 98.0)
+        self.assertAlmostEqual(np.rad2deg(satrec.nodeo), 310.0)
+        self.assertAlmostEqual(satrec.ecco, 0.001)
+        self.assertAlmostEqual(np.rad2deg(satrec.argpo), 170.0)
+        self.assertAlmostEqual(np.rad2deg(satrec.mo), 40.0)
+        self.assertAlmostEqual(np.rad2deg(satrec.no_kozai), 15.0)
+
+    def test_from_dict_with_sma_and_to_dict(self):
+        values = {
+            "epoch": {
+                "time_format": "GREGORIAN_DATE",
+                "time_scale": "UTC",
+                "calendar_date": "2025-12-31T12:00:00.000",
+            },
+            "ndot": 0.0,
+            "nddot": 0.0,
+            "bstar": 0.0,
+            "inclo": 98.1921,
+            "nodeo": 177.4890,
+            "ecco": 0.0001161,
+            "argpo": 87.5064,
+            "mo": 272.6267,
+            "sma": 7000.0,
+        }
+
+        params = Sgp4SatrecOrbitalParameters.from_dict(values)
+        self.assertIsInstance(params, Sgp4SatrecOrbitalParameters)
+        # no_kozai should be computed from sma
+        expected_no = Sgp4SatrecOrbitalParameters.compute_no_kozai_from_semi_major_axis(
+            7000.0
+        )
+        self.assertAlmostEqual(params.no_kozai, expected_no)
+
+        # to_dict roundtrip contains the same keys and numeric values
+        d = params.to_dict()
+        for k in ("epoch", "inclo", "nodeo", "ecco", "argpo", "mo", "no_kozai"):
+            self.assertIn(k, d)
+
+        # Compare epoch dicts exactly and numeric values with tolerances
+        self.assertEqual(d["epoch"], values["epoch"])
+        self.assertAlmostEqual(d["inclo"], values["inclo"])
+        self.assertAlmostEqual(d["nodeo"], values["nodeo"])
+        self.assertAlmostEqual(d["ecco"], values["ecco"])
+        self.assertAlmostEqual(d["argpo"], values["argpo"])
+        self.assertAlmostEqual(d["mo"], values["mo"])
+        # no_kozai should match the computed expected_no
+        self.assertAlmostEqual(d["no_kozai"], expected_no)
+
+    def test_init_requires_absolute_date(self):
+        with self.assertRaises(TypeError):
+            # epoch must be an AbsoluteDate instance
+            Sgp4SatrecOrbitalParameters(
+                epoch="not-a-date",
+                ndot=0.0,
+                nddot=0.0,
+                bstar=0.0,
+                inclo=0.0,
+                nodeo=0.0,
+                ecco=0.0,
+                argpo=0.0,
+                mo=0.0,
+                no_kozai=0.0,
+            )
     
 
 if __name__ == "__main__":

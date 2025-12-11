@@ -21,6 +21,7 @@ from skyfield.elementslib import (
 )
 import spiceypy as spice
 from sgp4.api import Satrec as Sgp4_Satrec
+from sgp4.api import WGS72 as Sgp4_WGS72
 from sgp4.conveniences import check_satrec as Sgp4_check_satrec
 
 from eosimutils.base import ReferenceFrame, EnumBase
@@ -852,7 +853,7 @@ class Sgp4SatrecOrbitalParameters:
         julian_date = epoch.to_dict(time_format="JULIAN_DATE", time_scale="UTC")["jd"]
         return julian_date - 2433281.5
     
-    def to_sgp4_satrec(self) -> Sgp4_Satrec:
+    def get_sgp4_satrec(self) -> Sgp4_Satrec:
         """Create and return an `sgp4.api.Satrec` object initialized with
         the stored orbital parameters.
 
@@ -866,7 +867,7 @@ class Sgp4SatrecOrbitalParameters:
         """
         satrec = Sgp4_Satrec()
         satrec.sgp4init(
-            'wgs72',  # gravity model WGS-72
+            Sgp4_WGS72,  # gravity model WGS-72
             'i',         # 'a' = old AFSPC mode, 'i' = improved mode
             0,      # satnum: Satellite number (not used here)
             self.epoch_satrec_repr, # epoch: days since 1949 December 31 00:00 UT
