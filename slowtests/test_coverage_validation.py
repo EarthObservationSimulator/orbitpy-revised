@@ -5,7 +5,8 @@ orbit type (circular, elliptical)/(inclined, equatorial), sensor type (rectangul
 pointing direction (nadir/off nadir), and grid (global, US, equatorial). Thetrajectory data is read
 from the STK output file directly, so these tests cover the frame transformations and geometry
 calculations (point in FOV checks). To compare coverage output to orbitpy, the STK result is
-discretized. 
+discretized. Also tests output for CBPA (that it is consistent with non CBPA) and polygonal FOVs
+(that it passes the same metric thresholds as rectangular sensor).
 
 """
 
@@ -287,6 +288,11 @@ class STKValidation(unittest.TestCase):
             target_point_array,fov=fov,frame_graph=registry,times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -325,10 +331,15 @@ class STKValidation(unittest.TestCase):
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
+
         fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
-
+        
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
@@ -365,6 +376,11 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -402,11 +418,17 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
+
 
         fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
-
+        
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
 
@@ -442,6 +464,11 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -480,6 +507,11 @@ class STKValidation(unittest.TestCase):
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
+        
         fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
@@ -515,15 +547,20 @@ class STKValidation(unittest.TestCase):
 
         # Calculate point coverage
         target_point_array = create_cartesian_position_array_from_csv(grid_path)
-        circ_coverage = cov.calculate_coverage(
+        orbitpycov = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
         if self.plot_tests:
-            plot_results(circ_coverage, stkcov, target_point_array)
+            plot_results(orbitpycov, stkcov, target_point_array)
 
-        self.get_metrics(circ_coverage, stkcov, 7)
+        self.get_metrics(orbitpycov, stkcov, 7)
 
     def test_8(self):
         """Test a sun-sync orbit on an equatorial grid with a 20 degree diameter pointed conical
@@ -578,6 +615,11 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
 
         if self.plot_tests:
             plot_results(orbitpycov, stkcov, target_point_array)
@@ -633,8 +675,6 @@ class STKValidation(unittest.TestCase):
             True,
         )
 
-        fov = PolygonFieldOfView.from_rectangular(fov)
-
         # Calculate point coverage
         target_point_array = create_cartesian_position_array_from_csv(grid_path)
         orbitpycov = cov.calculate_coverage(
@@ -642,6 +682,12 @@ class STKValidation(unittest.TestCase):
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
+        
+        fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
 
@@ -682,6 +728,11 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
         fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(
@@ -748,6 +799,11 @@ class STKValidation(unittest.TestCase):
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
         
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
+        
         fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(
             target_point_array, fov=fov, frame_graph=registry, times=times)
@@ -812,6 +868,11 @@ class STKValidation(unittest.TestCase):
             target_point_array, fov=fov, frame_graph=registry, times=times)
         stkcov = ContinuousCoverageGP.from_stk(
             accesses_path, target_point_array).to_discrete(times[0], 1.0, len(times))
+        
+        orbitpycov_cbpa = cov.calculate_coverage(
+            target_point_array,fov=fov,frame_graph=registry,times=times, use_cbpa=True)
+        
+        self.assertEqual(orbitpycov, orbitpycov_cbpa)
         
         fov = PolygonFieldOfView.from_rectangular(fov)
         orbitpycov_poly = cov.calculate_coverage(

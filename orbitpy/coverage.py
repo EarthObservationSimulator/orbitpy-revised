@@ -59,6 +59,15 @@ class DiscreteCoverageTP:
         self.coverage = coverage
         self.grid_points = grid_points
 
+    def __eq__(self, other):
+        if not isinstance(other, DiscreteCoverageTP):
+            return NotImplemented
+        return (
+            self.time == other.time and
+            self.coverage == other.coverage and
+            self.grid_points == other.grid_points
+        )
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Serializes this object to a dictionary.
