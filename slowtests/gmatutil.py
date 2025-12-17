@@ -66,10 +66,14 @@ def parse_gmat_contact_file(filepath):
     with open(filepath, "r") as f:
         lines = f.readlines()
     # Find the line index where the table starts (after header lines)
+    table_start = 0
     for i, line in enumerate(lines):
         if line.strip().startswith("Start Time"):
             table_start = i + 1
             break
+    if table_start == 0:
+        return []  # No contacts found
+
     # Parse each data line until an empty line or non-data line
     for line in lines[table_start:]:
         parts = line.strip().split()

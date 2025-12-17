@@ -1,7 +1,11 @@
 """ Validation tests for the contactfinder module using GMAT-generated data.
-Maximum deviation in contact interval start and stop times were found to be within 14 seconds.
+Maximum deviation in contact interval start and stop times were found to be within 14 seconds for the NOAA-20 satellite,
+and 32.5 seconds for the CYGFM-01 satellite.
 This is likely due to the different methods used by GMAT (continuous domain) 
 and OrbitPy's ElevationAwareContactFinder (computation at discrete times).
+However, in the GMAT simulations, the maximum step-size in the trajectory (state) computation was 10 seconds 
+and in the contact interval computation, the step size was 10 seconds. 
+Errors greater than 20 seconds are puzzling.
 """
 
 import os
@@ -24,18 +28,32 @@ class TestElevationAwareContactFinder(unittest.TestCase):
     def setUp(self):
 
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.gmat_data_dir = os.path.join(self.script_dir, "gmat")
+        self.noaa_dir = os.path.join(self.gmat_data_dir, "noaa20_viirs")
+        self.cygfm01_dir = os.path.join(self.gmat_data_dir, "cygfm01")
 
         self.elevation_contact_finder = ElevationAwareContactFinder()
         self.frame_graph = FrameGraph()
         
-        if "noaa_trajectory.pkl" in os.listdir():
+        # Load NOAA-20 trajectory
+        if "noaa_trajectory.pkl" in os.listdir(self.noaa_dir):
             print("Loading cached noaa_trajectory.pkl")
-            with open("noaa_trajectory.pkl", "rb") as f:
+            with open(os.path.join(self.noaa_dir, "noaa_trajectory.pkl"), "rb") as f:
                 self.noaa_trajectory = pickle.load(f)
         else:
-            self.noaa_trajectory = parse_gmat_state_file(os.path.join(self.script_dir, "gmat/noaa20_viirs/Cartesian.txt"))
-            with open("noaa_trajectory.pkl", "wb") as f:
+            self.noaa_trajectory = parse_gmat_state_file(os.path.join(self.noaa_dir, "Cartesian.txt"))
+            with open(os.path.join(self.noaa_dir, "noaa_trajectory.pkl"), "wb") as f:
                 pickle.dump(self.noaa_trajectory, f, protocol=pickle.HIGHEST_PROTOCOL)
+        
+        # Load CYGFM-01 trajectory
+        if "cygfm01_trajectory.pkl" in os.listdir(self.cygfm01_dir):
+            print("Loading cached cygfm01_trajectory.pkl")
+            with open(os.path.join(self.cygfm01_dir, "cygfm01_trajectory.pkl"), "rb") as f:
+                self.cygfm01_trajectory = pickle.load(f)
+        else:
+            self.cygfm01_trajectory = parse_gmat_state_file(os.path.join(self.cygfm01_dir, "Cartesian.txt"))
+            with open(os.path.join(self.cygfm01_dir, "cygfm01_trajectory.pkl"), "wb") as f:
+                pickle.dump(self.cygfm01_trajectory, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         # define the ground-stations
         self.station_1 = GroundStation.from_dict({
@@ -88,13 +106,13 @@ class TestElevationAwareContactFinder(unittest.TestCase):
             "min_elevation_angle": 7
         })
 
-    def test_elevation_contact_finder_with_station_1(self):
-        """ Compare GMAT ContactLocator results with ElevationAwareContactFinder results.
+    def test_elevation_contact_finder_with_station_1_noaa20(self):
+        """ Compare GMAT ContactLocator results with ElevationAwareContactFinder results for NOAA-20.
         Errors are expected since the ElevationAwareContactFinder calculated the contacts at the
         trajectory time-steps only and evaluates the contact interval, whereas GMAT possibly 
         uses a continuous technique to find more accurate contact times.
         """
-        gmat_contacts = parse_gmat_contact_file(os.path.join(self.script_dir, "gmat/noaa20_viirs/ContactLocator1.txt"))
+        gmat_contacts = parse_gmat_contact_file(os.path.join(self.noaa_dir, "ContactLocator1.txt"))
 
         result = self.elevation_contact_finder.execute(
             frame_graph=self.frame_graph,
@@ -119,8 +137,8 @@ class TestElevationAwareContactFinder(unittest.TestCase):
                 delta=10  # allow up to 10 seconds difference
             )
 
-    def test_elevation_contact_finder_with_other_stations(self):
-            """ Compare GMAT ContactLocator results with ElevationAwareContactFinder results.
+    def test_elevation_contact_finder_with_other_stations_noaa20(self):
+            """ Compare GMAT ContactLocator results with ElevationAwareContactFinder results for NOAA-20.
             Errors are expected since the ElevationAwareContactFinder calculated the contacts at the
             trajectory time-steps only and evaluates the contact interval, whereas GMAT possibly 
             uses a continuous technique to find more accurate contact times.
@@ -136,9 +154,9 @@ class TestElevationAwareContactFinder(unittest.TestCase):
             ]:
                 with self.subTest(station=station.name):
                     gmat_contacts = parse_gmat_contact_file(
-                        os.path.join(self.script_dir, f"gmat/noaa20_viirs/ContactLocator{station.name[-1]}.txt")
+                        os.path.join(self.noaa_dir, f"ContactLocator{station.name[-1]}.txt")
                     )
-                    print(f"Testing station: {station.name}")
+                    print(f"Testing NOAA-20 station: {station.name}")
                     result = self.elevation_contact_finder.execute(
                         frame_graph=self.frame_graph,
                         observer_state=station.geographic_position,
@@ -150,16 +168,94 @@ class TestElevationAwareContactFinder(unittest.TestCase):
 
                     self.assertEqual(len(gmat_contacts), len(result.contact_intervals())) # match number of contact intervals
 
-                    for gmat_contact_item, orbitpy_contact_item in zip(gmat_contacts, result.contact_intervals()):
+                    for i, (gmat_contact_item, orbitpy_contact_item) in enumerate(zip(gmat_contacts, result.contact_intervals())):
                         self.assertAlmostEqual(
                             gmat_contact_item[0].to_spice_ephemeris_time(),
                             orbitpy_contact_item[0].to_spice_ephemeris_time(),
-                            delta=14  # allow up to 14 seconds difference
+                            delta=14,  # allow up to 14 seconds difference
+                            msg=f"Station: {station.name}, # contact: {i+1}"
                         )
                         self.assertAlmostEqual(
                             gmat_contact_item[1].to_spice_ephemeris_time(),
                             orbitpy_contact_item[1].to_spice_ephemeris_time(),
-                            delta=14  # allow up to 14 seconds difference
+                            delta=14,  # allow up to 14 seconds difference
+                            msg=f"Station: {station.name}, # contact: {i+1}"
+                        )
+
+    def test_elevation_contact_finder_with_station_1_cygfm01(self):
+        """ Compare GMAT ContactLocator results with ElevationAwareContactFinder results for CYGFM-01.
+        Errors are expected since the ElevationAwareContactFinder calculated the contacts at the
+        trajectory time-steps only and evaluates the contact interval, whereas GMAT possibly 
+        uses a continuous technique to find more accurate contact times.
+        """
+        gmat_contacts = parse_gmat_contact_file(os.path.join(self.cygfm01_dir, "ContactLocator1.txt"))
+
+        result = self.elevation_contact_finder.execute(
+            frame_graph=self.frame_graph,
+            observer_state=self.station_1.geographic_position,
+            target_state=self.cygfm01_trajectory,
+            min_elevation_angle=self.station_1.min_elevation_angle_deg,
+        )
+
+        self.assertIsInstance(result, ContactInfo)
+
+        self.assertEqual(len(gmat_contacts), len(result.contact_intervals())) # match number of contact intervals
+
+        for gmat_contact_item, orbitpy_contact_item in zip(gmat_contacts, result.contact_intervals()):
+            self.assertAlmostEqual(
+                gmat_contact_item[0].to_spice_ephemeris_time(),
+                orbitpy_contact_item[0].to_spice_ephemeris_time(),
+                delta=10  # allow up to 10 seconds difference
+            )
+            self.assertAlmostEqual(
+                gmat_contact_item[1].to_spice_ephemeris_time(),
+                orbitpy_contact_item[1].to_spice_ephemeris_time(),
+                delta=10  # allow up to 10 seconds difference
+            )
+
+    def test_elevation_contact_finder_with_other_stations_cygfm01(self):
+            """ Compare GMAT ContactLocator results with ElevationAwareContactFinder results for CYGFM-01.
+            Errors are expected since the ElevationAwareContactFinder calculated the contacts at the
+            trajectory time-steps only and evaluates the contact interval, whereas GMAT possibly 
+            uses a continuous technique to find more accurate contact times.
+            """
+            
+            for station in [
+                self.station_2,
+                self.station_3,
+                self.station_4,
+                self.station_5,
+                self.station_6,
+                self.station_7,
+            ]:
+                with self.subTest(station=station.name):
+                    gmat_contacts = parse_gmat_contact_file(
+                        os.path.join(self.cygfm01_dir, f"ContactLocator{station.name[-1]}.txt")
+                    )
+                    print(f"Testing CYGFM-01 station: {station.name}")
+                    result = self.elevation_contact_finder.execute(
+                        frame_graph=self.frame_graph,
+                        observer_state=station.geographic_position,
+                        target_state=self.cygfm01_trajectory,
+                        min_elevation_angle=station.min_elevation_angle_deg,
+                    )
+
+                    self.assertIsInstance(result, ContactInfo)
+
+                    self.assertEqual(len(gmat_contacts), len(result.contact_intervals())) # match number of contact intervals
+
+                    for i, (gmat_contact_item, orbitpy_contact_item) in enumerate(zip(gmat_contacts, result.contact_intervals())):
+                        self.assertAlmostEqual(
+                            gmat_contact_item[0].to_spice_ephemeris_time(),
+                            orbitpy_contact_item[0].to_spice_ephemeris_time(),
+                            delta=32.5,  # allow up to 32.5 seconds difference,
+                            msg=f"Station: {station.name}, # contact: {i+1}"
+                        )
+                        self.assertAlmostEqual(
+                            gmat_contact_item[1].to_spice_ephemeris_time(),
+                            orbitpy_contact_item[1].to_spice_ephemeris_time(),
+                            delta=27,  # allow up to 27 seconds difference
+                            msg=f"Station: {station.name}, # contact: {i+1}"
                         )
 
 if __name__ == "__main__":
