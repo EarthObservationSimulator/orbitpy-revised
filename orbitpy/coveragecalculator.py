@@ -124,7 +124,7 @@ class SpecularCoverage:
     def calculate_coverage(
         self,
         target_point_array: Cartesian3DPositionArray,
-        fov: CircularFieldOfView,
+        fov: Union[CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView],
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
         transmitters: List[OmnidirectionalFieldOfView],
@@ -149,8 +149,8 @@ class SpecularCoverage:
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
-            fov (CircularFieldOfView): The field of view to use for
-                coverage calculation.
+            fov (Union[CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView]):
+                The field of view to use for coverage calculation.
             frame_graph (FrameGraph): The frame graph containing the necessary transformations
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
@@ -291,6 +291,80 @@ class SpecularCoverage:
 
             # Add variables to list
             variables.append(boresight_target_source)
+            variables.append(fov_source)
+        elif isinstance(fov, RectangularFieldOfView):
+            deg2rad = math.pi / 180.0
+            up_angle_rad = (
+                fov.ref_angle * 2.0 * deg2rad
+            )  # convert half angle to full to match kcl
+            right_angle_rad = (
+                fov.cross_angle * 2.0 * deg2rad
+            )  # convert half angle to full to match kcl
+            right_fov = np.cross(fov.boresight, fov.ref_vector)
+            right_fov_gte = gte.Vector3d(right_fov)
+            up_fov_gte = gte.Vector3d(fov.ref_vector)
+
+            # First, define the "up" and "right" vectors in the FOV frame as constant sources.
+            # These orthogonal vectors define the first and second basis vectors for the FOV image
+            # plane.
+            up_fov_source = kcl.ConstantSourceVector3d(up_fov_gte)
+            right_fov_source = kcl.ConstantSourceVector3d(right_fov_gte)
+
+            # Define sources which transform up and right vectors from fov frame to target frame
+            # These are Variable objects so they must be added to the variables list to be updated.
+            up_target_source = kcl.TransformedVector3dSource(
+                up_fov_source, fov_to_target_source, buff_size
+            )
+            right_target_source = kcl.TransformedVector3dSource(
+                right_fov_source, fov_to_target_source, buff_size
+            )
+
+            # Define constant sources for the FOV angles about the up and right vectors
+            right_angle_source = kcl.ConstantSourced(right_angle_rad)
+            up_angle_source = kcl.ConstantSourced(up_angle_rad)
+
+            # Define a source which builds a rectangle object using the FOV position, up and right
+            # unit vectors, and FOV angles.
+            # This is a Variable object so it must be added to the variables list to be updated.
+            fov_source = kcl.VectorAngleRectViewSource(
+                pos_fov_target_source,
+                up_target_source,
+                right_target_source,
+                up_angle_source,
+                right_angle_source,
+                buff_size,
+            )
+
+            # Define a Viewer object for the FOV shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
+            fov_viewer = kcl.ViewerRectView3d(fov_source)
+
+            # Add variables to list
+            variables.append(up_target_source)
+            variables.append(right_target_source)
+            variables.append(fov_source)
+        elif isinstance(fov, PolygonFieldOfView):
+
+            # Define the polygon vertices and interior point in the FOV frame
+            vertices_fov = [gte.Vector3d(v) for v in fov.boundary_corners]
+            interior_fov = gte.Vector3d(fov.boresight)
+
+            # Define a source which builds a spherical polygon object using the FOV position,
+            # polygon vertices and interior point.
+            # This is a Variable object so it must be added to the variables list to be updated.
+            fov_source = kcl.SphericalPolySource(
+                vertices_fov,
+                interior_fov,
+                pos_fov_target_source,
+                fov_to_target_source,
+                buff_size,
+            )
+
+            # Define a Viewer object for the polygon shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
+            fov_viewer = kcl.ViewerSphericalPolygond(fov_source)
+
+            # Add variables to list
             variables.append(fov_source)
         else:
             raise ValueError("Unsupported field of view type.")
