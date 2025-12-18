@@ -20,8 +20,8 @@ import GeometricTools as gte
 
 
 def get_specular_trajectory(
-    transmitter: StateSeries,
-    receiver: StateSeries,
+    transmitter_states_itrf: StateSeries,
+    receiver_states_itrf: StateSeries,
     times: AbsoluteDateArray,
     surface: SurfaceType = SurfaceType.WGS84,
 ) -> PositionSeries:
@@ -33,8 +33,8 @@ def get_specular_trajectory(
     line of sight) will be stored as NaN vectors in the PositionSeries.
 
     Args:
-        transmitter (StateSeries): The GNSS satellite trajectory in ITRF frame.
-        receiver (StateSeries): The Earth observation satellite trajectory in ITRF frame.
+        transmitter_states_itrf (StateSeries): The GNSS satellite trajectory in ITRF frame.
+        receiver_states_itrf (StateSeries): The Earth observation satellite trajectory in ITRF frame.
         times (AbsoluteDateArray): Times for which to compute specular point.
 
     Returns:
@@ -50,8 +50,8 @@ def get_specular_trajectory(
     tol = 1e-10
     max_iter = 20
 
-    transmitter_pos = transmitter.at(times)[0]
-    receiver_pos = receiver.at(times)[0]
+    transmitter_pos = transmitter_states_itrf.at(times)[0]
+    receiver_pos = receiver_states_itrf.at(times)[0]
 
     transmitter_pos_list = [gte.Vector3d(p) for p in transmitter_pos]
     receiver_pos_list = [gte.Vector3d(p) for p in receiver_pos]
@@ -115,7 +115,7 @@ def get_specular_trajectory(
         ]
 
     result = PositionSeries(
-        data=specular_positions, time=times, frame=transmitter.frame
+        data=specular_positions, time=times, frame=transmitter_states_itrf.frame
     )
 
     return result

@@ -113,8 +113,8 @@ sp_posseries_ref = PositionSeries(
 
 # Compute specular points using ellipsoidal Earth model
 sp_posseries = get_specular_trajectory(
-    transmitter=tx_stateseries,
-    receiver=sc_stateseries,
+    transmitter_states_itrf=tx_stateseries,
+    receiver_states_itrf=sc_stateseries,
     times=datearray,
     surface=SurfaceType.WGS84,
 )
@@ -134,8 +134,8 @@ plt.title("Specular Location Error Norm, Ellipsoidal Earth")
 
 # Compute specular points using spherical Earth model
 sp_posseries_spherical = get_specular_trajectory(
-    transmitter=tx_stateseries,
-    receiver=sc_stateseries,
+    transmitter_states_itrf=tx_stateseries,
+    receiver_states_itrf=sc_stateseries,
     times=datearray,
     surface=SurfaceType.SPHERE,
 )
