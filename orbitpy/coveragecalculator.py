@@ -356,7 +356,7 @@ class SpecularCoverage:
                 pos_fov_target_source,
                 specular_source,
                 radar_gain,
-                buff_size,
+                buff_size_full,
             )
 
             radius_source = kcl.ConstantSourced(specular_radius)
