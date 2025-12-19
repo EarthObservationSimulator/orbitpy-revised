@@ -715,7 +715,11 @@ class Mission:
         self, propagated_trajectories: List[Dict[str, Union[str, StateSeries]]]
     ) -> List[Dict[str, Any]]:
         """Compute coverage over configured spatial points for each spacecraft sensor.
-        Executed the PointCoverage calculator.
+        Executes the PointCoverage calculator.
+        
+        If no sensors are defined for a spacecraft, an omnidirectional sensor is attached
+        to the spacecraft for coverage calculation. The result contains a sensor coverage entry with
+        `sensor_id` as `None` and `sensor_name` as `spacecraft_omnidirectional_fov`.
 
         Args:
             propagated_trajectories:
@@ -808,29 +812,50 @@ class Mission:
                 trajectory
             )
 
+            # attach the spacecraft local orbital frame to the frame graph
+            self.frame_graph.add_orientation_transform(att_lvlh)
+            self.frame_graph.add_pos_transform(
+                from_frame=eci_frame,
+                to_frame=local_orbital_frame,
+                position=pos_lvlh,
+            )
+
             sensor_cov: List[Dict[str, Any]] = []
-            for sensor in spacecraft.sensor:
-                # calculate coverage for each sensor
-                self.frame_graph.add_orientation_transform(att_lvlh)
-                self.frame_graph.add_pos_transform(
-                    from_frame=eci_frame,
-                    to_frame=local_orbital_frame,
-                    position=pos_lvlh,
-                )
+            if not spacecraft.sensor or len(spacecraft.sensor) == 0:
+                # attach an omnidirectional sensor if no sensors are defined
+                omni_fov = OmnidirectionalFieldOfView(frame=local_orbital_frame)
                 result = coverage_calculator.calculate_coverage(
                     target_point_array=self.cartesian_spatial_points,
-                    fov=sensor.fov,
+                    fov=omni_fov,
                     frame_graph=self.frame_graph,
                     times=times,
                     surface=self.settings.surface_type,
                 )
                 sensor_cov.append(
                     {
-                        "sensor_id": sensor.identifier,
-                        "sensor_name": sensor.name,
+                        "sensor_id": None,
+                        "sensor_name": "spacecraft_omnidirectional_fov",
                         "coverage_info": result,
                     }
                 )
+
+            else:
+                for sensor in spacecraft.sensor:
+                    # calculate coverage for each sensor
+                    result = coverage_calculator.calculate_coverage(
+                        target_point_array=self.cartesian_spatial_points,
+                        fov=sensor.fov,
+                        frame_graph=self.frame_graph,
+                        times=times,
+                        surface=self.settings.surface_type,
+                    )
+                    sensor_cov.append(
+                        {
+                            "sensor_id": sensor.identifier,
+                            "sensor_name": sensor.name,
+                            "coverage_info": result,
+                        }
+                    )
 
             all_coverage_info.append(
                 {

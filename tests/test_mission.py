@@ -935,6 +935,83 @@ class TestAutoRetrieveOrbit(unittest.TestCase):
             self.assertIn("trajectory", entry)
             self.assertIsInstance(entry["trajectory"], StateSeries)
 
+class TestMissionNoSensor(unittest.TestCase):
+    """Tests for the Mission class with a spacecraft that has no sensors."""
+
+    def setUp(self):
+        
+         # Generate uniformly spaced points on a latitude/longitude grid
+        self.all_geo_points_list = uniform_lat_lon_spacing_grid(
+            -90, 90, 1, -180, 180, 1
+        )
+        points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                self.all_geo_points_list
+            )
+        )
+
+        self.mission_dict = {
+            "start_time": {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": "2025-09-30T13:00:00.000",
+                "time_scale": "UTC",
+            },
+            "duration_days": 0.5,
+            "spacecrafts": [
+                {
+                    "id": "123e4567-e89b-12d3-a456-426614174000",
+                    "name": "NoSensorSat",
+                    "orbit": {
+                        "orbit_type": "TWO_LINE_ELEMENT_SET",
+                        "TLE_LINE0": "0 NOSENSOR 1",
+                        "TLE_LINE1": "1 39084U 13008A   25273.59195902  .00000981  00000-0  22767-3 0  9990",  # pylint: disable=line-too-long
+                        "TLE_LINE2": "2 39084  98.2157 342.7113 0001218  95.7876 264.3462 14.57123342660093",  # pylint: disable=line-too-long
+                    },
+                    "local_orbital_frame_handler": {
+                        "frame_type": "LVLH_TYPE_1",
+                        "name": "LVLH_NoSensorSat",
+                    },
+                    # No sensors defined
+                }
+            ],
+            "propagator": {
+                "propagator_type": "SGP4_PROPAGATOR",
+                "step_size": 60,  # seconds
+            },
+            "spatial_points": {
+                "cartesian_3d_array": points_array.to_dict()
+            },
+        }
+    
+    def test_coverage_no_sensor(self):
+        m = Mission.from_dict(self.mission_dict)
+        (propagated_trajectories, _) = m.execute_propagation()
+        all_coverage_info = m.execute_coverage_calculator(propagated_trajectories)
+
+        # coverage_info is a list of dicts, each with "spacecraft_id" and "coverage"
+        self.assertIsInstance(all_coverage_info, list)
+        self.assertEqual(len(all_coverage_info), len(m.spacecrafts))
+
+        for sc_idx, sc_entry in enumerate(all_coverage_info):
+            # check spacecraft entry
+            self.assertIsInstance(sc_entry, dict)
+            expected_sc_id = m.spacecrafts[sc_idx].identifier
+            self.assertEqual(sc_entry.get("spacecraft_id"), expected_sc_id)
+            self.assertIn("total_spacecraft_coverage", sc_entry)
+            self.assertIsInstance(sc_entry["total_spacecraft_coverage"], list)
+            self.assertEqual(len(sc_entry["total_spacecraft_coverage"]), 1) # should have one omnidirectional coverage entry
+            sensor_entry = sc_entry["total_spacecraft_coverage"][0]
+            self.assertEqual(
+                    sensor_entry.get("sensor_id"), None
+                )
+            self.assertEqual(
+                    sensor_entry.get("sensor_name"), "spacecraft_omnidirectional_fov"
+                )
+            self.assertIn("coverage_info", sensor_entry)
+            self.assertIsInstance(
+                sensor_entry["coverage_info"], DiscreteCoverageTP
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
