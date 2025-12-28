@@ -1,3 +1,7 @@
+"""
+This module provides function to convert the results from orbitpy-revised mission
+evaluations into the D-SHIELD project CSV format.
+"""
 import os
 import shutil
 import pandas as pd
@@ -47,12 +51,12 @@ def write_dshield_format_of_propagator_results(
         if os.path.exists(results_dir) and os.path.isdir(results_dir):
             shutil.rmtree(results_dir)
         os.makedirs(results_dir, exist_ok=True)
-        out_fp = os.path.join(results_dir, f"state.csv")
+        out_fp = os.path.join(results_dir, "state.csv")
 
         name = sc.get("spacecraft_name", sc.get("spacecraft_id", "spacecraft"))
         traj = sc.get("trajectory", {})
         frame = traj.get("frame", "UNKNOWN")
-        time_info = traj.get("time", {})
+        # time_info = traj.get("time", {})
         ephemeris_seconds = traj.get("time", {}).get("ephemeris_time", [])
         if not ephemeris_seconds:
             print(f"Skipping {name}: no ephemeris time array")
@@ -71,7 +75,7 @@ def write_dshield_format_of_propagator_results(
         pos_list = traj.get("data", [[], []])[0]
         vel_list = traj.get("data", [[], []])[1]
 
-        with open(out_fp, "w", newline="") as f:
+        with open(out_fp, "w", newline="", encoding="utf-8") as f:
             # header lines (exact wording as requested by the D-SHIELD project)
             f.write(f"Satellite states are in {frame} frame\n")
             f.write(
@@ -112,10 +116,11 @@ def write_dshield_format_of_contact_results(
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<ground_contact>' folder is erased and recreated.
 
-    The contact times indicated in the contact intervals need to be represented in Gregorian date UTC format.
+    The contact times indicated in the contact intervals need to be represented in
+    Gregorian date UTC format.
 
     Args:
-        contact_results (list[dict): List of spacecraft to ground-station contact results.
+        contact_results (list[dict]): List of spacecraft to ground-station contact results.
                         See `orbitpy.mission.Mission.execute_gs_contact_finder` for structure.
         out_dir (str): Output directory to save the CSV files.
         epoch_dict (dict): Dictionary representing the epoch (start time) of the mission.
@@ -138,7 +143,8 @@ def write_dshield_format_of_contact_results(
                 or t.get("time_scale") != "UTC"
             ):
                 raise ValueError(
-                    f"Unsupported time format: {t.get('time_format')} and/or time scale: {t.get('time_scale')}"
+                    f"Unsupported time format: {t.get("time_format")} and/or \
+                        time scale: {t.get("time_scale")}"
                 )
 
             return pd.to_datetime(t.get("calendar_date"))
@@ -182,8 +188,8 @@ def write_dshield_format_of_contact_results(
 
             # write CSV
             out_fp = os.path.join(results_dir, f"gs{g_idx+1}_contacts.csv")
-            with open(out_fp, "w", newline="") as f:
-                header_title = f"Contacts between spacecraft {sc_name} with Ground station {gs_name}"
+            with open(out_fp, "w", newline="", encoding="utf-8") as f:
+                header_title = f"Contacts between spacecraft {sc_name} and Ground station {gs_name}"
                 f.write(header_title + "\n")
                 f.write(
                     f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
@@ -199,7 +205,7 @@ def write_dshield_format_of_contact_results(
                     try:
                         start_dt = _to_dt(interval[0])
                         end_dt = _to_dt(interval[1])
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         continue
 
                     start_idx = int(
@@ -236,7 +242,8 @@ def write_dshield_format_of_eclipse_results(
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<eclipse>' folder is erased and recreated.
 
-    The eclipse times indicated in the eclipse intervals need to be represented in Gregorian date UTC format.
+    The eclipse times indicated in the eclipse intervals need to be represented in
+    Gregorian date UTC format.
 
     Args:
         eclipse_results (list[dict]): List of spacecraft eclipse results. Each entry should have
@@ -259,7 +266,8 @@ def write_dshield_format_of_eclipse_results(
                 or t.get("time_scale") != "UTC"
             ):
                 raise ValueError(
-                    f"Unsupported time format: {t.get('time_format')} and/or time scale: {t.get('time_scale')}"
+                    f"Unsupported time format: {t.get("time_format")} \
+                        and/or time scale: {t.get("time_scale")}"
                 )
             return pd.to_datetime(t.get("calendar_date"))
         return pd.to_datetime(t)
@@ -290,7 +298,7 @@ def write_dshield_format_of_eclipse_results(
             continue
 
         out_fp = os.path.join(results_dir, "eclipse_intervals.csv")
-        with open(out_fp, "w", newline="") as f:
+        with open(out_fp, "w", newline="", encoding="utf-8") as f:
             header_title = f"Eclipse intervals for spacecraft {sc_name}"
             f.write(header_title + "\n")
             f.write(
@@ -305,7 +313,7 @@ def write_dshield_format_of_eclipse_results(
                 try:
                     start_dt = _to_dt(interval[0])
                     end_dt = _to_dt(interval[1])
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # skip malformed interval
                     continue
 
@@ -378,9 +386,10 @@ def write_dshield_format_of_point_coverage_results(
                 )
                 continue
 
-            with open(out_fp, "w", newline="") as f:
+            with open(out_fp, "w", newline="", encoding="utf-8") as f:
                 f.write(
-                    f"Spacecraft with name {sc_name}, id {sc_id}. Sensor with name {sensor_name}, id {sensor_id} \n"
+                    f"Spacecraft with name {sc_name}, id {sc_id}. \
+                        Sensor with name {sensor_name}, id {sensor_id} \n"
                 )
                 f.write(
                     f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
@@ -397,7 +406,8 @@ def write_dshield_format_of_point_coverage_results(
                 coverage_lists = coverage_info.get("coverage", [])
                 if len(ephemeris_seconds) != len(coverage_lists):
                     print(
-                        f"Warning: Mismatched lengths for coverage times and lists for {sc_name} sensor {sensor_name}"
+                        f"Warning: Mismatched lengths for coverage times and \
+                            lists for {sc_name} sensor {sensor_name}"
                     )
                 for idx in range(len(ephemeris_seconds)):
                     gp_indices = coverage_lists[idx]
@@ -470,9 +480,10 @@ def write_dshield_format_of_gnssr_coverage_results(
                 )
                 continue
 
-            with open(out_fp, "w", newline="") as f:
+            with open(out_fp, "w", newline="", encoding="utf-8") as f:
                 f.write(
-                    f"Spacecraft with name {sc_name}, id {sc_id}. Sensor with name {sensor_name}, id {sensor_id} \n"
+                    f"Spacecraft with name {sc_name}, id {sc_id}. \
+                        Sensor with name {sensor_name}, id {sensor_id} \n"
                 )
                 f.write(
                     f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
@@ -486,7 +497,7 @@ def write_dshield_format_of_gnssr_coverage_results(
                         source.get("gnss_spacecraft_name")
                         or "UNKNOWN SOURCE NAME"
                     )
-                    source_id = source.get("gnss_spacecraft_id")
+                    #source_id = source.get("gnss_spacecraft_id")
                     coverage_info = source.get("coverage_info", {})
                     time_info = coverage_info.get("time", {})
                     # expected time format is 'SPICE_ET'
@@ -497,7 +508,8 @@ def write_dshield_format_of_gnssr_coverage_results(
                     coverage_lists = coverage_info.get("coverage", [])
                     if len(ephemeris_seconds) != len(coverage_lists):
                         print(
-                            f"Warning: Mismatched lengths for coverage times and lists for {sc_name} sensor {sensor_name} source {source_name}"
+                            f"Warning: Mismatched lengths for coverage times and lists for \
+                                {sc_name} sensor {sensor_name} source {source_name}"
                         )
                     for idx in range(len(ephemeris_seconds)):
                         gp_indices = coverage_lists[idx]
@@ -571,7 +583,8 @@ def aggregate_gnssr_coverage_by_time(
     # Group every row by its time index. Within each group we aggregate the distinct source names
     # and merge all GP indices using the helper above.
     for time_idx, group in df.groupby("time index"):
-        # Returns a comma-separated, alphabetically sorted list of unique, non-empty source names found in the current time-index group
+        # Returns a comma-separated, alphabetically sorted list of unique, non-empty source names
+        # found in the current time-index group
         sources = ",".join(
             sorted(
                 set(
@@ -607,19 +620,23 @@ def write_dshield_format_of_specular_trajectory_results(
     step_size_seconds: float,
 ) -> None:
     """
-    Write a single CSV file per spacecraft with all specular points, including a column for GNSS spacecraft name.
+    Write a single CSV file per spacecraft with all specular points, including a column
+    for GNSS spacecraft name.
 
     The resulting files are produced within the following directory structure:
         <out_dir>/<spacecraft_name>/specular/specular_points.csv
 
-    - Each spacecraft produces one CSV file named specular_points.csv containing all GNSS transmitters' specular points.
+    - Each spacecraft produces one CSV file named specular_points.csv containing all
+        GNSS transmitters' specular points.
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<specular>' folder is erased and recreated.
 
     Args:
-        specular_trajectories (list[dict]): List of specular trajectory results as produced by Mission.execute_specular_trajectory_calculator (serialized version).
+        specular_trajectories (list[dict]): List of specular trajectory results as produced by
+                            Mission.execute_specular_trajectory_calculator (serialized version).
         out_dir (str): Output directory to save the CSV files.
-        epoch_dict (dict): Dictionary representing the epoch (start time) of the mission in Gregorian (UTC) calendar date format.
+        epoch_dict (dict): Dictionary representing the epoch (start time) of the mission in
+                            Gregorian (UTC) calendar date format.
         epoch_ephemeris_seconds (float): Ephemeris time (SPICE ET) of the epoch.
         step_size_seconds (float): Step size in seconds used to compute time indices.
     """
@@ -655,7 +672,7 @@ def write_dshield_format_of_specular_trajectory_results(
             continue
 
         out_fp = os.path.join(results_dir, "specular_points.csv")
-        with open(out_fp, "w", newline="") as f:
+        with open(out_fp, "w", newline="", encoding="utf-8") as f:
             f.write(
                 f"Specular points between spacecraft {sc_name} and all GNSS transmitters\n"
             )
