@@ -15,7 +15,10 @@ from eosimutils.time import AbsoluteDate
 from eosimutils.base import ReferenceFrame, SPHERICAL_EARTH_MEAN_RADIUS
 from eosimutils.standardframes import LVLHType1FrameHandler
 from eosimutils.framegraph import FrameGraph
-from eosimutils.fieldofview import CircularFieldOfView, OmnidirectionalFieldOfView
+from eosimutils.fieldofview import (
+    CircularFieldOfView,
+    OmnidirectionalFieldOfView,
+)
 from eosimutils.state import Cartesian3DPositionArray
 
 
@@ -222,7 +225,9 @@ for i in range(len(gps_stateseries)):
 
 # Fill frame graph with transforms for CYGNSS satellite
 handler_cygnss = LVLHType1FrameHandler("LVLH_CYGNSS")
-att_lvlh_cygnss, pos_lvlh_cygnss = handler_cygnss.get_transform(cygnss_stateseries)
+att_lvlh_cygnss, pos_lvlh_cygnss = handler_cygnss.get_transform(
+    cygnss_stateseries
+)
 lvlh_cygnss = handler_cygnss.get_frame()
 registry.add_orientation_transform(att_lvlh_cygnss)
 from_frame = ReferenceFrame.get("ICRF_EC")

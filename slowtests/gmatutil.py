@@ -6,6 +6,7 @@ from eosimutils.trajectory import StateSeries
 from eosimutils.base import ReferenceFrame
 from eosimutils.time import AbsoluteDateArray, AbsoluteDate
 
+
 def parse_gmat_state_file(filepath):
     """
     Parse a GMAT state file and return a StateSeries object.
@@ -19,7 +20,7 @@ def parse_gmat_state_file(filepath):
     times = []
     positions = []
     velocities = []
-    with open(filepath, "r") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         lines = f.readlines()
     # Skip header
     for line in lines[1:]:
@@ -29,15 +30,21 @@ def parse_gmat_state_file(filepath):
             continue
         # Parse time string and state values
         time_str = " ".join(parts[:4])
-        dt = datetime.strptime(time_str, "%d %b %Y %H:%M:%S.%f") # Parse to datetime object
-        iso_str = dt.isoformat() # Get ISO formatted string
+        dt = datetime.strptime(
+            time_str, "%d %b %Y %H:%M:%S.%f"
+        )  # Parse to datetime object
+        iso_str = dt.isoformat()  # Get ISO formatted string
         try:
             # Try parsing the ISO formatted string to AbsoluteDate
-            t = AbsoluteDate.from_dict({ "time_format": "GREGORIAN_DATE",
-                "calendar_date": iso_str,
-                "time_scale": "UTC"})
-        except Exception:
-            raise ValueError("Failed to parse time string: {}".format(time_str))
+            t = AbsoluteDate.from_dict(
+                {
+                    "time_format": "GREGORIAN_DATE",
+                    "calendar_date": iso_str,
+                    "time_scale": "UTC",
+                }
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to parse time string: {time_str}") from e
         state_vals = [float(x) for x in parts[4:10]]
         positions.append(state_vals[:3])
         velocities.append(state_vals[3:])
@@ -48,7 +55,9 @@ def parse_gmat_state_file(filepath):
     velocities = np.array(velocities)
     # Build StateSeries
     time_obj = AbsoluteDateArray(times)
-    frame = ReferenceFrame("ICRF_EC")  # MJ2000Eq is ICRF_EC in eosimutils (since eosimutils uses SPICE in which ICRF ~ J2000)
+    frame = ReferenceFrame(
+        "ICRF_EC"
+    )  # MJ2000Eq is ICRF_EC in eosimutils (since eosimutils uses SPICE in which ICRF ~ J2000)
     return StateSeries(time_obj, [positions, velocities], frame)
 
 
@@ -63,7 +72,7 @@ def parse_gmat_contact_file(filepath):
         List[Tuple[AbsoluteDate, AbsoluteDate]]: List of contact intervals.
     """
     contacts = []
-    with open(filepath, "r") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         lines = f.readlines()
     # Find the line index where the table starts (after header lines)
     table_start = 0
@@ -87,18 +96,23 @@ def parse_gmat_contact_file(filepath):
         stop_dt = datetime.strptime(stop_str, "%d %b %Y %H:%M:%S.%f")
         start_iso = start_dt.isoformat()
         stop_iso = stop_dt.isoformat()
-        start_ad = AbsoluteDate.from_dict({
-            "time_format": "GREGORIAN_DATE",
-            "calendar_date": start_iso,
-            "time_scale": "UTC"
-        })
-        stop_ad = AbsoluteDate.from_dict({
-            "time_format": "GREGORIAN_DATE",
-            "calendar_date": stop_iso,
-            "time_scale": "UTC"
-        })
+        start_ad = AbsoluteDate.from_dict(
+            {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": start_iso,
+                "time_scale": "UTC",
+            }
+        )
+        stop_ad = AbsoluteDate.from_dict(
+            {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": stop_iso,
+                "time_scale": "UTC",
+            }
+        )
         contacts.append((start_ad, stop_ad))
     return contacts
+
 
 def parse_gmat_eclipse_file(filepath):
     """
@@ -108,10 +122,11 @@ def parse_gmat_eclipse_file(filepath):
         filepath (str): Path to the EclipseLocator file.
 
     Returns:
-        List[dict]: List of eclipse events, each as a dictionary with start, stop (AbsoluteDate), type, and event number.
+        List[dict]: List of eclipse events, each as a dictionary with 
+                    start, stop (AbsoluteDate), type, and event number.
     """
     events = []
-    with open(filepath, "r") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         lines = f.readlines()
     # Find the line index where the table starts (after header lines)
     for i, line in enumerate(lines):
@@ -131,22 +146,28 @@ def parse_gmat_eclipse_file(filepath):
         stop_dt = datetime.strptime(stop_str, "%d %b %Y %H:%M:%S.%f")
         start_iso = start_dt.isoformat()
         stop_iso = stop_dt.isoformat()
-        start_ad = AbsoluteDate.from_dict({
-            "time_format": "GREGORIAN_DATE",
-            "calendar_date": start_iso,
-            "time_scale": "UTC"
-        })
-        stop_ad = AbsoluteDate.from_dict({
-            "time_format": "GREGORIAN_DATE",
-            "calendar_date": stop_iso,
-            "time_scale": "UTC"
-        })
+        start_ad = AbsoluteDate.from_dict(
+            {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": start_iso,
+                "time_scale": "UTC",
+            }
+        )
+        stop_ad = AbsoluteDate.from_dict(
+            {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": stop_iso,
+                "time_scale": "UTC",
+            }
+        )
         event_type = parts[10]
         event_number = int(parts[11])
-        events.append({
-            "start": start_ad,
-            "stop": stop_ad,
-            "type": event_type,
-            "event_number": event_number
-        })
+        events.append(
+            {
+                "start": start_ad,
+                "stop": stop_ad,
+                "type": event_type,
+                "event_number": event_number,
+            }
+        )
     return events

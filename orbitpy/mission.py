@@ -33,7 +33,7 @@ The features currently supported are:
   coverage, multiple GNSS satellites can be specified as transmitters
   (in addition to the receiver spacecraft with one or more GNSS-R sensors).
 
-The coding style is such that each of the dictionaries within the mission dictionary 
+The coding style is such that each of the dictionaries within the mission dictionary
 is formatted so that it can be directly converted to the corresponding object using the
 `from_dict` function of the respective class. For example, the dictionary for a spacecraft
 is such that it can be directly converted to a `Spacecraft` object using the
@@ -185,7 +185,9 @@ class Settings:
     def __init__(
         self,
         user_dir: Optional[str] = None,
-        coverage_type: Optional[Union[CoverageType, str]] = CoverageType.POINT_COVERAGE,
+        coverage_type: Optional[
+            Union[CoverageType, str]
+        ] = CoverageType.POINT_COVERAGE,
         specular_radius_km: Optional[float] = None,
         spacetrack_credentials_relative_path: Optional[str] = None,
         surface_type: Optional[SurfaceType] = SurfaceType.WGS84,
@@ -226,10 +228,13 @@ class Settings:
             dict_in (Dict[str, Any]): Dictionary containing miscellaneous mission settings.
                         Expected keys are:
                 - user_dir (Optional[str]): Absolute user directory path.
-                - coverage_type (Optional[Union[CoverageType, str]]): Type of coverage. If None, POINT_COVERAGE is used.
+                - coverage_type (Optional[Union[CoverageType, str]]): Type of coverage.
+                                                        If None, POINT_COVERAGE is used.
                 - specular_radius_km (Optional[float]): Specular radius in kilometers.
-                - spacetrack_credentials_relative_path (Optional[str]): Relative file path for Space-Track.org credentials.
-                - surface_type (Optional[SurfaceType]): Type of Earth surface model to use. If None, WGS84 is used.
+                - spacetrack_credentials_relative_path (Optional[str]): 
+                                    Relative file path for Space-Track.org credentials.
+                - surface_type (Optional[SurfaceType]): Type of Earth surface model to use.
+                                                        If None, WGS84 is used.
 
         Returns:
             Settings: An instance of the Settings class.
@@ -247,16 +252,14 @@ class Settings:
         )
         surface_type = dict_in.get("surface_type", None)
         surface_type = (
-            SurfaceType.get(surface_type)
-            if surface_type
-            else SurfaceType.WGS84
+            SurfaceType.get(surface_type) if surface_type else SurfaceType.WGS84
         )
         return cls(
             user_dir=user_dir,
             coverage_type=coverage_type,
             specular_radius_km=specular_radius_km,
             spacetrack_credentials_relative_path=spacetrack_credentials_relative_path,
-            surface_type=surface_type
+            surface_type=surface_type,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -276,7 +279,8 @@ class Settings:
                 self.surface_type.to_string() if self.surface_type else None
             ),
         }
-    
+
+
 class Mission:
     """Class to represent a space mission with spacecraft, sensors, and ground stations."""
 
@@ -299,10 +303,10 @@ class Mission:
             spacecrafts (Union[Spacecraft, List[Spacecraft]]): List of spacecraft in the mission.
             ground_stations (Optional[GroundStation, List[GroundStation]]): List of ground stations.
             propagator (Optional[SGP4Propagator]): Propagator to use for orbit propagation.
-            cartesian_spatial_points (Optional[Cartesian3DPositionArray]): Cartesian spatial points 
-                                                                            for coverage calculation.
+            cartesian_spatial_points (Optional[Cartesian3DPositionArray]): Cartesian spatial points
+                                                                           for coverage calculation.
             gnss_spacecrafts (Optional[List[Spacecraft]]): List of GNSS satellites (transmitters)
-                                                            (applicable for GNSSR coverage).
+                                                          (applicable for GNSS-R coverage).
             frame_graph (FrameGraph): Frame graph for coordinate transformations.
             settings (Optional[Settings]): Miscellaneous mission settings.
         """
@@ -332,7 +336,7 @@ class Mission:
         """Load an object from a dictionary or a JSON file.
 
         Args:
-            other_cls (Type[Any]): The class type to instantiate the object. 
+            other_cls (Type[Any]): The class type to instantiate the object.
                                     The class should support a 'from_dict' function.
             dict_in (dict): Dictionary containing object data or a reference to a JSON file.
             ref_dir (str): Directory path to resolve relative file paths.
@@ -382,7 +386,7 @@ class Mission:
         spacecrafts = Mission.load_object(
             Spacecraft, spacecrafts_dict_val, settings.user_dir
         )
-        
+
         # setup GNSS (transmitter) spacecrafts (applicable for GNSSR coverage)
         gnss_spacecrafts_dict_val = dict_in.get("gnss_spacecrafts", None)
         gnss_spacecrafts = Mission.load_object(
@@ -409,27 +413,33 @@ class Mission:
             if "geographic_array" in spatial_points_dict:
                 geographic_points_dict = spatial_points_dict["geographic_array"]
                 geographic_points = Mission.load_object(
-                    GeographicPositionArray, geographic_points_dict, settings.user_dir
+                    GeographicPositionArray,
+                    geographic_points_dict,
+                    settings.user_dir,
                 )
-                cartesian_spatial_points = geographic_points.to_cartesian3d_position_array()
+                cartesian_spatial_points = (
+                    geographic_points.to_cartesian3d_position_array()
+                )
             elif "cartesian_3d_array" in spatial_points_dict:
-                cartesian_points_dict = spatial_points_dict["cartesian_3d_array"]
+                cartesian_points_dict = spatial_points_dict[
+                    "cartesian_3d_array"
+                ]
                 cartesian_spatial_points = Mission.load_object(
-                    Cartesian3DPositionArray, cartesian_points_dict, settings.user_dir
+                    Cartesian3DPositionArray,
+                    cartesian_points_dict,
+                    settings.user_dir,
                 )
             else:
-                raise ValueError(
-                    "Unsupported spatial points specification."
-                )
+                raise ValueError("Unsupported spatial points specification.")
         else:
             cartesian_spatial_points = None
 
         # setup the frames and the transformations
         # The spacecrafts need to be setup before this so that their
         # local orbit frames are registered.
-        _transform_dict = dict_in.get("frame_transforms", None)
+        trn_dict = dict_in.get("frame_transforms", None)
         transform_dict = Mission.load_object(
-            dict, _transform_dict, settings.user_dir
+            dict, trn_dict, settings.user_dir
         )
 
         # add reference frames from the user-specified transforms if not already present
@@ -494,20 +504,29 @@ class Mission:
                 self.propagator.to_dict() if self.propagator else None
             ),
             "spatial_points": (
-                { "cartesian_3d_array": self.cartesian_spatial_points.to_dict()} if self.cartesian_spatial_points else None
+                {"cartesian_3d_array": self.cartesian_spatial_points.to_dict()}
+                if self.cartesian_spatial_points
+                else None
             ),
             "settings": self.settings.to_dict() if self.settings else None,
         }
 
-    def execute_propagation(self) -> Tuple[List[Dict[str, Union[str, StateSeries]]], Optional[List[Dict[str, Union[str, StateSeries]]]]]:
+    def execute_propagation(
+        self,
+    ) -> Tuple[
+        List[Dict[str, Union[str, StateSeries]]],
+        Optional[List[Dict[str, Union[str, StateSeries]]]],
+    ]:
         """Propagate all spacecrafts in the mission using the specified propagator.
 
         Returns:
-            Tuple[List[Dict[str, Union[str, StateSeries]]], Optional[List[Dict[str, Union[str, StateSeries]]]]]:
+            Tuple[List[Dict[str, Union[str, StateSeries]]], 
+                    Optional[List[Dict[str, Union[str, StateSeries]]]]]:
                 A tuple (results, tx_results) where:
                 -    results: List of propagation results for the spacecrafts.
-                - tx_results: Optional list of propagation results for GNSS (transmitter) spacecraft,
-                              or None if no GNSS spacecraft were provided. Applcable only for GNSS-R coverage.
+                - tx_results: Optional list of propagation results for GNSS (transmitter)
+                              spacecraft, or None if no GNSS spacecraft were provided. 
+                              Applicable only for GNSS-R coverage.
 
                 Each list item is a dict with:
                 - "spacecraft_id": str
@@ -584,14 +603,16 @@ class Mission:
 
         Args:
             propagated_trajectories (List[Dict[str, Union[str, StateSeries]]]):
-                Propagation results containing spacecraft IDs/names and their corresponding StateSeries.
+                Propagation results containing spacecraft IDs/names and
+                their corresponding StateSeries.
 
         Returns:
             List[Dict[str, Union[str, EclipseInfo]]]:
                 One item per spacecraft with:
                 - "spacecraft_id": str
                 - "spacecraft_name": str
-                - "eclipse_info": A list of tuples representing the start and end times of eclipse intervals.
+                - "eclipse_info": A list of tuples representing the start and
+                                    end times of eclipse intervals.
 
         Example:
             [
@@ -643,7 +664,8 @@ class Mission:
                 - "contacts": List[Dict[str, Any]] where each dict has:
                         - "ground_station_id": str
                         - "ground_station_name": str
-                        - "contact_info":  A list of tuples representing the start and end times of contact intervals.
+                        - "contact_info":  A list of tuples representing the start and
+                                        end times of contact intervals.
             Example:
             [
                 {
@@ -705,7 +727,7 @@ class Mission:
                     {
                         "ground_station_id": gs.identifier,
                         "ground_station_name": gs.name,
-                        "contact_info": result.contact_intervals(), # interval format
+                        "contact_info": result.contact_intervals(),  # interval format
                     }
                 )
             all_contact_info.append(ground_stn_contact_info)
@@ -716,7 +738,7 @@ class Mission:
     ) -> List[Dict[str, Any]]:
         """Compute coverage over configured spatial points for each spacecraft sensor.
         Executes the PointCoverage calculator.
-        
+
         If no sensors are defined for a spacecraft, an omnidirectional sensor is attached
         to the spacecraft for coverage calculation. The result contains a sensor coverage entry with
         `sensor_id` as `None` and `sensor_name` as `spacecraft_omnidirectional_fov`.
@@ -772,7 +794,7 @@ class Mission:
                     ]
                 }
             ]
-        
+
         Raises:
             ValueError: If no spatial points are specified for coverage calculation.
             ValueError: If a spacecraft does not have a local orbital frame handler specified.
@@ -884,10 +906,10 @@ class Mission:
                 Output of execute_propagation()[1].
 
         Returns:
-            List[Dict[str, Any]]: List of nested (3 levels) dictionary mapping spacecraft IDs/names to a dict
-                that maps sensors IDs/names to their coverage information.
-                Each sensor has a list of dictionaries that maps the
-                GNSS spacecraft IDs/names to their coverage information.
+            List[Dict[str, Any]]: List of nested (3 levels) dictionary mapping
+                spacecraft IDs/names to a dict that maps sensors IDs/names to
+                their coverage information. Each sensor has a list of dictionaries
+                that maps the GNSS spacecraft IDs/names to their coverage information.
 
                 Each item has:
                 - "spacecraft_id": str
@@ -1009,8 +1031,9 @@ class Mission:
             )
 
             gnss_frames.append(tx_local_orbital_frame)
-            gnss_fovs.append(OmnidirectionalFieldOfView(frame=tx_local_orbital_frame))
-
+            gnss_fovs.append(
+                OmnidirectionalFieldOfView(frame=tx_local_orbital_frame)
+            )
 
         # initialize the results dictionary
         all_coverage_info: List[Dict[str, Any]] = []
@@ -1079,9 +1102,7 @@ class Mission:
                         "coverage_info": coverage[
                             0
                         ],  # DiscreteCoverageTP object
-                        "rcg_factor": coverage[
-                            1
-                        ],  # RCG proportionality factor
+                        "rcg_factor": coverage[1],  # RCG proportionality factor
                     }
                     for i, coverage in enumerate(result)
                 ]
@@ -1108,10 +1129,11 @@ class Mission:
         propagated_rx_trajectories: List[Dict[str, Union[str, StateSeries]]],
         propagated_tx_trajectories: List[Dict[str, Union[str, StateSeries]]],
     ) -> List[Dict[str, Any]]:
-        """Calculate specular points for pairs of (receiver: GNSSR) spacecrafts 
+        """Calculate specular points for pairs of (receiver: GNSSR) spacecrafts
             and (transmitter) GNSS spacecrafts.
-            This routine calculates **all possible** specular points between each, meaning the the field of view
-            of the GNSSR or the GNSS spacecrafts are not considered.
+            This routine calculates **all possible** specular points between each,
+            meaning the the field of view of the GNSSR or the GNSS spacecrafts
+            are not considered.
 
         Args:
             propagated_rx_trajectories:
@@ -1120,17 +1142,18 @@ class Mission:
                 Output of execute_propagation()[1].
 
         Returns:
-            List[Dict[str, Any]]: List of nested dictionary mapping (receiver) spacecraft IDs/names to
-                 a list of dictionaries that maps the (transmitter) GNSS spacecraft IDs/names 
+            List[Dict[str, Any]]: List of nested dictionary mapping (receiver) spacecraft IDs/names
+                 to a list of dictionaries that maps the (transmitter) GNSS spacecraft IDs/names
                  to their calculated specular point information.
 
                 Each item has:
                 - "spacecraft_id": str
                 - "spacecraft_name": str
-                - "all_specular_trajectories": List[Dict[str, Union[str, PositionSeries]]] where each dict has:
-                    - "gnss_spacecraft_id": str
-                    - "gnss_spacecraft_name": str
-                    - "specular_trajectory": PositionSeries
+                - "all_specular_trajectories": List[Dict[str, Union[str, PositionSeries]]] 
+                                                where each dict has:
+                                                - "gnss_spacecraft_id": str
+                                                - "gnss_spacecraft_name": str
+                                                - "specular_trajectory": PositionSeries
 
 
             Example:
@@ -1166,7 +1189,9 @@ class Mission:
             )
 
         # initialize the results dictionary
-        all_specular_info: List[Dict[str, Any]] = [] # accumulate results over all receiver spacecrafts
+        all_specular_info: List[Dict[str, Any]] = (
+            []
+        )  # accumulate results over all receiver spacecrafts
         for rx_item in propagated_rx_trajectories:
 
             rx_spc_id = rx_item["spacecraft_id"]
@@ -1176,53 +1201,68 @@ class Mission:
                 rx_trajectory_icrf.time
             )  # times at which coverage is to be calculated
 
-            # Convert the propgated trajectories from ICRF_EC frame to ITRF frame since the specular point calculation
+            # Convert the propgated trajectories from ICRF_EC frame
+            # to ITRF frame since the specular point calculation
             # assumes the input trajectories are in the ITRF frame.
-            rx_rot_array, rx_w_array = self.frame_graph.get_orientation_transform(
-                from_frame = ReferenceFrame.get("ICRF_EC"),
-                to_frame = ReferenceFrame.get("ITRF"),
-                t = rx_times
+            rx_rot_array, rx_w_array = (
+                self.frame_graph.get_orientation_transform(
+                    from_frame=ReferenceFrame.get("ICRF_EC"),
+                    to_frame=ReferenceFrame.get("ITRF"),
+                    t=rx_times,
+                )
             )
 
-            # Convert the propgated trajectories from ICRF_EC frame to ITRF frame since the specular point calculation
+            # Convert the propgated trajectories from ICRF_EC frame to
+            # ITRF frame since the specular point calculation
             # assumes the input trajectories are in the ITRF frame.
             rx_pos_icrf = rx_trajectory_icrf.data[0]
             rx_vel_icrf = rx_trajectory_icrf.data[1]
-            rx_rot_array, rx_w_array = self.frame_graph.get_orientation_transform(
-                from_frame = ReferenceFrame.get("ICRF_EC"),
-                to_frame = ReferenceFrame.get("ITRF"),
-                t = rx_times
+            rx_rot_array, rx_w_array = (
+                self.frame_graph.get_orientation_transform(
+                    from_frame=ReferenceFrame.get("ICRF_EC"),
+                    to_frame=ReferenceFrame.get("ITRF"),
+                    t=rx_times,
+                )
             )
             pos_itrf = rx_rot_array.apply(rx_pos_icrf)
-            vel_itrf = rx_rot_array.apply(rx_vel_icrf) + np.cross(rx_w_array, rx_pos_icrf)
+            vel_itrf = rx_rot_array.apply(rx_vel_icrf) + np.cross(
+                rx_w_array, rx_pos_icrf
+            )
             rx_trajectory_itrf = StateSeries(
                 time=rx_trajectory_icrf.time,
                 data=[pos_itrf, vel_itrf],
-                frame=ReferenceFrame.get("ITRF")
+                frame=ReferenceFrame.get("ITRF"),
             )
 
-            all_spacecraft_specular_info: List[Dict[str, Any]] = [] # accumulate results for this receiver spacecrafts for all the GNSS transmitters
+            all_spacecraft_specular_info: List[Dict[str, Any]] = (
+                []
+            )  # accumulate results for this receiver spacecrafts for all the GNSS transmitters
             for tx_item in propagated_tx_trajectories:
 
                 tx_spc_id = tx_item["spacecraft_id"]
                 tx_spc_name = tx_item.get("spacecraft_name")
                 tx_trajectory_icrf = tx_item["trajectory"]
-                
-                # Convert the propagated trajectories from ICRF_EC frame to ITRF frame since the specular point calculation
-                # assumes the input trajectories are in the ITRF frame.
+
+                # Convert the propagated trajectories from ICRF_EC frame
+                # to ITRF frame since the specular point calculation assumes
+                # the input trajectories are in the ITRF frame.
                 tx_pos_icrf = tx_trajectory_icrf.data[0]
                 tx_vel_icrf = tx_trajectory_icrf.data[1]
-                tx_rot_array, tx_w_array = self.frame_graph.get_orientation_transform(
-                    from_frame = ReferenceFrame.get("ICRF_EC"),
-                    to_frame = ReferenceFrame.get("ITRF"),
-                    t = rx_times
+                tx_rot_array, tx_w_array = (
+                    self.frame_graph.get_orientation_transform(
+                        from_frame=ReferenceFrame.get("ICRF_EC"),
+                        to_frame=ReferenceFrame.get("ITRF"),
+                        t=rx_times,
+                    )
                 )
                 pos_itrf = tx_rot_array.apply(tx_pos_icrf)
-                vel_itrf = tx_rot_array.apply(tx_vel_icrf) + np.cross(tx_w_array, tx_pos_icrf)
+                vel_itrf = tx_rot_array.apply(tx_vel_icrf) + np.cross(
+                    tx_w_array, tx_pos_icrf
+                )
                 tx_trajectory_itrf = StateSeries(
                     time=tx_trajectory_icrf.time,
                     data=[pos_itrf, vel_itrf],
-                    frame=ReferenceFrame.get("ITRF")
+                    frame=ReferenceFrame.get("ITRF"),
                 )
 
                 # Compute specular points
@@ -1230,7 +1270,7 @@ class Mission:
                     transmitter=tx_trajectory_itrf,
                     receiver=rx_trajectory_itrf,
                     times=rx_times,
-                    surface=self.settings.surface_type
+                    surface=self.settings.surface_type,
                 )
 
                 all_spacecraft_specular_info.append(
@@ -1240,7 +1280,7 @@ class Mission:
                         "specular_info": sp_posseries,
                     }
                 )
-            
+
             all_specular_info.append(
                 {
                     "spacecraft_id": rx_spc_id,
@@ -1251,7 +1291,6 @@ class Mission:
 
         return all_specular_info
 
-
     def execute_all(self) -> Dict[str, Any]:
         """Run all configured mission analyses and return a structured result bundle.
 
@@ -1259,18 +1298,24 @@ class Mission:
             Dict[str, Any]:
                 A dictionary with the following keys (present only if the respective analysis runs):
                 - "propagator_results": List[Dict[str, Union[str, StateSeries]]]
-                                  Primary spacecraft propagation results (see execute_propagation()).
-                - "propagation_gnss": Optional[List[Dict[str, Union[str, StateSeries]]]]
-                                      GNSS spacecraft propagation results (see execute_propagation()).
+                                  Primary spacecraft propagation results
+                                  (see `execute_propagation()`).
+                - "gnssr_propagator_results": Optional[List[Dict[str, Union[str, StateSeries]]]]
+                                      GNSS spacecraft propagation results
+                                      (see `execute_propagation()`).
                                       Applies for the case of gnssr missions.
                 - "eclipse_finder_results": List[Dict[str, Union[str, EclipseInfo]]]
-                             Eclipse results per spacecraft (see execute_eclipse_finder()).
+                             Eclipse results per spacecraft
+                             (see `execute_eclipse_finder()`).
                 - "contact_finder_results": List[Dict[str, Any]]
-                              Ground-station contact results (see execute_gs_contact_finder()).
+                              Ground-station contact results
+                              (see `execute_gs_contact_finder()`).
                 - "coverage_calculator_results": List[Dict[str, Any]]
-                              Coverage calculator results (see execute_coverage_calculator()).
+                              Coverage calculator results
+                              (see `execute_coverage_calculator()`).
 
         """
+        mission_results = {}
         # propagation
         propagated_trajectories, gnss_trajectories = self.execute_propagation()
 
@@ -1297,15 +1342,17 @@ class Mission:
                     "contact_finder_results": contacts,
                     "coverage_calculator_results": coverage,
                 }
-                
+
             elif self.settings.coverage_type == CoverageType.SPECULAR_COVERAGE:
                 if not gnss_trajectories:
                     raise ValueError(
                         "No GNSS spacecraft trajectories available for GNSS-R coverage calculation."
                     )
-                specular_trajectories = self.execute_specular_trajectory_calculator(
-                    propagated_rx_trajectories=propagated_trajectories,
-                    propagated_tx_trajectories=gnss_trajectories,
+                specular_trajectories = (
+                    self.execute_specular_trajectory_calculator(
+                        propagated_rx_trajectories=propagated_trajectories,
+                        propagated_tx_trajectories=gnss_trajectories,
+                    )
                 )
                 coverage = self.execute_gnssr_coverage_calculator(
                     propagated_rx_trajectories=propagated_trajectories,
@@ -1320,11 +1367,10 @@ class Mission:
                     "coverage_calculator_results": coverage,
                     "specular_trajectory_results": specular_trajectories,
                 }
-                
+
             else:
                 raise ValueError(
                     f"Unsupported coverage type {self.settings.coverage_type}."
                 )
 
-       
         return mission_results

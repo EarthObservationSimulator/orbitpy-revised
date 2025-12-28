@@ -2,7 +2,7 @@
 .. module:: orbitpy.resources
    :synopsis: Models of space mission resources.
 
-Collection of classes modeling space mission resources (ground stations, 
+Collection of classes modeling space mission resources (ground stations,
 sensors, and spacecraft).
 
 These classes handle the properties of each resource and provide
@@ -10,7 +10,7 @@ methods to serialize and deserialize the resource information to and from
 dictionaries. The primary application is in the `mission` module, where
 these resources are used to define the mission configuration.
 
-The mission module provoides methods to run simulations (propagate, contact finding, 
+The mission module provoides methods to run simulations (propagate, contact finding,
 eclipse finding, coverage) based on the defined resources and their properties.
 
 """
@@ -286,7 +286,7 @@ class Spacecraft:
             dict_in (dict): Dictionary with the spacecraft information.
                 The dictionary should contain the following key-value pairs:
                 - "id" (str): (Optional) Unique identifier.
-                            If not provided, the created Spacecraft object defaults 
+                            If not provided, the created Spacecraft object defaults
                             to a new UUID. (See __init__ method.)
                 - "name" (str): (Optional) Name of the spacecraft.
                 - "norad_id" (int): (Optional) NORAD ID of the spacecraft.
@@ -294,8 +294,9 @@ class Spacecraft:
                                             See `orbitpy.orbits.OrbitFactory.from_dict`.
                 - "local_orbital_frame_handler" (dict): (Optional) Local orbital frame (handler).
                             See `eosimutils.standardframes.StandardFrameHandlerFactory.from_dict`.
-                            If not provided, the created Spacecraft object defaults to LVLH Type-1 frame handler 
-                            with the name "LVLH_<spacecraft_id in upper case>". (See __init__ method.)
+                            If not provided, the created Spacecraft object defaults to LVLH Type-1
+                            frame handler with the name "LVLH_<spacecraft_id in upper case>".
+                            (See __init__ method.)
                 - "sensor" (List[dict] or dict): (Optional) List of Sensors or a single Sensor.
                                                         See `orbitpy.resources.Sensor.from_dict`.
 

@@ -415,5 +415,6 @@ class TestElevationAwareContactFinder(unittest.TestCase):
             f"target_x3: {target_x3} were used.",
         )
 
+
 if __name__ == "__main__":
     unittest.main()

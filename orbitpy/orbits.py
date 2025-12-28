@@ -10,7 +10,7 @@ by using the :class:eosimutils.state.CartesianState class.
 
 import json
 import requests
-from typing import Dict, Tuple, Any, Optional, Type, Callable, Union
+from typing import Dict, Tuple, Any, Optional, Type, Callable
 import numpy as np
 from datetime import datetime
 
@@ -383,7 +383,7 @@ class SpaceTrackAPI:
                     "SpaceTrack: Invalid target_date_time format. "
                     "It should be a string in the format"
                     "'%Y-%m-%dT%H:%M:%S'. E.g., 2024-04-09T01:00:00"
-                ) # Can fractional seconds be included?
+                )  # Can fractional seconds be included?
                 return None
 
         tdt = tdt_datetime.strftime(
@@ -685,6 +685,7 @@ class OsculatingElements:
             frame=self.inertial_frame,
         )
 
+
 class Sgp4SatrecOrbitalParameters:
     """Container for the orbital elements required by ``sgp4.Satrec``.
 
@@ -692,7 +693,7 @@ class Sgp4SatrecOrbitalParameters:
     in **degrees**. ``no_kozai`` is in **revolutions per day**.
     The units are chosen to match those used in the OMM format.
 
-    Note that these are mean Keplerian elements in the True Equator, Mean Equinox (TEME) 
+    Note that these are mean Keplerian elements in the True Equator, Mean Equinox (TEME)
     earth centered inertial frame.
 
     The epoch is stored as an :class:`~eosimutils.time.AbsoluteDate` object.
@@ -723,7 +724,7 @@ class Sgp4SatrecOrbitalParameters:
         self.epoch = epoch
         self.ndot = float(ndot)
         self.nddot = float(nddot)
-        self.bstar = float(bstar)        
+        self.bstar = float(bstar)
         self.inclo = inclo
         self.nodeo = self._wrap_angle_0_360_deg(nodeo)
         self.ecco = float(ecco)
@@ -737,8 +738,8 @@ class Sgp4SatrecOrbitalParameters:
         """Wrap an angle to the range [0, 360) degrees."""
         try:
             v = float(angle) % 360.0
-        except Exception:
-            raise TypeError("Angle must be a number")
+        except Exception as exc:
+            raise TypeError("Angle must be a number") from exc
         # modulo can return negative for some floats in Python; ensure non-negative
         if v < 0.0:
             v += 360.0
@@ -771,7 +772,7 @@ class Sgp4SatrecOrbitalParameters:
         if semi_major_axis_km <= 0.0:
             raise ValueError("semi_major_axis_km must be positive")
 
-        n_rad_per_s = np.sqrt(gm_km3_s2 / (semi_major_axis_km ** 3))
+        n_rad_per_s = np.sqrt(gm_km3_s2 / (semi_major_axis_km**3))
         # convert rad/s -> deg/min
         n_deg_per_min = np.rad2deg(n_rad_per_s) * 60.0
         # convert deg/min to revolutions-per-day
@@ -786,16 +787,19 @@ class Sgp4SatrecOrbitalParameters:
             values (Dict[str, Any]): Dictionary containing the orbital parameters.
                 Expected keys:
                 - "epoch" (Dict[str, Any]): The epoch as an dictionary for AbsoluteDate.from_dict.
-                - "ndot" (float): Optional. First time derivative of the mean motion (loaded from the TLE, but otherwise ignored).
-                - "nddot" (float): Optional. Second time derivative of the mean motion  (loaded from the TLE, but otherwise ignored).
+                - "ndot" (float): Optional. First time derivative of the mean motion
+                                        (loaded from the TLE, but otherwise ignored).
+                - "nddot" (float): Optional. Second time derivative of the mean motion
+                                            (loaded from the TLE, but otherwise ignored).
                 - "bstar" (float): Optional. Ballistic drag coefficient B* (1/earth radii).
                 - "inclo" (float): Inclination in degrees (0 to 180 degrees).
-                - "nodeo" (float): Right Ascension of the Ascending Node in degrees ( 0 to 360 degrees).
+                - "nodeo" (float): Right Ascension of the Ascending Node in degrees
+                                    (0 to 360 degrees).
                 - "ecco" (float): Eccentricity (dimensionless).
                 - "argpo" (float): Argument of Perigee in degrees (0 to 360 degrees).
                 - "mo" (float): Mean Anomaly in degrees (0 to 360 degrees).
                 - Either "no_kozai" (float): Mean Motion in revolutions per day,
-                  or "sma" (float): semi-major axis in kilometers. 
+                  or "sma" (float): semi-major axis in kilometers.
                                     If `sma` is provided `no_kozai` will be computed.
 
         """
@@ -806,7 +810,9 @@ class Sgp4SatrecOrbitalParameters:
             sma = float(values["sma"])
             no_kozai_val = cls.compute_no_kozai_from_semi_major_axis(sma)
         else:
-            raise KeyError("Either 'no_kozai' or 'sma' (semi-major axis in km) must be provided")
+            raise KeyError(
+                "Either 'no_kozai' or 'sma' (semi-major axis in km) must be provided"
+            )
 
         return cls(
             epoch=AbsoluteDate.from_dict(values["epoch"]),
@@ -837,7 +843,7 @@ class Sgp4SatrecOrbitalParameters:
         }
 
     @staticmethod
-    def _derive_epoch_satrec_repr(epoch: AbsoluteDate) ->  float:
+    def _derive_epoch_satrec_repr(epoch: AbsoluteDate) -> float:
         """
         Compute the epoch representation required by the SGP4 `Satrec` class.
 
@@ -853,9 +859,11 @@ class Sgp4SatrecOrbitalParameters:
         Returns:
             float: A float representing the epoch in the format required by the SGP4 `Satrec` class.
         """
-        julian_date = epoch.to_dict(time_format="JULIAN_DATE", time_scale="UTC")["jd"]
+        julian_date = epoch.to_dict(
+            time_format="JULIAN_DATE", time_scale="UTC"
+        )["jd"]
         return julian_date - 2433281.5
-    
+
     def get_sgp4_satrec(self) -> Sgp4_Satrec:
         """Create and return an `sgp4.api.Satrec` object initialized with
         the stored orbital parameters.
@@ -863,33 +871,41 @@ class Sgp4SatrecOrbitalParameters:
         'WGS72' gravity model and 'i' (improved) mode are used by default.
         THe reason for using WGS72 is outlined in:
             https://pypi.org/project/sgp4/#providing-your-own-elements
-        
+
         Returns:
             Sgp4_Satrec: An instance of `sgp4.api.Satrec` initialized with
                          the stored orbital parameters.
         """
         satrec = Sgp4_Satrec()
-        no_kozai_rad_per_min = np.deg2rad(self.no_kozai * 360.0) / 1440.0  # rev/day -> rad/min
+        no_kozai_rad_per_min = (
+            np.deg2rad(self.no_kozai * 360.0) / 1440.0
+        )  # rev/day -> rad/min
         satrec.sgp4init(
             Sgp4_WGS72,  # gravity model WGS-72
-            'i',         # 'a' = old AFSPC mode, 'i' = improved mode
-            0,      # satnum: Satellite number (not used here)
-            self.epoch_satrec_repr, # epoch: days since 1949 December 31 00:00 UT
-            self.bstar, # bstar: drag coefficient (1/earth radii)
-            self.ndot, # ndot: ballistic coefficient (radians/minute^2)
+            "i",  # 'a' = old AFSPC mode, 'i' = improved mode
+            0,  # satnum: Satellite number (not used here)
+            self.epoch_satrec_repr,  # epoch: days since 1949 December 31 00:00 UT
+            self.bstar,  # bstar: drag coefficient (1/earth radii)
+            self.ndot,  # ndot: ballistic coefficient (radians/minute^2)
             self.nddot,  # nddot: mean motion 2nd derivative (radians/minute^3)
-            self.ecco, # ecco: eccentricity
-            np.deg2rad(self.argpo), # argpo: argument of perigee (radians 0..2pi)
-            np.deg2rad(self.inclo), # inclo: inclination (radians 0..pi)
-            np.deg2rad(self.mo), # mo: mean anomaly (radians 0..2pi)
+            self.ecco,  # ecco: eccentricity
+            np.deg2rad(
+                self.argpo
+            ),  # argpo: argument of perigee (radians 0..2pi)
+            np.deg2rad(self.inclo),  # inclo: inclination (radians 0..pi)
+            np.deg2rad(self.mo),  # mo: mean anomaly (radians 0..2pi)
             no_kozai_rad_per_min,  # no_kozai: mean motion (radians/minute)
-            np.deg2rad(self.nodeo), # nodeo: R.A. of ascending node (radians 0..2pi)
+            np.deg2rad(
+                self.nodeo
+            ),  # nodeo: R.A. of ascending node (radians 0..2pi)
         )
-        Sgp4_check_satrec(satrec) # validate that the elements are acceptable
+        Sgp4_check_satrec(satrec)  # validate that the elements are acceptable
         return satrec
 
     @classmethod
-    def tle_lines_to_satrec_orbital_parameters(cls, tle_line1: str, tle_line2: str) -> "Sgp4SatrecOrbitalParameters":
+    def tle_lines_to_satrec_orbital_parameters(
+        cls, tle_line1: str, tle_line2: str
+    ) -> "Sgp4SatrecOrbitalParameters":
         """Create an instance of `Sgp4SatrecOrbitalParameters` from TLE lines.
 
         Args:
@@ -901,11 +917,13 @@ class Sgp4SatrecOrbitalParameters:
         """
         satrec = Sgp4_Satrec.twoline2rv(tle_line1, tle_line2)
         # Extract epoch as AbsoluteDate
-        epoch = AbsoluteDate.from_dict({
-            "time_format": "JULIAN_DATE",
-            "time_scale": "UTC",
-            "jd": satrec.jdsatepoch  + satrec.jdsatepochF,
-        })
+        epoch = AbsoluteDate.from_dict(
+            {
+                "time_format": "JULIAN_DATE",
+                "time_scale": "UTC",
+                "jd": satrec.jdsatepoch + satrec.jdsatepochF,
+            }
+        )
         return cls(
             epoch=epoch,
             ndot=satrec.ndot,
@@ -916,5 +934,7 @@ class Sgp4SatrecOrbitalParameters:
             ecco=satrec.ecco,
             argpo=np.rad2deg(satrec.argpo),
             mo=np.rad2deg(satrec.mo),
-            no_kozai=np.rad2deg(satrec.no_kozai)*1440.0/360.0,  # rad/min -> rev/day
+            no_kozai=np.rad2deg(satrec.no_kozai)
+            * 1440.0
+            / 360.0,  # rad/min -> rev/day
         )

@@ -171,10 +171,13 @@ class EclipseFinder:
         objects inside the Earth.
 
         The following combinations of inputs are supported:
-            1. 'time' and 'position' provided as inputs. Eclipse is evaluated at the given time(s) for the input position.
-            2. 'state' provided as input. Eclipse is evaluated at the time(s) and position(s) in the state/ state-series.
-            3. 'time' and 'state' provided as inputs. Eclipse is evaluated at the given time(s) for the position(s) in the state(series).
-                                                        The time(s) in the state(series) are ignored. 
+            1. 'time' and 'position' provided as inputs. Eclipse is evaluated
+                at the given time(s) for the input position.
+            2. 'state' provided as input. Eclipse is evaluated at the time(s) 
+                and position(s) in the state/ state-series.
+            3. 'time' and 'state' provided as inputs. Eclipse is evaluated at the given 
+                time(s) for the position(s) in the state(series).The time(s) in the
+                state(series) are ignored.
 
         References:
             https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/spkpos_c.html
@@ -220,14 +223,16 @@ class EclipseFinder:
 
         # Helper function to normalize time input as AbsoluteDateArray
         def _as_absolute_date_array(
-            time_value: Union[AbsoluteDate, AbsoluteDateArray]
+            time_value: Union[AbsoluteDate, AbsoluteDateArray],
         ) -> AbsoluteDateArray:
             """Normalize a time input to an AbsoluteDateArray."""
             if isinstance(time_value, AbsoluteDateArray):
                 return time_value
             if isinstance(time_value, AbsoluteDate):
                 return AbsoluteDateArray(
-                    np.array([time_value.to_spice_ephemeris_time()], dtype=float)
+                    np.array(
+                        [time_value.to_spice_ephemeris_time()], dtype=float
+                    )
                 )
             raise TypeError(
                 "time must be an AbsoluteDate or AbsoluteDateArray when provided."
@@ -297,7 +302,9 @@ class EclipseFinder:
                 else:
                     eval_time = _as_absolute_date_array(time)
                     time = eval_time
-                    e2o_vector = np.tile(state_position, (eval_time.length, 1)) # the position is assumed constant over the eval times
+                    e2o_vector = np.tile(
+                        state_position, (eval_time.length, 1)
+                    )  # the position is assumed constant over the eval times
             else:
                 raise TypeError(
                     "State must be of type StateSeries, PositionSeries, or CartesianState."

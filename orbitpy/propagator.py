@@ -15,7 +15,11 @@ from eosimutils.base import EnumBase, ReferenceFrame
 from eosimutils.time import AbsoluteDate, AbsoluteDateArray
 from eosimutils.trajectory import StateSeries
 
-from .orbits import TwoLineElementSet, OrbitalMeanElementsMessage, Sgp4SatrecOrbitalParameters
+from .orbits import (
+    TwoLineElementSet,
+    OrbitalMeanElementsMessage,
+    Sgp4SatrecOrbitalParameters,
+)
 
 NUMBER_OF_SECONDS_IN_A_DAY = 86400.0
 
@@ -150,17 +154,22 @@ class SGP4Propagator:
         self,
         t0: AbsoluteDate,
         duration_days: float,
-        orbit: Union[TwoLineElementSet, OrbitalMeanElementsMessage, Sgp4SatrecOrbitalParameters],
+        orbit: Union[
+            TwoLineElementSet,
+            OrbitalMeanElementsMessage,
+            Sgp4SatrecOrbitalParameters,
+        ],
     ) -> StateSeries:
         """Propagates the orbit from t0 to t1 using the SGP4 propagator.
 
         Args:
             t0 (AbsoluteDate): Start time for propagation.
             duration_days (float): Duration of propagation in days.
-            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage, Sgp4SatrecOrbitalParameters]):
+            orbit (Union[TwoLineElementSet, OrbitalMeanElementsMessage,
+                            Sgp4SatrecOrbitalParameters]):
                     Orbital specifications to be propagated.
-                    This can be either a TLE set or an Orbital Mean Elements Message or classical orbital
-                    elements compatible with SGP4.
+                    This can be either a TLE set or an Orbital Mean Elements 
+                    Message or classical orbital elements compatible with SGP4.
 
         Returns:
             StateSeries: A StateSeries object containing the propagated trajectory.
@@ -168,7 +177,7 @@ class SGP4Propagator:
         Raises:
             ValueError: If the orbit type is invalid for SGP4 propagation.
         """
-        
+
         skyfield_ts = Skyfield_load.timescale()
         if isinstance(orbit, TwoLineElementSet) or isinstance(
             orbit, OrbitalMeanElementsMessage
@@ -180,7 +189,9 @@ class SGP4Propagator:
         elif isinstance(orbit, Sgp4SatrecOrbitalParameters):
             # get satrec object from Sgp4SatrecOrbitalParameters
             satrec = orbit.get_sgp4_satrec()
-            skyfield_sat = Skyfield_EarthSatellite.from_satrec(satrec, skyfield_ts) # wrap into a Skyfield object
+            skyfield_sat = Skyfield_EarthSatellite.from_satrec(
+                satrec, skyfield_ts
+            )  # wrap into a Skyfield object
         else:
             raise ValueError(
                 "Invalid orbit type for SGP4 propagation. Must be TLE or mean elements message."

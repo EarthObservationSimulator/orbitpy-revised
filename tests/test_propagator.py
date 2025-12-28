@@ -98,33 +98,35 @@ class TestSGP4Propagator(unittest.TestCase):
     """Unit tests for the SGP4Propagator class."""
 
     def setUp(self):
-        """Set up test data for SGP4Propagator. """
+        """Set up test data for SGP4Propagator."""
 
         self.step_size = 60  # seconds
         self.propagator = SGP4Propagator(step_size=self.step_size)
 
-        #Test satellite is Sentinel-1D (norad id: 66315)
+        # Test satellite is Sentinel-1D (norad id: 66315)
         self.tle = TwoLineElementSet(
             line0="0 SENTINEL-1D",
             line1="1 66315U 25251A   25319.50889988  .00000433  00000-0  10101-3 0  9997",
             line2="2 66315  98.1943 324.8830 0000636 321.5378  38.5776 14.59503087  1569",
         )
-        self.sgp4_satrec_params = Sgp4SatrecOrbitalParameters.from_dict({
-            "epoch": {
-                "time_format": "Gregorian_Date",
-                "calendar_date": "2025-11-15T12:12:48.949632",
-                "time_scale": "utc",
-            },
-            "inclo": 98.1943,
-            "nodeo": 324.883,
-            "ecco": 0.0000636,
-            "argpo": 321.5378,
-            "mo": 38.5776,
-            "no_kozai": 14.59503087,
-            "bstar": 0.00010101,
-            "ndot": 0.00000433,
-            "nddot": 0.0,
-        })
+        self.sgp4_satrec_params = Sgp4SatrecOrbitalParameters.from_dict(
+            {
+                "epoch": {
+                    "time_format": "Gregorian_Date",
+                    "calendar_date": "2025-11-15T12:12:48.949632",
+                    "time_scale": "utc",
+                },
+                "inclo": 98.1943,
+                "nodeo": 324.883,
+                "ecco": 0.0000636,
+                "argpo": 321.5378,
+                "mo": 38.5776,
+                "no_kozai": 14.59503087,
+                "bstar": 0.00010101,
+                "ndot": 0.00000433,
+                "nddot": 0.0,
+            }
+        )
         self.start_time = AbsoluteDate.from_dict(
             {
                 "time_format": "Gregorian_Date",
@@ -184,8 +186,7 @@ class TestSGP4Propagator(unittest.TestCase):
         )
 
     def test_execute_with_sgp4satrecorbitalparameters(self):
-        """Test the execute method with a Sgp4SatrecOrbitalParameters object.
-        """
+        """Test the execute method with a Sgp4SatrecOrbitalParameters object."""
 
         # run propagation with Sgp4SatrecOrbitalParameters
         result = self.propagator.execute(
@@ -254,6 +255,7 @@ class TestSGP4Propagator(unittest.TestCase):
         np.testing.assert_allclose(
             result_tle.data[1], result_sgp4.data[1], rtol=1e-3, atol=1e-2
         )  # Velocity
+
 
 if __name__ == "__main__":
     unittest.main()

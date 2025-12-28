@@ -16,11 +16,10 @@ from eosimutils.state import (
 from eosimutils.base import SurfaceType
 
 from orbitpy.mission import Mission
-from orbitpy.eclipsefinder import EclipseInfo
-from orbitpy.contactfinder import ContactInfo
 from orbitpy.coverage import DiscreteCoverageTP
 from orbitpy.coveragecalculator import CoverageType
-        
+
+
 def uniform_lat_lon_spacing_grid(
     lat_lower_bound: float,
     lat_upper_bound: float,
@@ -52,23 +51,27 @@ class TestMissionOne(unittest.TestCase):
 
     def setUp(self):
 
-        self.points_array = Cartesian3DPositionArray.from_geographic_position_array(
-            GeographicPositionArray.from_geographic_position_list(
-                [
-                    GeographicPosition(
-                        latitude_degrees=45.0,
-                        longitude_degrees=45.0,
-                        elevation_m=0.0,
-                    ),
-                    GeographicPosition(
-                        latitude_degrees=-45.0,
-                        longitude_degrees=-45.0,
-                        elevation_m=0.0,
-                    ),
-                    GeographicPosition(
-                        latitude_degrees=0.0, longitude_degrees=0.0, elevation_m=0.0
-                    ),
-                ]
+        self.points_array = (
+            Cartesian3DPositionArray.from_geographic_position_array(
+                GeographicPositionArray.from_geographic_position_list(
+                    [
+                        GeographicPosition(
+                            latitude_degrees=45.0,
+                            longitude_degrees=45.0,
+                            elevation_m=0.0,
+                        ),
+                        GeographicPosition(
+                            latitude_degrees=-45.0,
+                            longitude_degrees=-45.0,
+                            elevation_m=0.0,
+                        ),
+                        GeographicPosition(
+                            latitude_degrees=0.0,
+                            longitude_degrees=0.0,
+                            elevation_m=0.0,
+                        ),
+                    ]
+                )
             )
         )
 
@@ -152,7 +155,7 @@ class TestMissionOne(unittest.TestCase):
             },
             "spatial_points": {
                 "cartesian_3d_array": self.points_array.to_dict()
-            }
+            },
         }
 
     def test_from_dict_and_to_dict_roundtrip(self):
@@ -187,7 +190,6 @@ class TestMissionOne(unittest.TestCase):
         self.assertIsNone(settings.spacetrack_credentials_relative_path)
         self.assertIsNone(settings.user_dir)
         self.assertEqual(settings.surface_type, SurfaceType.WGS84)
-        
 
     def test_execute_propagation(self):
         m = Mission.from_dict(self.mission_dict)
@@ -481,9 +483,7 @@ class TestMissionTwo(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": {
-                "cartesian_3d_array": points_array.to_dict()
-            },
+            "spatial_points": {"cartesian_3d_array": points_array.to_dict()},
         }
         self.m = Mission.from_dict(self.mission_dict)
         (self.propagated_trajectories, _) = self.m.execute_propagation()
@@ -817,9 +817,7 @@ class TestMissionGNSSR(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": {
-                "cartesian_3d_array": points_array.to_dict()
-            },
+            "spatial_points": {"cartesian_3d_array": points_array.to_dict()},
             "settings": {
                 "coverage_type": "SPECULAR_COVERAGE",
                 "specular_radius_km": 15.0,
@@ -877,9 +875,7 @@ class TestMissionGNSSR(unittest.TestCase):
                     self.assertIsInstance(
                         gnssr_entry["coverage_info"], DiscreteCoverageTP
                     )
-                    self.assertIsInstance(
-                        gnssr_entry["rcg_factor"], list
-                    )
+                    self.assertIsInstance(gnssr_entry["rcg_factor"], list)
                     self.assertTrue(
                         all(
                             isinstance(rcg, float)
@@ -935,12 +931,13 @@ class TestAutoRetrieveOrbit(unittest.TestCase):
             self.assertIn("trajectory", entry)
             self.assertIsInstance(entry["trajectory"], StateSeries)
 
+
 class TestMissionNoSensor(unittest.TestCase):
     """Tests for the Mission class with a spacecraft that has no sensors."""
 
     def setUp(self):
-        
-         # Generate uniformly spaced points on a latitude/longitude grid
+
+        # Generate uniformly spaced points on a latitude/longitude grid
         self.all_geo_points_list = uniform_lat_lon_spacing_grid(
             -90, 90, 1, -180, 180, 1
         )
@@ -978,15 +975,15 @@ class TestMissionNoSensor(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": {
-                "cartesian_3d_array": points_array.to_dict()
-            },
+            "spatial_points": {"cartesian_3d_array": points_array.to_dict()},
         }
-    
+
     def test_coverage_no_sensor(self):
         m = Mission.from_dict(self.mission_dict)
         (propagated_trajectories, _) = m.execute_propagation()
-        all_coverage_info = m.execute_coverage_calculator(propagated_trajectories)
+        all_coverage_info = m.execute_coverage_calculator(
+            propagated_trajectories
+        )
 
         # coverage_info is a list of dicts, each with "spacecraft_id" and "coverage"
         self.assertIsInstance(all_coverage_info, list)
@@ -999,14 +996,15 @@ class TestMissionNoSensor(unittest.TestCase):
             self.assertEqual(sc_entry.get("spacecraft_id"), expected_sc_id)
             self.assertIn("total_spacecraft_coverage", sc_entry)
             self.assertIsInstance(sc_entry["total_spacecraft_coverage"], list)
-            self.assertEqual(len(sc_entry["total_spacecraft_coverage"]), 1) # should have one omnidirectional coverage entry
+            self.assertEqual(
+                len(sc_entry["total_spacecraft_coverage"]), 1
+            )  # should have one omnidirectional coverage entry
             sensor_entry = sc_entry["total_spacecraft_coverage"][0]
+            self.assertEqual(sensor_entry.get("sensor_id"), None)
             self.assertEqual(
-                    sensor_entry.get("sensor_id"), None
-                )
-            self.assertEqual(
-                    sensor_entry.get("sensor_name"), "spacecraft_omnidirectional_fov"
-                )
+                sensor_entry.get("sensor_name"),
+                "spacecraft_omnidirectional_fov",
+            )
             self.assertIn("coverage_info", sensor_entry)
             self.assertIsInstance(
                 sensor_entry["coverage_info"], DiscreteCoverageTP

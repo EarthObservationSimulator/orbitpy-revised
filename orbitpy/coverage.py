@@ -63,9 +63,9 @@ class DiscreteCoverageTP:
         if not isinstance(other, DiscreteCoverageTP):
             return NotImplemented
         return (
-            self.time == other.time and
-            self.coverage == other.coverage and
-            self.grid_points == other.grid_points
+            self.time == other.time
+            and self.coverage == other.coverage
+            and self.grid_points == other.grid_points
         )
 
     def to_dict(self) -> Dict[str, Any]:
