@@ -1,0 +1,242 @@
+[
+        {
+            "name": "GPS_01",
+            "norad_id": "55268"
+        },
+        {
+            "name": "GPS_02",
+            "norad_id": "48859"
+        },
+        {
+            "name": "GPS_03",
+            "norad_id": "46826"
+        },
+        {
+            "name": "GPS_04",
+            "norad_id": "45854"
+        },
+        {
+            "name": "GPS_05",
+            "norad_id": "44506"
+        },
+        {
+            "name": "GPS_06",
+            "norad_id": "43873"
+        },
+        {
+            "name": "GPS_07",
+            "norad_id": "41328"
+        },
+        {
+            "name": "GPS_08",
+            "norad_id": "41019"
+        },
+        {
+            "name": "GPS_09",
+            "norad_id": "40730"
+        },
+        {
+            "name": "GPS_10",
+            "norad_id": "40534"
+        },
+        {
+            "name": "GPS_11",
+            "norad_id": "40294"
+        },
+        {
+            "name": "GPS_12",
+            "norad_id": "40105"
+        },
+        {
+            "name": "GPS_13",
+            "norad_id": "39741"
+        },
+        {
+            "name": "GPS_14",
+            "norad_id": "39533"
+        },
+        {
+            "name": "GPS_15",
+            "norad_id": "39166"
+        },
+        {
+            "name": "GPS_16",
+            "norad_id": "38833"
+        },
+        {
+            "name": "GPS_17",
+            "norad_id": "36585"
+        },
+        {
+            "name": "GPS_18",
+            "norad_id": "35752"
+        },
+        {
+            "name": "GPS_19",
+            "norad_id": "32711"
+        },
+        {
+            "name": "GPS_20",
+            "norad_id": "32384"
+        },
+        {
+            "name": "GPS_21",
+            "norad_id": "32260"
+        },
+        {
+            "name": "GPS_22",
+            "norad_id": "29601"
+        },
+        {
+            "name": "GPS_23",
+            "norad_id": "29486"
+        },
+        {
+            "name": "GPS_24",
+            "norad_id": "28874"
+        },
+        {
+            "name": "GPS_25",
+            "norad_id": "28474"
+        },
+        {
+            "name": "GPS_26",
+            "norad_id": "28190"
+        },
+        {
+            "name": "GPS_27",
+            "norad_id": "27704"
+        },
+        {
+            "name": "GPS_28",
+            "norad_id": "27663"
+        },
+        {
+            "name": "GPS_29",
+            "norad_id": "26407"
+        },
+        {
+            "name": "GPS_30",
+            "norad_id": "26360"
+        },
+        {
+            "name": "GPS_31",
+            "norad_id": "24876"
+        },
+        {
+            "name": "GALILEO_01",
+            "norad_id": "37846"
+        },
+        {
+            "name": "GALILEO_02",
+            "norad_id": "37847"
+        },
+        {
+            "name": "GALILEO_03",
+            "norad_id": "38857"
+        },
+        {
+            "name": "GALILEO_04",
+            "norad_id": "40128"
+        },
+        {
+            "name": "GALILEO_05",
+            "norad_id": "40129"
+        },
+        {
+            "name": "GALILEO_06",
+            "norad_id": "40544"
+        },
+        {
+            "name": "GALILEO_07",
+            "norad_id": "40545"
+        },
+        {
+            "name": "GALILEO_08",
+            "norad_id": "40889"
+        },
+        {
+            "name": "GALILEO_09",
+            "norad_id": "40890"
+        },
+        {
+            "name": "GALILEO_10",
+            "norad_id": "41174"
+        },
+        {
+            "name": "GALILEO_11",
+            "norad_id": "41175"
+        },
+        {
+            "name": "GALILEO_12",
+            "norad_id": "41549"
+        },
+        {
+            "name": "GALILEO_13",
+            "norad_id": "41550"
+        },
+        {
+            "name": "GALILEO_14",
+            "norad_id": "41859"
+        },
+        {
+            "name": "GALILEO_15",
+            "norad_id": "41860"
+        },
+        {
+            "name": "GALILEO_16",
+            "norad_id": "41861"
+        },
+        {
+            "name": "GALILEO_17",
+            "norad_id": "41862"
+        },
+        {
+            "name": "GALILEO_18",
+            "norad_id": "43055"
+        },
+        {
+            "name": "GALILEO_19",
+            "norad_id": "43056"
+        },
+        {
+            "name": "GALILEO_20",
+            "norad_id": "43057"
+        },
+        {
+            "name": "GALILEO_21",
+            "norad_id": "43058"
+        },
+        {
+            "name": "GALILEO_22",
+            "norad_id": "43564"
+        },
+        {
+            "name": "GALILEO_23",
+            "norad_id": "43565"
+        },
+        {
+            "name": "GALILEO_24",
+            "norad_id": "43566"
+        },
+        {
+            "name": "GALILEO_25",
+            "norad_id": "43567"
+        },
+        {
+            "name": "GALILEO_26",
+            "norad_id": "49809"
+        },
+        {
+            "name": "GALILEO_27",
+            "norad_id": "49810"
+        },
+        {
+            "name": "GALILEO_28",
+            "norad_id": "59598"
+        },
+        {
+            "name": "GALILEO_29",
+            "norad_id": "59600"
+        }
+    ]

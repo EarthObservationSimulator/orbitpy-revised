@@ -1,21 +1,23 @@
 """Unit tests for orbitpy.orbits module."""
 
 import os
+from typing import List
 import unittest
 import numpy as np
 
 # from eosimutils.base import JsonSerializer
-
+from eosimutils.time import AbsoluteDate
 from eosimutils.trajectory import StateSeries
 from eosimutils.state import (
     Cartesian3DPositionArray,
     GeographicPosition,
+    GeographicPositionArray,
 )
+from eosimutils.base import SurfaceType
 
 from orbitpy.mission import Mission
-from orbitpy.eclipsefinder import EclipseInfo
-from orbitpy.contactfinder import ContactInfo
 from orbitpy.coverage import DiscreteCoverageTP
+from orbitpy.coveragecalculator import CoverageType
 
 
 def uniform_lat_lon_spacing_grid(
@@ -25,7 +27,7 @@ def uniform_lat_lon_spacing_grid(
     lon_lower_bound: float,
     lon_upper_bound: float,
     lon_step_deg: float,
-) -> Cartesian3DPositionArray:
+) -> List[GeographicPosition]:
     """Return uniformly spaced GeographicPosition points
     on a latitude/longitude grid given the bounds."""
     latitudes = np.arange(
@@ -49,22 +51,28 @@ class TestMissionOne(unittest.TestCase):
 
     def setUp(self):
 
-        self.points_array = Cartesian3DPositionArray.from_geographic_positions(
-            [
-                GeographicPosition(
-                    latitude_degrees=45.0,
-                    longitude_degrees=45.0,
-                    elevation_m=0.0,
-                ),
-                GeographicPosition(
-                    latitude_degrees=-45.0,
-                    longitude_degrees=-45.0,
-                    elevation_m=0.0,
-                ),
-                GeographicPosition(
-                    latitude_degrees=0.0, longitude_degrees=0.0, elevation_m=0.0
-                ),
-            ]
+        self.points_array = (
+            Cartesian3DPositionArray.from_geographic_position_array(
+                GeographicPositionArray.from_geographic_position_list(
+                    [
+                        GeographicPosition(
+                            latitude_degrees=45.0,
+                            longitude_degrees=45.0,
+                            elevation_m=0.0,
+                        ),
+                        GeographicPosition(
+                            latitude_degrees=-45.0,
+                            longitude_degrees=-45.0,
+                            elevation_m=0.0,
+                        ),
+                        GeographicPosition(
+                            latitude_degrees=0.0,
+                            longitude_degrees=0.0,
+                            elevation_m=0.0,
+                        ),
+                    ]
+                )
+            )
         )
 
         # For purposes of the `test_from_dict_and_to_dict_roundtrip` test, below dictionary
@@ -145,7 +153,9 @@ class TestMissionOne(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": self.points_array.to_dict(),
+            "spatial_points": {
+                "cartesian_3d_array": self.points_array.to_dict()
+            },
         }
 
     def test_from_dict_and_to_dict_roundtrip(self):
@@ -171,6 +181,15 @@ class TestMissionOne(unittest.TestCase):
             m_dict.get("spatial_points"),
             self.mission_dict.get("spatial_points"),
         )
+        # Test defaults for mission settings
+        # Since no "settings" key is provided in self.mission_dict, defaults should be used
+        settings = m.settings
+        self.assertIsNotNone(settings)
+        self.assertEqual(settings.coverage_type, CoverageType.POINT_COVERAGE)
+        self.assertIsNone(settings.specular_radius_km)
+        self.assertIsNone(settings.spacetrack_credentials_relative_path)
+        self.assertIsNone(settings.user_dir)
+        self.assertEqual(settings.surface_type, SurfaceType.WGS84)
 
     def test_execute_propagation(self):
         m = Mission.from_dict(self.mission_dict)
@@ -202,7 +221,12 @@ class TestMissionOne(unittest.TestCase):
         self.assertIsInstance(entry.get("spacecraft_id"), str)
         self.assertIn(entry.get("spacecraft_id"), m.spacecrafts[0].identifier)
         self.assertIn("eclipse_info", entry)
-        self.assertIsInstance(entry["eclipse_info"], EclipseInfo)
+        self.assertIsInstance(entry["eclipse_info"], list)
+        for interval in entry["eclipse_info"]:
+            self.assertIsInstance(interval, tuple)
+            self.assertEqual(len(interval), 2)
+            self.assertIsInstance(interval[0], AbsoluteDate)
+            self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_gs_contact_finder(self):
         m = Mission.from_dict(self.mission_dict)
@@ -232,7 +256,12 @@ class TestMissionOne(unittest.TestCase):
         gs_entry = contact_info[0]["contacts"][0]
         self.assertEqual(gs_entry.get("ground_station_id"), gs_id)
         self.assertIn("contact_info", gs_entry)
-        self.assertIsInstance(gs_entry["contact_info"], ContactInfo)
+        self.assertIsInstance(gs_entry["contact_info"], list)
+        for interval in gs_entry["contact_info"]:
+            self.assertIsInstance(interval, tuple)
+            self.assertEqual(len(interval), 2)
+            self.assertIsInstance(interval[0], AbsoluteDate)
+            self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_coverage_calculator(self):
         m = Mission.from_dict(self.mission_dict)
@@ -287,17 +316,19 @@ class TestMissionTwo(unittest.TestCase):
     def setUp(self):
 
         # Generate uniformly spaced points on a latitude/longitude grid
-        self.all_geo_points_array = uniform_lat_lon_spacing_grid(
+        self.all_geo_points_list = uniform_lat_lon_spacing_grid(
             -90, 90, 1, -180, 180, 1
         )
-        points_array = Cartesian3DPositionArray.from_geographic_positions(
-            self.all_geo_points_array
+        points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                self.all_geo_points_list
+            )
         )
 
         self.mission_dict = {
             "start_time": {
                 "time_format": "GREGORIAN_DATE",
-                "calendar_date": "2025-09-30T13 :00:00.000",
+                "calendar_date": "2025-09-30T13:00:00.000",
                 "time_scale": "UTC",
             },
             "duration_days": 1.0,
@@ -452,7 +483,7 @@ class TestMissionTwo(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": points_array.to_dict(),
+            "spatial_points": {"cartesian_3d_array": points_array.to_dict()},
         }
         self.m = Mission.from_dict(self.mission_dict)
         (self.propagated_trajectories, _) = self.m.execute_propagation()
@@ -495,7 +526,12 @@ class TestMissionTwo(unittest.TestCase):
                 entry.get("spacecraft_id"), self.m.spacecrafts[idx].identifier
             )
             self.assertIn("eclipse_info", entry)
-            self.assertIsInstance(entry["eclipse_info"], EclipseInfo)
+            self.assertIsInstance(entry["eclipse_info"], list)
+            for interval in entry["eclipse_info"]:
+                self.assertIsInstance(interval, tuple)
+                self.assertEqual(len(interval), 2)
+                self.assertIsInstance(interval[0], AbsoluteDate)
+                self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_gs_contact_finder(self):
 
@@ -526,7 +562,12 @@ class TestMissionTwo(unittest.TestCase):
                     self.m.ground_stations[gs_idx].identifier,
                 )
                 self.assertIn("contact_info", gs_entry)
-                self.assertIsInstance(gs_entry["contact_info"], ContactInfo)
+                self.assertIsInstance(gs_entry["contact_info"], list)
+                for interval in gs_entry["contact_info"]:
+                    self.assertIsInstance(interval, tuple)
+                    self.assertEqual(len(interval), 2)
+                    self.assertIsInstance(interval[0], AbsoluteDate)
+                    self.assertIsInstance(interval[1], AbsoluteDate)
 
     def test_execute_coverage_calculator(self):
 
@@ -608,11 +649,11 @@ class TestMissionTwo(unittest.TestCase):
         )  # unique indices
         # print(covered_point_indices)
 
-        # Find indices of the points in the original self.all_geo_points_array
+        # Find indices of the points in the original self.all_geo_points_list
         # with latitude less than 60 degrees
         lat_bound_indices = [
             i
-            for i, geo_pos in enumerate(self.all_geo_points_array)
+            for i, geo_pos in enumerate(self.all_geo_points_list)
             if geo_pos.latitude > -60 and geo_pos.latitude < 60
         ]
 
@@ -638,13 +679,14 @@ class TestMissionGNSSR(unittest.TestCase):
     def setUp(self):
 
         # Generate uniformly spaced points on a latitude/longitude grid
-        self.all_geo_points_array = uniform_lat_lon_spacing_grid(
+        self.all_geo_points_list = uniform_lat_lon_spacing_grid(
             -35, 35, 1, -180, 180, 1
         )
-        points_array = Cartesian3DPositionArray.from_geographic_positions(
-            self.all_geo_points_array
+        points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                self.all_geo_points_list
+            )
         )
-
         self.mission_dict = {
             "start_time": {
                 "time_format": "GREGORIAN_DATE",
@@ -775,7 +817,7 @@ class TestMissionGNSSR(unittest.TestCase):
                 "propagator_type": "SGP4_PROPAGATOR",
                 "step_size": 60,  # seconds
             },
-            "spatial_points": points_array.to_dict(),
+            "spatial_points": {"cartesian_3d_array": points_array.to_dict()},
             "settings": {
                 "coverage_type": "SPECULAR_COVERAGE",
                 "specular_radius_km": 15.0,
@@ -822,7 +864,7 @@ class TestMissionGNSSR(unittest.TestCase):
                     self.assertIn("gnss_spacecraft_id", gnssr_entry)
                     self.assertIn("gnss_spacecraft_name", gnssr_entry)
                     self.assertIn("coverage_info", gnssr_entry)
-                    self.assertIn("rcg_proportionality", gnssr_entry)
+                    self.assertIn("rcg_factor", gnssr_entry)
 
                     self.assertIsInstance(
                         gnssr_entry["gnss_spacecraft_id"], str
@@ -833,13 +875,11 @@ class TestMissionGNSSR(unittest.TestCase):
                     self.assertIsInstance(
                         gnssr_entry["coverage_info"], DiscreteCoverageTP
                     )
-                    self.assertIsInstance(
-                        gnssr_entry["rcg_proportionality"], list
-                    )
+                    self.assertIsInstance(gnssr_entry["rcg_factor"], list)
                     self.assertTrue(
                         all(
                             isinstance(rcg, float)
-                            for rcg in gnssr_entry["rcg_proportionality"]
+                            for rcg in gnssr_entry["rcg_factor"]
                         )
                     )
 
@@ -890,6 +930,85 @@ class TestAutoRetrieveOrbit(unittest.TestCase):
             )
             self.assertIn("trajectory", entry)
             self.assertIsInstance(entry["trajectory"], StateSeries)
+
+
+class TestMissionNoSensor(unittest.TestCase):
+    """Tests for the Mission class with a spacecraft that has no sensors."""
+
+    def setUp(self):
+
+        # Generate uniformly spaced points on a latitude/longitude grid
+        self.all_geo_points_list = uniform_lat_lon_spacing_grid(
+            -90, 90, 1, -180, 180, 1
+        )
+        points_array = Cartesian3DPositionArray.from_geographic_position_array(
+            GeographicPositionArray.from_geographic_position_list(
+                self.all_geo_points_list
+            )
+        )
+
+        self.mission_dict = {
+            "start_time": {
+                "time_format": "GREGORIAN_DATE",
+                "calendar_date": "2025-09-30T13:00:00.000",
+                "time_scale": "UTC",
+            },
+            "duration_days": 0.5,
+            "spacecrafts": [
+                {
+                    "id": "123e4567-e89b-12d3-a456-426614174000",
+                    "name": "NoSensorSat",
+                    "orbit": {
+                        "orbit_type": "TWO_LINE_ELEMENT_SET",
+                        "TLE_LINE0": "0 NOSENSOR 1",
+                        "TLE_LINE1": "1 39084U 13008A   25273.59195902  .00000981  00000-0  22767-3 0  9990",  # pylint: disable=line-too-long
+                        "TLE_LINE2": "2 39084  98.2157 342.7113 0001218  95.7876 264.3462 14.57123342660093",  # pylint: disable=line-too-long
+                    },
+                    "local_orbital_frame_handler": {
+                        "frame_type": "LVLH_TYPE_1",
+                        "name": "LVLH_NoSensorSat",
+                    },
+                    # No sensors defined
+                }
+            ],
+            "propagator": {
+                "propagator_type": "SGP4_PROPAGATOR",
+                "step_size": 60,  # seconds
+            },
+            "spatial_points": {"cartesian_3d_array": points_array.to_dict()},
+        }
+
+    def test_coverage_no_sensor(self):
+        m = Mission.from_dict(self.mission_dict)
+        (propagated_trajectories, _) = m.execute_propagation()
+        all_coverage_info = m.execute_coverage_calculator(
+            propagated_trajectories
+        )
+
+        # coverage_info is a list of dicts, each with "spacecraft_id" and "coverage"
+        self.assertIsInstance(all_coverage_info, list)
+        self.assertEqual(len(all_coverage_info), len(m.spacecrafts))
+
+        for sc_idx, sc_entry in enumerate(all_coverage_info):
+            # check spacecraft entry
+            self.assertIsInstance(sc_entry, dict)
+            expected_sc_id = m.spacecrafts[sc_idx].identifier
+            self.assertEqual(sc_entry.get("spacecraft_id"), expected_sc_id)
+            self.assertIn("total_spacecraft_coverage", sc_entry)
+            self.assertIsInstance(sc_entry["total_spacecraft_coverage"], list)
+            self.assertEqual(
+                len(sc_entry["total_spacecraft_coverage"]), 1
+            )  # should have one omnidirectional coverage entry
+            sensor_entry = sc_entry["total_spacecraft_coverage"][0]
+            self.assertEqual(sensor_entry.get("sensor_id"), None)
+            self.assertEqual(
+                sensor_entry.get("sensor_name"),
+                "spacecraft_omnidirectional_fov",
+            )
+            self.assertIn("coverage_info", sensor_entry)
+            self.assertIsInstance(
+                sensor_entry["coverage_info"], DiscreteCoverageTP
+            )
 
 
 if __name__ == "__main__":

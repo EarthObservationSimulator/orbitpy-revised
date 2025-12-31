@@ -10,10 +10,10 @@ slowtest:
 	coverage run -m unittest discover -s slowtests
 
 lint:
-	pylint --rcfile=pylintrc orbitpy tests examples # Use the pylintrc file from the Google Python Style Guide 
+	pylint --rcfile=pylintrc orbitpy tests slowtests examples # Use the pylintrc file from the Google Python Style Guide
 
 format:
-	black orbitpy tests examples
+	black orbitpy tests slowtests examples
 
 docs:
 	sphinx-build -b html docs/source docs/build

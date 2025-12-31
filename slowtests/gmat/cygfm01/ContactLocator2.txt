@@ -1,0 +1,9 @@
+Target: DefaultSC
+
+Observer: GroundStation2
+There are no contact events in the time interval 16 Dec 2025 06:39:55.990 to 16 Dec 2025 18:39:55.990
+
+
+Number of events : 0
+
+
