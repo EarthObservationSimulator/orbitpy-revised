@@ -1201,17 +1201,6 @@ class Mission:
                 rx_trajectory_icrf.time
             )  # times at which coverage is to be calculated
 
-            # Convert the propgated trajectories from ICRF_EC frame
-            # to ITRF frame since the specular point calculation
-            # assumes the input trajectories are in the ITRF frame.
-            rx_rot_array, rx_w_array = (
-                self.frame_graph.get_orientation_transform(
-                    from_frame=ReferenceFrame.get("ICRF_EC"),
-                    to_frame=ReferenceFrame.get("ITRF"),
-                    t=rx_times,
-                )
-            )
-
             # Convert the propgated trajectories from ICRF_EC frame to
             # ITRF frame since the specular point calculation
             # assumes the input trajectories are in the ITRF frame.
