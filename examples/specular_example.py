@@ -112,7 +112,7 @@ sp_posseries_ref = PositionSeries(
 # ------------------------------
 
 # Compute specular points using ellipsoidal Earth model
-sp_posseries = get_specular_trajectory(
+sp_posseries, rcg_factor_ellipsoidal = get_specular_trajectory(
     transmitter_states_itrf=tx_stateseries,
     receiver_states_itrf=sc_stateseries,
     times=datearray,
@@ -126,6 +126,8 @@ norms = np.linalg.norm(diff.data[0], axis=1)
 # Plot the norm of the difference
 plt.figure()
 plt.plot(datearray.ephemeris_time, norms)
+plt.xlabel("Ephemeris Time (s)")
+plt.ylabel("Error Norm (km)")
 plt.title("Specular Location Error Norm, Ellipsoidal Earth")
 
 # -----------------------------------
@@ -133,7 +135,7 @@ plt.title("Specular Location Error Norm, Ellipsoidal Earth")
 # -----------------------------------
 
 # Compute specular points using spherical Earth model
-sp_posseries_spherical = get_specular_trajectory(
+sp_posseries_spherical, rcg_factor_spherical = get_specular_trajectory(
     transmitter_states_itrf=tx_stateseries,
     receiver_states_itrf=sc_stateseries,
     times=datearray,
@@ -148,8 +150,23 @@ norms = np.linalg.norm(diff.data[0], axis=1)
 
 plt.figure()
 plt.plot(datearray.ephemeris_time, norms)
+plt.xlabel("Ephemeris Time (s)")
+plt.ylabel("Error Norm (km)")
 plt.title("Specular Location Error Norm, Spherical Earth")
 
+# Plot spherical RCG factor
+plt.figure()
+plt.plot(datearray.ephemeris_time, rcg_factor_spherical)
+plt.xlabel("Ephemeris Time (s)")
+plt.ylabel("Range-Corrected Gain Factor")
+plt.title("Range-Corrected Gain Factor, Spherical Earth")
+
+# Plot ellipsoidal RCG factor
+plt.figure()
+plt.plot(datearray.ephemeris_time, rcg_factor_ellipsoidal)
+plt.xlabel("Ephemeris Time (s)")
+plt.ylabel("Range-Corrected Gain Factor")
+plt.title("Range-Corrected Gain Factor, Ellipsoidal Earth")
 # ---------------
 # Display plots
 # ---------------

@@ -97,7 +97,18 @@ def get_specular_trajectory(
         max_iter,
     )
 
-    variables = [los_source, specular_source]
+    # Returns the range-corrected gain (RCG) factor for the radar.
+    radar_gain = 1.0  # Placeholder value
+    rcg_source = kcl.RCGSource(
+            transmitter_pos_source,
+            receiver_pos_source,
+            specular_source,
+            radar_gain,
+            buff_size,
+        )
+
+
+    variables = [los_source, specular_source, rcg_source]
 
     driver = kcl.VarDriver(variables)
     start_time = 0
@@ -105,6 +116,7 @@ def get_specular_trajectory(
     writers = []
     kcl.driveCoverage(buff_size, start_time, stop_time, driver, writers)
 
+    rcg_factor = np.zeros(buff_size)
     specular_positions = np.zeros((buff_size, 3))
     for i in range(buff_size):
         specular_point = specular_source.get(i)
@@ -113,9 +125,10 @@ def get_specular_trajectory(
             specular_point[1],
             specular_point[2],
         ]
+        rcg_factor[i] = rcg_source.get(i)
 
     result = PositionSeries(
         data=specular_positions, time=times, frame=transmitter_states_itrf.frame
     )
 
-    return result
+    return result, rcg_factor
