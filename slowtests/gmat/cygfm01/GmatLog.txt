@@ -1,0 +1,82 @@
+GMAT Build Date: Apr  9 2025 12:22:35
+
+GMAT Log file set to C:\workspace\GMAT_R2025a\bin\..\output\GmatLog.txt
+Moderator is updating data files...
+Moderator is creating core engine...
+*** Library "..\plugins\libPythonInterface_py312" did not open.
+*** Library "..\plugins\libMatlabInterface" did not open.
+*** Library "..\plugins\libFminconOptimizer" did not open.
+Successfully set Planetary Source to use: DE405
+Successfully set Planetary Source to use: DE405
+Successfully set Planetary Source to use: DE405
+Setting nutation file to C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\NUTATION.DAT
+Setting leap seconds file to C:\workspace\GMAT_R2025a\bin\..\data\time\tai-utc.dat
+2025-12-16 17:23:22 GMAT Moderator successfully created core engine
+Successfully set Planetary Source to use: DE405
+Successfully set Planetary Source to use: DE405
+2025-12-16 17:23:22 GMAT GUI successfully launched.
+*** Error loading "..\plugins\libPythonInterface_py312": GMAT could not load the Python interface. Please check that bin/gmat_startup_file.txt contains the PLUGIN line for "libPythonInterface_py3X" corresponding to an installed Python 3.X distribution. See the User Guide for instructions, or disable the appropriate PLUGIN line in bin/gmat_startup_file.txt to remove this error.
+*** Error loading "libMatlabInterface": GMAT could not load the MATLAB interface. Please check that MATLAB is installed and configured correctly.  See the User Guide for instructions, or disable the appropriate PLUGIN line in bin/gmat_startup_file.txt to remove this error.
+*** Error loading "libFminconOptimizer": Either libMatlabInterface could not load or is disabled, or the MATLAB Optimization Toolbox is not available.  Disable the appropriate PLUGIN line in bin/gmat_startup_file.txt to remove this error.
+
+Interpreting scripts from the file.
+***** file: C:\workspace\GMAT_missions\gmat_mission.script
+Successfully set Planetary Source to use: DE405
+Successfully set Planetary Source to use: DE405
+Successfully interpreted the script
+Running mission...
+Successfully set Planetary Source to use: DE405
+Successfully set Planetary Source to use: DE405
+Kernel C:/workspace/GMAT_R2025a/bin/../data/planetary_ephem/spk/DE405AllPlanets.bsp has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\SPICEPlanetaryConstantsKernel.tpc has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\time\SPICELeapSecondKernel.tls has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\SPICEEarthPredictedKernel.bpc has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\SPICEEarthCurrentKernel.bpc has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\earth_latest_high_prec.bpc has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\SPICELunaCurrentKernel.bpc has been loaded.
+Kernel C:\workspace\GMAT_R2025a\bin\..\data\planetary_coeff\SPICELunaFrameKernel.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation1_1765934615_9133448588859.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation1_1765934615_9133448624657.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation2_1765934615_9133448755556.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation2_1765934615_9133448784347.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation3_1765934615_9133448814587.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation3_1765934615_9133448839984.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation4_1765934615_9133448866020.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation4_1765934615_9133448893819.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation5_1765934615_9133448914103.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation5_1765934615_9133448934260.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation6_1765934615_9133448956339.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation6_1765934615_9133448980123.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation7_1765934615_9133448999966.bsp has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_GroundStation7_1765934615_9133449034415.tf has been loaded.
+Kernel C:\Users\vinay\AppData\Local\Temp\tmp_DefaultSC_1765934615_9133448568931.bsp has been loaded.
+Finding events for ContactLocator ContactLocator1 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation1 and so will not be considered an occulting body for contact location.
+Finding events for ContactLocator ContactLocator2 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation2 and so will not be considered an occulting body for contact location.
+Finding events for ContactLocator ContactLocator3 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation3 and so will not be considered an occulting body for contact location.
+Finding events for ContactLocator ContactLocator4 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation4 and so will not be considered an occulting body for contact location.
+Finding events for ContactLocator ContactLocator5 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation5 and so will not be considered an occulting body for contact location.
+Finding events for ContactLocator ContactLocator6 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation6 and so will not be considered an occulting body for contact location.
+Finding events for ContactLocator ContactLocator7 ...
+Celestial body properties are provided by SPICE kernels.
+*** WARNING *** Body Earth is the central body for GroundStation GroundStation7 and so will not be considered an occulting body for contact location.
+Finding events for EclipseLocator EclipseLocator1 ...
+Celestial body properties are provided by SPICE kernels.
+
+Mission run completed.
+===> Total Run Time: 7.310 seconds
+
+========================================
+Moderator is deleting core engine...
+2025-12-16 17:26:29 GMAT GUI exiting.

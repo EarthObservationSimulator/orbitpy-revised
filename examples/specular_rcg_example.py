@@ -112,8 +112,8 @@ sc_stateseries = get_stateseries([cygnss_id], start_date)[0]
 
 # Compute specular points using ellipsoidal Earth model
 sp_posseries, rcg_factor_ellipsoidal = get_specular_trajectory(
-    transmitter=tx_stateseries,
-    receiver=sc_stateseries,
+    transmitter_states_itrf=tx_stateseries,
+    receiver_states_itrf=sc_stateseries,
     times=tx_stateseries.time,
     surface=SurfaceType.WGS84,
 )

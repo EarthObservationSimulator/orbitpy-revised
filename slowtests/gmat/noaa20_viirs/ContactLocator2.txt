@@ -1,0 +1,11 @@
+Target: DefaultSC
+
+Observer: GroundStation2
+Start Time (UTC)            Stop Time (UTC)               Duration (s)         
+31 Oct 2025 22:24:05.494    31 Oct 2025 22:32:29.383      503.88884994    
+01 Nov 2025 00:04:50.729    01 Nov 2025 00:11:23.274      392.54538075    
+
+
+Number of events : 2
+
+

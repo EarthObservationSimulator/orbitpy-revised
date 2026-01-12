@@ -1,0 +1,18 @@
+[
+        {
+            "name": "GPS_01",
+            "norad_id": "55268"
+        },
+        {
+            "name": "GPS_02",
+            "norad_id": "48859"
+        },
+        {
+            "name": "GPS_03",
+            "norad_id": "46826"
+        },
+        {
+            "name": "GPS_04",
+            "norad_id": "45854"
+        }
+    ]

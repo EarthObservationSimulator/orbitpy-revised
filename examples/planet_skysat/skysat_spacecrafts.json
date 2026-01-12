@@ -1,0 +1,164 @@
+[
+    {
+        "name": "SKYSATC1",
+        "norad_id": "41601",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_C1"
+        },
+        "sensor": [{
+            "name": "SEN_C1_P1",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C1_P1"
+            }
+        },
+        {
+            "name": "SEN_C1_P2",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C1_P2"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC2",
+        "norad_id": "41773",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_C2"
+        },
+        "sensor": [{
+            "name": "C2_P1",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C2_P1"
+            }
+        },
+        {
+            "name": "C2_P2",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C2_P2"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC3",
+        "norad_id": "41774",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_C3"
+        },
+        "sensor": [{
+            "name": "C3_P1",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C3_P1"
+            }
+        },
+        {
+            "name": "C3_P2",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C3_P2"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC4",
+        "norad_id": "41771",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_C4"
+        },
+        "sensor": [{
+            "name": "C4_P1",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C4_P1"
+            }
+        },
+        {
+            "name": "C4_P2",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C4_P2"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC5",
+        "norad_id": "41772",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_C5"
+        },
+        "sensor": [{
+            "name": "C5_P1",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C5_P1"
+            }
+        },
+        {
+            "name": "C5_P2",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C5_P2"
+            }
+        }
+        ]
+    },
+    {
+        "name": "SKYSATC6",
+        "norad_id": "42992",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_C6"
+        },
+        "sensor": [{
+            "name": "C6_P1",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C6_P1"
+            }
+        },
+        {
+            "name": "C6_P2",
+            "fov": {
+                "fov_type": "RECTANGULAR",
+                "ref_angle": 5,
+                "cross_angle": 5,
+                "frame": "SEN_FR_C6_P2"
+            }
+        }
+        ]
+    }
+]
