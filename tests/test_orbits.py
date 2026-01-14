@@ -53,6 +53,9 @@ class TestOrbitFactory(unittest.TestCase):
         OrbitFactory.register_type(OrbitType.CARTESIAN_STATE.value)(
             CartesianState
         )
+        OrbitFactory.register_type(OrbitType.SGP4_SATREC_ORBITAL_PARAMETERS.value)(
+            Sgp4SatrecOrbitalParameters
+        )
         self.tle_dict = {
             "orbit_type": OrbitType.TWO_LINE_ELEMENT_SET.value,
             "TLE_LINE0": "0 LANDSAT 9",
@@ -370,7 +373,7 @@ class TestOsculatingElements(unittest.TestCase):
         self.assertEqual(state.inertial_frame, self.inertial_frame)
 
     def test_invalid_inertial_frame(self):
-        """Test initialization with an invalid inertial frame."""
+        """Test initialization with an invalid frame."""
         with self.assertRaises(ValueError) as context:
             OsculatingElements(
                 self.time,
