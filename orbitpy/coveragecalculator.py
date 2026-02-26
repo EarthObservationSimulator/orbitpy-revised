@@ -7,6 +7,7 @@
 from typing import Type, Dict, Any, Union, Callable, List, Tuple
 import math
 import numpy as np
+import copy
 
 from .coverage import DiscreteCoverageTP
 
@@ -119,6 +120,46 @@ class SpecularCoverage:
     ) -> "SpecularCoverage":
         # Empty since class does not require any initialization parameters
         return cls()
+    
+    @classmethod
+    def get_best_coverage(cls, 
+        coverage_list: List[Tuple[DiscreteCoverageTP, List[float]]]
+    ) -> Tuple[DiscreteCoverageTP, List[float]]:
+        """ Takes a list of tuples, where each tuple contains (1) the coverage corresponding
+        to a single GPS transmitter and (2) the range-corrected gain (RCG), assuming unity gain.
+        Will return a single tuple containing (1) a DiscreteCoverageTP object which holds
+        the coverage at each time point corresponding to the highest RCG value across all
+        transmitters, and (2) a list of the maximum RCG values at each time point.
+
+        Args:
+            coverage_list (List[Tuple[DiscreteCoverageTP, List[float]]]): A list of
+                tuples containing (1) the coverage for each GPS transmitter and (2) the radar's 
+                range-corrected gain (RCG), assuming unity gain, at the input time points.
+        
+        Returns:
+            Tuple[DiscreteCoverageTP, List[float]]: A tuple containing (1) the best coverage
+                across all transmitters at each time point and (2) the maximum RCG value
+                at each time point.
+
+        """
+
+        output_coverage, output_rcg = copy.deepcopy(coverage_list[0])
+        num_timepoints = len(coverage_list[0][0].time)
+        num_lists = len(coverage_list)
+        for i in range(num_timepoints):
+            max_rcg = 0.0
+            max_rcg_idx = 0
+            for j in range(0, num_lists):
+                rcg_j = coverage_list[j][1][i] # rcg at timepoint i for transmitter j
+                if rcg_j > max_rcg:
+                    max_rcg = rcg_j
+                    max_rcg_idx = j
+
+            output_coverage.coverage[i] = coverage_list[max_rcg_idx][0].coverage[i]
+            output_rcg[i] = max_rcg
+
+        return output_coverage, output_rcg
+
 
     def calculate_coverage(
         self,
