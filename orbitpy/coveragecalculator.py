@@ -147,7 +147,7 @@ class SpecularCoverage:
         num_timepoints = len(coverage_list[0][0].time)
         num_lists = len(coverage_list)
         for i in range(num_timepoints):
-            max_rcg = 0.0
+            max_rcg = -np.inf
             max_rcg_idx = 0
             for j in range(0, num_lists):
                 rcg_j = coverage_list[j][1][i] # rcg at timepoint i for transmitter j
@@ -160,6 +160,59 @@ class SpecularCoverage:
 
         return output_coverage, output_rcg
 
+    @classmethod
+    def get_topk_coverage(
+        cls,
+        coverage_list: List[Tuple[DiscreteCoverageTP, List[float]]],
+        k: int,
+    ) -> List[Tuple[DiscreteCoverageTP, List[float]]]:
+        """Takes a list of tuples, where each tuple contains (1) the coverage corresponding
+        to a single GPS transmitter and (2) the range-corrected gain (RCG), assuming unity gain.
+
+        Returns a list of k tuples. For each rank r (0 <= r < k), the r-th output contains:
+        (1) a DiscreteCoverageTP object holding the coverage at each time point
+        corresponding to the r-th highest RCG across all transmitters, and (2) a list of the r-th
+        highest RCG values at each time point.
+
+        Args:
+            coverage_list (List[Tuple[DiscreteCoverageTP, List[float]]]): A list of tuples
+                containing (1) the coverage for each GPS transmitter and (2) the radar's
+                range-corrected gain (RCG), assuming unity gain, at the input time points.
+            k (int): Number of top coverages to return.
+
+        Returns:
+            List[Tuple[DiscreteCoverageTP, List[float]]]: A list of k tuples, where each tuple
+                contains: (1) a DiscreteCoverageTP object, and (2) the corresponding RCG list.
+        """
+
+        if len(coverage_list) == 0:
+            raise ValueError("coverage_list must be non-empty")
+        if k <= 0:
+            raise ValueError("k must be >= 1")
+
+        num_lists = len(coverage_list)
+        k = min(k, num_lists)
+
+        # Initialize outputs as deep copies of the first k coverages
+        outputs = [copy.deepcopy(coverage_list[i]) for i in range(k)]
+        num_timepoints = len(coverage_list[0][0].time)
+
+        for i in range(num_timepoints):
+            # Collect RCGs at this time index
+            rcgs = np.array([coverage_list[j][1][i] for j in range(num_lists)], dtype=float)
+
+            # Treat non-finite values as -inf so they sort to the bottom
+            rcgs = np.where(np.isfinite(rcgs), rcgs, -np.inf)
+
+            # Indices sorted by descending RCG
+            sorted_indices = np.argsort(rcgs)[::-1]
+
+            for r in range(k):
+                idx = int(sorted_indices[r])
+                outputs[r][0].coverage[i] = coverage_list[idx][0].coverage[i]
+                outputs[r][1][i] = float(rcgs[idx])
+
+        return outputs
 
     def calculate_coverage(
         self,
