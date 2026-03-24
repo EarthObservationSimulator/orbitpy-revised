@@ -148,6 +148,20 @@ class DiscreteCoverageTP:
             int: Total coverage time.
         """
         return sum(len(tp) for tp in self.coverage)
+    
+    def __getitem__(self, time_index: int) -> List[int]:
+        """
+        Get the list of covered grid-point indices at a given time index.
+        """
+        
+        return self.coverage[time_index]
+
+
+    def __setitem__(self, time_index: int, value: List[int]) -> None:
+        """
+        Replace the list of covered grid-point indices at a given time index.
+        """
+        self.coverage[time_index] = value
 
 
 class DiscreteCoverageGP:
