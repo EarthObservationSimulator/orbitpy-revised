@@ -29,6 +29,9 @@ def get_best_trajectory(
     specular_trajectory is a timeseries of position data and rcg is a timeseries of range-corrected
     gain values at the same time points.
 
+    This function is equivalent to get_topk_trajectories with k=1, except that it doesn't require
+    or output ids for each satellite.
+
     Args:
         traj_list (List[Tuple[PositionSeries, List[float]]]): List of tuples containing
             specular trajectory and corresponding RCG list.
@@ -66,6 +69,39 @@ def get_topk_trajectories(
     from the entry with the r-th highest RCG at that time.
 
     Also returns, for each timepoint, the k ids selected (in rank order: best -> k-th best).
+
+    Example:
+
+        Suppose we have 4 input trajectories with ids [10, 11, 12, 13],
+        each defined at 5 time-points, and k = 2.
+
+        Their RCG values over time are:
+
+            id 10: [0.1, 0.9, 0.3, 0.4, 0.8]
+            id 11: [0.5, 0.2, 0.7, 0.1, 0.6]
+            id 12: [0.4, 0.8, 0.2, 0.9, 0.3]
+            id 13: [0.3, 0.1, 0.6, 0.7, 0.5]
+
+        Then the top-2 ids selected at each time-point are:
+
+            t0: [11, 12]
+            t1: [10, 12]
+            t2: [11, 13]
+            t3: [12, 13]
+            t4: [10, 11]
+
+        So:
+            selected_ids_by_time = [
+                [11, 12],
+                [10, 12],
+                [11, 13],
+                [12, 13],
+                [10, 11],
+            ]
+
+        The first output trajectory contains, at each time-point, the position
+        from the trajectory with the highest RCG at that time. The second output
+        trajectory does the same for the second-highest RCG.
 
     Args:
         traj_list: List of (specular_trajectory, rcg) tuples.
@@ -115,7 +151,7 @@ def get_specular_trajectory(
     receiver_states_itrf: StateSeries,
     times: AbsoluteDateArray,
     surface: SurfaceType = SurfaceType.WGS84,
-) -> PositionSeries:
+) -> Tuple[PositionSeries, np.ndarray]:
     """
     Compute the specular point for the given transmitter/receiver pair.
 
@@ -131,7 +167,8 @@ def get_specular_trajectory(
         times (AbsoluteDateArray): Times for which to compute specular point.
 
     Returns:
-        PositionSeries: Object which stores computed specular point at each time point.
+        Tuple[PositionSeries, np.ndarray]:
+            Tuple which stores computed specular point at each time point and the corresponding RCG factors.
     """
 
     # Store all output in memory
@@ -191,7 +228,7 @@ def get_specular_trajectory(
     )
 
     # Returns the range-corrected gain (RCG) factor for the radar.
-    radar_gain = 1.0  # Placeholder value
+    radar_gain = 1.0  # Assume unity gain
     rcg_source = kcl.RCGSource(
             transmitter_pos_source,
             receiver_pos_source,

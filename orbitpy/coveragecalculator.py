@@ -133,8 +133,8 @@ class SpecularCoverage:
 
         Args:
             coverage_list (List[Tuple[DiscreteCoverageTP, List[float]]]): A list of
-                tuples containing (1) the coverage for each GPS transmitter and (2) the radar's 
-                range-corrected gain (RCG), assuming unity gain, at the input time points.
+                tuples, with each tuple containing (1) the coverage for each GPS transmitter and 
+                (2) the radar's range-corrected gain (RCG), assuming unity gain, at the input time points.
         
         Returns:
             Tuple[DiscreteCoverageTP, List[float]]: A tuple containing (1) the best coverage

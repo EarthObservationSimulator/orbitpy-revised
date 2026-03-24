@@ -264,7 +264,7 @@ total_time = 0
 for cov in coverage:
     total_time += cov[0].coverage_time()
 
-print(f"Total coverage time summed accross target grid points is {total_time}")
+print(f"Total coverage time summed across target grid points is {total_time}")
 
 end_time = timer()
 print(f"Coverage calculation took {end_time - start_time:.2f} seconds.")
@@ -273,4 +273,4 @@ print(f"Coverage calculation took {end_time - start_time:.2f} seconds.")
 
 best_cov, best_rcg = SpecularCoverage.get_best_coverage(coverage)
 
-print(f"Total best coverage time summed accross target grid points is {best_cov.coverage_time()}")
+print(f"Total best coverage time summed across target grid points is {best_cov.coverage_time()}")

@@ -9,7 +9,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from eosimutils.time import AbsoluteDateArray, AbsoluteDate, AbsoluteDateArray
+from eosimutils.time import AbsoluteDateArray, AbsoluteDate
 from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.base import ReferenceFrame, SurfaceType
 
