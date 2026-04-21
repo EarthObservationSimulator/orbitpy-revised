@@ -28,6 +28,8 @@ class PropagatorType(EnumBase):
     """Enumeration of supported propagator types."""
 
     SGP4_PROPAGATOR = "SGP4_PROPAGATOR"
+    # Note: Orekit propagator is available in the orekitpropagator module.
+    OREKIT_PROPAGATOR = "OREKIT_PROPAGATOR"
 
 
 class PropagatorFactory:
