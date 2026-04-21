@@ -1,0 +1,9 @@
+name: orbitpy-package-1
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - eigen
+  - fmt
+  - tbb
+  - pip
