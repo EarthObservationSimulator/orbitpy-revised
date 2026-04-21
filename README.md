@@ -8,27 +8,28 @@ Wherever feasible, third-party library classes and functions are leveraged to av
 
 ## Installation
 
-Requires: Unix-like operating system, `python 3.13`, `pip`
+Requires: Unix-like operating system, `conda`
 
-Create a conda environment and install the dependencies:
+Create a conda environment from the provided environment file.
+
 ```
-conda create -n eosim-revised python=3.13
-conda activate eosim-revised
-conda install sphinx
-pip install sphinx-rtd-theme
-pip install pylint
-pip install black
-pip install coverage
-pip install skyfield
-pip install astropy
+conda env create -f environment.yml
+conda activate orbitpy
 ```
 
-Install the `eosimutils` package: first download the repository and follow the instructions provided in its README file. This package installs the core utilities required by `orbitpy`.
+Then, install the package into the environment using pip.
 
-Once the repository is set up, run the following command in the terminal to complete the installation of `orbitpy`:
 ```
-make install
+pip install .
 ```
+
+Or, to install the development version (includes tests, formatting utilities, and docs):
+
+```
+pip install ".[dev]"
+```
+
+Next, install the `eosimutils` package: first download the repository and follow the instructions provided in its README file. This package installs the core utilities required by `orbitpy`.
 
 ## Developer Notes
 
