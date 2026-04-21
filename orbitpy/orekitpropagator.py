@@ -1,7 +1,16 @@
 
-"""Orekit-based orbit propagator."""
+"""Orekit-based orbit propagator.
 
-from typing import Any, Dict, Optional
+Note: Many classes are directly imported from Orekit without using the Orekit_ prefix as specified
+in the style guide due to the large number of inports. 
+
+The orekit propagator depends on the presence of data files DTCFILE.TXT, SOLFSMY.TXT, and 
+orekit-data.zip in the data directory of the project. These will be automatically 
+downloaded if not already present.
+
+"""
+
+from typing import Any, Dict, Optional, Union
 
 from os import chdir, getcwd, path
 from pathlib import Path
@@ -41,6 +50,7 @@ from eosimutils.time import AbsoluteDate, AbsoluteDateArray
 from eosimutils.base import ReferenceFrame
 
 from .propagator import PropagatorFactory, PropagatorType
+from .orbits import TwoLineElementSet, OrbitalMeanElementsMessage
 
 def setup_data_directory() -> Path:
     """Ensure the local ../data directory exists and contains required files."""
@@ -92,7 +102,7 @@ class OrekitPropagator:
     absolute and relative tolerances.
 
     Args:
-        stepSize: Propagation step size in seconds.
+        step_size: Propagation step size in seconds.
         mass: Spacecraft mass in kilograms.
         cross_section: Effective cross-sectional area for drag/SRP, in square meters.
         drag_coeff: Drag coefficient.
@@ -108,7 +118,7 @@ class OrekitPropagator:
     """
     def __init__(
         self,
-        stepSize: Optional[float] = None,
+        step_size: Optional[float] = None,
         mass: Optional[float] = None,
         cross_section: Optional[float] = None,
         drag_coeff: Optional[float] = None,
@@ -125,7 +135,7 @@ class OrekitPropagator:
         """Initialize an OrekitPropagator instance."""
 
         # Use provided values or defaults
-        self.stepSize = float(stepSize) if stepSize is not None else 60.0
+        self.step_size = float(step_size) if step_size is not None else 60.0
         self.mass = mass if mass is not None else 100.0
         self.cross_section = cross_section if cross_section is not None else 1.0
         self.drag_coeff = drag_coeff if drag_coeff is not None else 1.0
@@ -247,7 +257,7 @@ class OrekitPropagator:
 
         Args:
             d: Dictionary with Orekit propagator specifications. Supported keys:
-                * "stepSize": Step size in seconds.
+                * "step_size": Step size in seconds.
                 * "mass": Spacecraft mass.
                 * "cross_section": Cross-sectional area for drag/SRP.
                 * "drag_coeff": Drag coefficient.
@@ -266,7 +276,7 @@ class OrekitPropagator:
         """
 
         return OrekitPropagator(
-            stepSize=d.get('stepSize', None),
+            step_size=d.get('step_size', None),
             mass=d.get('mass', None),
             cross_section=d.get('cross_section', None),
             drag_coeff=d.get('drag_coeff', None),
@@ -290,7 +300,7 @@ class OrekitPropagator:
         """
         return {
             "@type": "OREKIT PROPAGATOR",
-            "stepSize": self.stepSize,
+            "step_size": self.step_size,
             "mass": self.mass,
             "cross_section": self.cross_section,
             "drag_coeff": self.drag_coeff,
@@ -309,7 +319,7 @@ class OrekitPropagator:
         self,
         t0: AbsoluteDate,
         duration_days: float,
-        initial_state: CartesianState,
+        initial_state: Union[CartesianState, TwoLineElementSet, OrbitalMeanElementsMessage],
     ) -> StateSeries:
         """Propagate an initial Cartesian state using the configured Orekit model.
 
@@ -319,7 +329,7 @@ class OrekitPropagator:
             initial_state: Initial state.
 
         Returns:
-            StateSeries: Trajectory sampled at `self.stepSize`-second intervals.
+            StateSeries: Trajectory sampled at `self.step_size`-second intervals.
             containing Cartesian position (km) and velocity (km/s) in the ICRF_EC frame.
         """
         # Convert start time to Orekit AbsoluteDate using astropy
@@ -331,14 +341,12 @@ class OrekitPropagator:
 
         # Case 1: CartesianState initial condition
         if isinstance(initial_state, CartesianState):
-            # Optional sanity check: require initial_state.time == t0
             try:
                 if abs(initial_state.time.ephemeris_time - t0.ephemeris_time) > 1e-6:
                     raise ValueError(
                         "Start time t0 must match the time of the CartesianState for OrekitPropagator."
                     )
             except AttributeError:
-                # If your AbsoluteDate doesn't expose ephemeris_time, skip check.
                 pass
 
             pos_km = initial_state.position.to_numpy()
@@ -386,7 +394,7 @@ class OrekitPropagator:
 
         # Setup time grid
         duration_sec = float(duration_days) * 86400.0
-        step_time = float(self.stepSize)
+        step_time = float(self.step_size)
         num_steps = int(np.floor(duration_sec / step_time)) + 1
 
         positions: list[list[float]] = []
