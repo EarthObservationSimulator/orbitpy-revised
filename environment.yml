@@ -1,4 +1,4 @@
-name: orbitpy-package-1
+name: orbitpy
 channels:
   - conda-forge
 dependencies:
