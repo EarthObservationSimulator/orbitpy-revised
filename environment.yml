@@ -16,3 +16,4 @@ dependencies:
   - eigen
   - fmt
   - tbb
+  - tbb-devel
