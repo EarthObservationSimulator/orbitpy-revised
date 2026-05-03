@@ -3,7 +3,16 @@ channels:
   - conda-forge
 dependencies:
   - python=3.13
+  - pip
+
+  # portable build tools
+  - cmake
+  - ninja
+  - pkg-config
+  - compilers
+  - gtest
+
+  # C++ libraries
   - eigen
   - fmt
   - tbb
-  - pip
