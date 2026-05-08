@@ -2,10 +2,97 @@
 .. module:: orbitpy.orbits
    :synopsis: Representation of spacecraft orbits.
 
-Collection of classes and functions relating to
-represention of spacecraft orbit state.
-Spacecraft state may also be represented in terms of Cartesian state
-by using the :class:eosimutils.state.CartesianState class.
+The `orbitpy.orbits` module provides a collection of classes and functions for representing
+spacecraft orbit states.
+The module integrates with external libraries such as SPICE, Skyfield, and SGP4.
+
+**Key Features:**
+
+Factory Pattern:
+    - **OrbitFactory**: A factory class for creating instances of the appropriate orbit type based on a dictionary of specifications.
+                             It supports dynamic registration of custom orbit types.
+
+Support for multiple orbit representations:
+  - **TwoLineElementSet**: Two-line element sets (TLEs).
+
+  - **OrbitalMeanElementsMessage**: Orbital Mean-Elements Messages (OMMs).
+
+  - **OsculatingElements**: Osculating elements (Keplerian elements) in ICRF_EC frame.
+    Conversion to/from Cartesian states is supported.
+
+  - **Sgp4SatrecOrbitalParameters**: Sgp4-compatible orbital parameters. Enables initialization with 
+    either mean motion or semi-major axis specifications.
+    SGP4 Satrec object creation is supported.
+    Conversion from TLEs to Sgp4-compatible parameters is supported.
+    
+  - Cartesian state vectors.
+
+Retrieving satellite orbit data from Space-Track.org.
+    - Retrieve satellite orbit data *created* before and closest to a specified target date. 
+      Note that the data has some latency from the time of the satellite's state measurement.
+
+
+**Example Applications:**
+- Specification of initial orbit in orbit propagators.
+- Converting Cartesian states to/from Keplerian elements.
+
+**Constants:**
+- `GM_EARTH (float)`: Gravitational parameter for Earth in km^3/s^2.
+
+**Example Dictionary Representations**
+
+**TwoLineElementSet**
+```python
+{
+    "orbit_type": "TWO_LINE_ELEMENT_SET",
+    "TLE_LINE0": "0 LANDSAT 9",
+    "TLE_LINE1": "1 49260U 21088A   25106.07240456  .00000957  00000-0  22241-3 0  9997",
+    "TLE_LINE2": "2 49260  98.1921 177.4890 0001161  87.5064 272.6267 14.57121096188801"
+}
+```
+**OrbitalMeanElementsMessage**
+See `tests/test_orbits.py` for an example.
+
+**OsculatingElements**
+```python
+{
+    "orbit_type": "OSCULATING_ELEMENTS",
+    "time": { "time_format": "Gregorian_Date",
+              "calendar_date": "2025-03-10T14:30:00",
+              "time_scale": "utc"
+    },
+    "semi_major_axis": 7000.0,
+    "eccentricity": 0.001,
+    "inclination": 98.0,
+    "raan": 250.0,
+    "arg_of_perigee": 10.0,
+    "true_anomaly": 20.0,
+    "inertial_frame": "ICRF_EC"
+}
+```
+
+**Sgp4SatrecOrbitalParameters**
+```python
+{
+    "orbit_type": "SGP4_SATREC_ORBITAL_PARAMETERS",
+    "epoch": {
+        "time_format": "Gregorian_Date",
+        "calendar_date": "2025-03-10T14:30:00",
+        "time_scale": "utc"
+    },
+    "inclo": 98.1921,
+    "nodeo": 177.4890,
+    "argpo": 87.5064,
+    "mo": 272.6267,
+    "no_kozai": 14.57121096,
+    "ecco": 0.0001161,
+    # Optional fields
+    "bstar": 2.2e-5,
+    "ndot": 0.0,
+    "nddot": 0.0
+}
+```
+
 """
 
 import json
@@ -28,7 +115,7 @@ from eosimutils.base import ReferenceFrame, EnumBase
 from eosimutils.state import CartesianState
 from eosimutils.time import AbsoluteDate
 
-GM_EARTH = 398600.435507  # km^3/s^2
+GM_EARTH = 398600.435507  # km^3/s^2 https://ssd.jpl.nasa.gov/astro_par.html
 
 
 class OrbitType(EnumBase):
@@ -37,6 +124,7 @@ class OrbitType(EnumBase):
     TWO_LINE_ELEMENT_SET = "TWO_LINE_ELEMENT_SET"
     ORBITAL_MEAN_ELEMENTS_MESSAGE = "ORBITAL_MEAN_ELEMENTS_MESSAGE"
     OSCULATING_ELEMENTS = "OSCULATING_ELEMENTS"
+    SGP4_SATREC_ORBITAL_PARAMETERS = "SGP4_SATREC_ORBITAL_PARAMETERS"
     CARTESIAN_STATE = "CARTESIAN_STATE"
 
 
@@ -390,7 +478,7 @@ class SpaceTrackAPI:
             "%Y-%m-%dT%H:%M:%S"
         )  # ensure the format is correct
         omm_url = (
-            f"{self.BASE_URL}/basicspacedata/query/class/omm/"
+            f"{self.BASE_URL}/basicspacedata/query/class/gp_history/"
             + f"NORAD_CAT_ID/{norad_id}/CREATION_DATE/"
             + f"<{tdt}/orderby/EPOCH%20desc/"
             + "limit/1/format/json"
@@ -464,7 +552,9 @@ class SpaceTrackAPI:
 class OsculatingElements:
     """
     Represents the state in terms of osculating (instantaneous)
-    Keplerian elements in a specified inertial frame.
+    Keplerian elements in a specified inertial frame. (Only ICRF_EC
+    inertial reference frame is supported since `eosimutils` supports
+    only that inertial reference frame.)
 
     - Time
     - Semi-major axis
@@ -685,7 +775,7 @@ class OsculatingElements:
             frame=self.inertial_frame,
         )
 
-
+@OrbitFactory.register_type(OrbitType.SGP4_SATREC_ORBITAL_PARAMETERS.value)
 class Sgp4SatrecOrbitalParameters:
     """Container for the orbital elements required by ``sgp4.Satrec``.
 
@@ -755,12 +845,14 @@ class Sgp4SatrecOrbitalParameters:
         """Compute the Kozai mean motion (`no_kozai`) from semi-major axis.
 
         The classical Keplerian mean motion is n = sqrt(mu / a^3) [rad/s].
-        This helper returns the value converted to **degrees per minute** to
+        This helper returns the value converted to **revolutions per day** to
         match the `Sgp4SatrecOrbitalParameters.no_kozai` convention used in
         this module.
 
-        TODO: Verify that the gravity parameter used in SGP4 can be that corresponding
-                to WGS84 and not WGS72. The SGP4 model uses WGS72.
+        TODO: Verify that the gravity parameter used here for the computation of no_kozai is OK. 
+        Note that the SGP4 model, on the other hand, appears to use the WGS-72 Earth model,
+        and its gravitational parameters are defined as follows:
+         https://github.com/brandon-rhodes/python-sgp4/blob/master/sgp4/propagation.py
 
         Args:
             semi_major_axis_km: Semi-major axis in kilometers.

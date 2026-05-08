@@ -26,23 +26,22 @@ API Reference
 - **orbits** - Orbital state representations and transformations.  
   - Representations: TLE, Cartesian, Keplerian  
 - **resources** - Spacecraft, Ground station, and Sensors.  
-- **grid** - Spatial grids for coverage calculations.  
 
 ---
 
 ## 3. Dynamics & Event Modeling (Calculators)
-- **propagation** - Orbit propagation methods.  
+- **propagator** - Orbit propagation methods.  
   - Supported models: J2, SGP4, Orekit numerical integrators  
-- **coverage** - Observation/ground coverage computations.  
-- **contact** - Contact time windows for ground stations and inter-satellite communications.  
-- **eclipse** - Eclipse duration calculations.  
+- **coveragecalculator** - Observation/ground coverage computations.  
+- **contactfinder** - Contact time windows for ground stations and inter-satellite communications.  
+- **eclipsefinder** - Eclipse duration calculations.  
 - **datametrics** - Metrics of (potential) observations based on instrument and viewing geometry.  
 
 ---
 
 ## 4. Mission-Level Analysis
-- **mission** - Scenario setup, execution, and high-level mission representation.  
-- **analysis** - Post-processing, data analysis, and visualization of results.  
+- **mission** - Scenario setup, execution, and high-level mission representation.
+
                                               ┌───────────────────────────────┐
                                               │         Core Utilities        │
                                               │          (eosimutils)         │
@@ -54,41 +53,40 @@ API Reference
 (General utilities)  (Time scales,       (Cartesian positions)    (Time-varying     (path data)        (Attitude/        (frame       (LVLH frame)     (FOVs)  
                 formats, conversions)                              data series)                          pointing)  transformations)      
 
-miscellaneous: spicekernels, plotting, thirdpartyutils
+miscellaneous: spicekernels, plotting, thirdpartyutils, utils
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
                                 ┌────────────────────────────────────┐
                                 │     Orbital & Spacecraft Comp.     │
                                 └────────────────────────────────────┘
                                               │
-                        ┌─────────────────────┴────────────────────────────────────────┐
-                        │                           │                                  │
-                     orbits                     resources                            grid
-     (representations & conversions)     (Spacecraft, ground stations, sensors)  (Spatial coverage grids)
+                        ┌─────────────────────┴─────┐
+                        │                           │
+                     orbits                     resources
+     (representations & conversions)     (Spacecraft, ground stations, sensors)
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
                                 ┌────────────────────────────────────┐
                                 │     Dynamics & Event Modeling      │
                                 └────────────────────────────────────┘
-                                              │
-             ┌──────────────┬──────────────┬──────────────┬──────────────┐
-             │              │              │              │              │
-        propagation      coverage        contact        eclipse     datametrics
-   (Orbit propagation) (Access        (Comms windows)  (Eclipse      (Instrument     
-                       opportunities)                   predictions)  metrics)
+                                                │
+             ┌──────────────────┬────────────────────────────┬──────────────┐
+             │                  │                            │              │
+        propagator        coveragecalculator        contactfinder        eclipsefinder
+   (Orbit propagation)   (+ coverage, specular)    (Comms windows)       (Eclipse
+                        (Access opportunities)                            predictions)
 
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
                                 ┌────────────────────────────────────┐
-                                │     Mission-Level Analysis         │
+                                │     Mission-Level Simulation       │
                                 └────────────────────────────────────┘
                                               │
-                            ┌─────────────────┴──────────────────┐
-                            │                                    │
-                         mission                             analysis
-        (Scenario definition & execution)       (Results post-processing, metrics)
+                                            mission                             
+                            (Scenario definition & execution)      
 
+miscellaneous: utils, specular, coverage, plotting
 
 
 Please navigate below for detailed descriptions of OrbitPy's classes and functions. 
