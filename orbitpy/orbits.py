@@ -69,6 +69,7 @@ See `tests/test_orbits.py` for an example.
     "true_anomaly": 20.0,
     "inertial_frame": "ICRF_EC"
 }
+```
 
 **Sgp4SatrecOrbitalParameters**
 ```python
@@ -85,7 +86,7 @@ See `tests/test_orbits.py` for an example.
     "mo": 272.6267,
     "no_kozai": 14.57121096,
     "ecco": 0.0001161,
-    // Optional fields
+    # Optional fields
     "bstar": 2.2e-5,
     "ndot": 0.0,
     "nddot": 0.0
@@ -844,7 +845,7 @@ class Sgp4SatrecOrbitalParameters:
         """Compute the Kozai mean motion (`no_kozai`) from semi-major axis.
 
         The classical Keplerian mean motion is n = sqrt(mu / a^3) [rad/s].
-        This helper returns the value converted to **degrees per minute** to
+        This helper returns the value converted to **revolutions per day** to
         match the `Sgp4SatrecOrbitalParameters.no_kozai` convention used in
         this module.
 

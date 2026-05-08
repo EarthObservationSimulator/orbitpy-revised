@@ -30,7 +30,7 @@ API Reference
 ---
 
 ## 3. Dynamics & Event Modeling (Calculators)
-- **propagation** - Orbit propagation methods.  
+- **propagator** - Orbit propagation methods.  
   - Supported models: J2, SGP4, Orekit numerical integrators  
 - **coveragecalculator** - Observation/ground coverage computations.  
 - **contactfinder** - Contact time windows for ground stations and inter-satellite communications.  
