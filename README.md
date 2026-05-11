@@ -17,7 +17,13 @@ conda env create -f environment.yml
 conda activate orbitpy
 ```
 
-Then, install the package into the environment using pip.
+In case the current branch has been recently checked out, start by updating the submodules references.
+
+```
+git submodule update --recursive
+```
+
+Then, install the package into the environment using pip. 
 
 ```
 pip install .
