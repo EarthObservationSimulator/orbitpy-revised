@@ -327,7 +327,7 @@ class STKValidation(unittest.TestCase):
 
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite1_states.txt")
-        accesses_path = os.path.join(self.accesses_dir, "Global_grid_1.cvaa")
+        accesses_path = os.path.join(self.accesses_dir, "Global_Grid_1.cvaa")
         grid_path = os.path.join(self.accesses_dir, "Global_Grid")
 
         # Read trajectory from data file
@@ -377,7 +377,7 @@ class STKValidation(unittest.TestCase):
 
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite1_states.txt")
-        accesses_path = os.path.join(self.accesses_dir, "Global_grid_2.cvaa")
+        accesses_path = os.path.join(self.accesses_dir, "Global_Grid_2.cvaa")
         grid_path = os.path.join(self.accesses_dir, "Global_Grid")
 
         # Read trajectory from data file
@@ -439,7 +439,7 @@ class STKValidation(unittest.TestCase):
 
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite2_states.txt")
-        accesses_path = os.path.join(self.accesses_dir, "Global_grid_3.cvaa")
+        accesses_path = os.path.join(self.accesses_dir, "Global_Grid_3.cvaa")
         grid_path = os.path.join(self.accesses_dir, "Global_Grid")
 
         # Read trajectory from data file
@@ -490,7 +490,7 @@ class STKValidation(unittest.TestCase):
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite3_states.txt")
         accesses_path = os.path.join(self.accesses_dir, "US_Grid_4.cvaa")
-        grid_path = os.path.join(self.accesses_dir, "US_grid")
+        grid_path = os.path.join(self.accesses_dir, "US_Grid")
 
         # Read trajectory from data file
         result = create_stateseries_from_txt_file(state_path)
@@ -551,7 +551,7 @@ class STKValidation(unittest.TestCase):
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite4_states.txt")
         accesses_path = os.path.join(self.accesses_dir, "US_Grid_5.cvaa")
-        grid_path = os.path.join(self.accesses_dir, "US_grid")
+        grid_path = os.path.join(self.accesses_dir, "US_Grid")
 
         # Read trajectory from data file
         result = create_stateseries_from_txt_file(state_path)
@@ -601,7 +601,7 @@ class STKValidation(unittest.TestCase):
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite4_states.txt")
         accesses_path = os.path.join(self.accesses_dir, "US_Grid_6.cvaa")
-        grid_path = os.path.join(self.accesses_dir, "US_grid")
+        grid_path = os.path.join(self.accesses_dir, "US_Grid")
 
         # Read trajectory from data file
         result = create_stateseries_from_txt_file(state_path)
@@ -881,7 +881,7 @@ class STKValidation(unittest.TestCase):
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite5_states.txt")
         accesses_path = os.path.join(self.accesses_dir, "US_Grid_10.cvaa")
-        grid_path = os.path.join(self.accesses_dir, "US_grid")
+        grid_path = os.path.join(self.accesses_dir, "US_Grid")
 
         # Read trajectory from data file
         result = create_stateseries_from_txt_file(state_path)
@@ -942,7 +942,7 @@ class STKValidation(unittest.TestCase):
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite5_states.txt")
         accesses_path = os.path.join(self.accesses_dir, "US_Grid_11.cvaa")
-        grid_path = os.path.join(self.accesses_dir, "US_grid")
+        grid_path = os.path.join(self.accesses_dir, "US_Grid")
 
         # Read trajectory from data file
         result = create_stateseries_from_txt_file(state_path)
@@ -1028,7 +1028,7 @@ class STKValidation(unittest.TestCase):
         # Get file paths
         state_path = os.path.join(self.states_dir, "Satellite5_states.txt")
         accesses_path = os.path.join(self.accesses_dir, "US_Grid_12.cvaa")
-        grid_path = os.path.join(self.accesses_dir, "US_grid")
+        grid_path = os.path.join(self.accesses_dir, "US_Grid")
 
         # Read trajectory from data file
         result = create_stateseries_from_txt_file(state_path)

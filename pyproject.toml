@@ -1,31 +1,45 @@
 [build-system]
-requires = ["setuptools>=57", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["orbitpy"]
+requires = [
+    "scikit-build-core>=0.10",
+    "pybind11>=2.12"
+]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "orbitpy"
 version = "0.1.0"
 description = "A Python package for computing satellite remote-sensing orbit data."
+readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Vinay Ravindra", email = "vravindra@baeri.org" },
     { name = "Ryan Ketzner", email = "ketzner@ucf.edu" }
 ]
+requires-python = ">=3.13"
 dependencies = [
-    "sphinx",
-    "sphinx-rtd-theme",
-
+    "numpy",
+    "scipy",
+    "astropy",
+    "skyfield",
+    "spiceypy",
+    "requests"
 ]
 
 [project.optional-dependencies]
 dev = [
+    "pytest",
     "pylint",
     "black",
-    "coverage"
+    "coverage",
+    "sphinx",
+    "sphinx-rtd-theme"
 ]
 
+[tool.scikit-build]
+wheel.packages = ["src/orbitpy"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_BUILD_TYPE = "Release"
+
 [tool.black]
-line-length = 80 # Match with pylintrc
+line-length = 80
