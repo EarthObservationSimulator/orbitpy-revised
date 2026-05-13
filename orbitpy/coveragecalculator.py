@@ -7,6 +7,7 @@
 from typing import Type, Dict, Any, Union, Callable, List, Tuple
 import math
 import numpy as np
+import copy
 
 from .coverage import DiscreteCoverageTP
 
@@ -119,11 +120,104 @@ class SpecularCoverage:
     ) -> "SpecularCoverage":
         # Empty since class does not require any initialization parameters
         return cls()
+    
+    @classmethod
+    def get_best_coverage(cls, 
+        coverage_list: List[Tuple[DiscreteCoverageTP, List[float]]]
+    ) -> Tuple[DiscreteCoverageTP, List[float]]:
+        """ Takes a list of tuples, where each tuple contains (1) the coverage corresponding
+        to a single GPS transmitter and (2) the range-corrected gain (RCG), assuming unity gain.
+        Will return a single tuple containing (1) a DiscreteCoverageTP object which holds
+        the coverage at each time point corresponding to the highest RCG value across all
+        transmitters, and (2) a list of the maximum RCG values at each time point.
+
+        Args:
+            coverage_list (List[Tuple[DiscreteCoverageTP, List[float]]]): A list of
+                tuples, with each tuple containing (1) the coverage for each GPS transmitter and 
+                (2) the radar's range-corrected gain (RCG), assuming unity gain, at the input time points.
+        
+        Returns:
+            Tuple[DiscreteCoverageTP, List[float]]: A tuple containing (1) the best coverage
+                across all transmitters at each time point and (2) the maximum RCG value
+                at each time point.
+
+        """
+
+        output_coverage, output_rcg = copy.deepcopy(coverage_list[0])
+        num_timepoints = len(coverage_list[0][0].time)
+        num_lists = len(coverage_list)
+        for i in range(num_timepoints):
+            max_rcg = -np.inf
+            max_rcg_idx = 0
+            for j in range(0, num_lists):
+                rcg_j = coverage_list[j][1][i] # rcg at timepoint i for transmitter j
+                if rcg_j > max_rcg:
+                    max_rcg = rcg_j
+                    max_rcg_idx = j
+
+            output_coverage.coverage[i] = coverage_list[max_rcg_idx][0].coverage[i]
+            output_rcg[i] = max_rcg
+
+        return output_coverage, output_rcg
+
+    @classmethod
+    def get_topk_coverage(
+        cls,
+        coverage_list: List[Tuple[DiscreteCoverageTP, List[float]]],
+        k: int,
+    ) -> List[Tuple[DiscreteCoverageTP, List[float]]]:
+        """Takes a list of tuples, where each tuple contains (1) the coverage corresponding
+        to a single GPS transmitter and (2) the range-corrected gain (RCG), assuming unity gain.
+
+        Returns a list of k tuples. For each rank r (0 <= r < k), the r-th output contains:
+        (1) a DiscreteCoverageTP object holding the coverage at each time point
+        corresponding to the r-th highest RCG across all transmitters, and (2) a list of the r-th
+        highest RCG values at each time point.
+
+        Args:
+            coverage_list (List[Tuple[DiscreteCoverageTP, List[float]]]): A list of tuples
+                containing (1) the coverage for each GPS transmitter and (2) the radar's
+                range-corrected gain (RCG), assuming unity gain, at the input time points.
+            k (int): Number of top coverages to return.
+
+        Returns:
+            List[Tuple[DiscreteCoverageTP, List[float]]]: A list of k tuples, where each tuple
+                contains: (1) a DiscreteCoverageTP object, and (2) the corresponding RCG list.
+        """
+
+        if len(coverage_list) == 0:
+            raise ValueError("coverage_list must be non-empty")
+        if k <= 0:
+            raise ValueError("k must be >= 1")
+
+        num_lists = len(coverage_list)
+        k = min(k, num_lists)
+
+        # Initialize outputs as deep copies of the first k coverages
+        outputs = [copy.deepcopy(coverage_list[i]) for i in range(k)]
+        num_timepoints = len(coverage_list[0][0].time)
+
+        for i in range(num_timepoints):
+            # Collect RCGs at this time index
+            rcgs = np.array([coverage_list[j][1][i] for j in range(num_lists)], dtype=float)
+
+            # Treat non-finite values as -inf so they sort to the bottom
+            rcgs = np.where(np.isfinite(rcgs), rcgs, -np.inf)
+
+            # Indices sorted by descending RCG
+            sorted_indices = np.argsort(rcgs)[::-1]
+
+            for r in range(k):
+                idx = int(sorted_indices[r])
+                outputs[r][0].coverage[i] = coverage_list[idx][0].coverage[i]
+                outputs[r][1][i] = float(rcgs[idx])
+
+        return outputs
 
     def calculate_coverage(
         self,
         target_point_array: Cartesian3DPositionArray,
-        fov: CircularFieldOfView,
+        fov: Union[CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView],
         frame_graph: FrameGraph,
         times: AbsoluteDateArray,
         transmitters: List[OmnidirectionalFieldOfView],
@@ -148,8 +242,8 @@ class SpecularCoverage:
         Args:
             target_point_array (Cartesian3DPositionArray): An array of target points in a Cartesian
                 coordinate system.
-            fov (CircularFieldOfView): The field of view to use for
-                coverage calculation.
+            fov (Union[CircularFieldOfView, RectangularFieldOfView, PolygonFieldOfView]):
+                The field of view to use for coverage calculation.
             frame_graph (FrameGraph): The frame graph containing the necessary transformations
                 between frames.
             times (AbsoluteDateArray): An array of time points for which the coverage is to be
@@ -292,6 +386,80 @@ class SpecularCoverage:
             # Add variables to list
             variables.append(boresight_target_source)
             variables.append(fov_source)
+        elif isinstance(fov, RectangularFieldOfView):
+            deg2rad = math.pi / 180.0
+            up_angle_rad = (
+                fov.ref_angle * 2.0 * deg2rad
+            )  # convert half angle to full to match kcl
+            right_angle_rad = (
+                fov.cross_angle * 2.0 * deg2rad
+            )  # convert half angle to full to match kcl
+            right_fov = np.cross(fov.boresight, fov.ref_vector)
+            right_fov_gte = gte.Vector3d(right_fov)
+            up_fov_gte = gte.Vector3d(fov.ref_vector)
+
+            # First, define the "up" and "right" vectors in the FOV frame as constant sources.
+            # These orthogonal vectors define the first and second basis vectors for the FOV image
+            # plane.
+            up_fov_source = kcl.ConstantSourceVector3d(up_fov_gte)
+            right_fov_source = kcl.ConstantSourceVector3d(right_fov_gte)
+
+            # Define sources which transform up and right vectors from fov frame to target frame
+            # These are Variable objects so they must be added to the variables list to be updated.
+            up_target_source = kcl.TransformedVector3dSource(
+                up_fov_source, fov_to_target_source, buff_size
+            )
+            right_target_source = kcl.TransformedVector3dSource(
+                right_fov_source, fov_to_target_source, buff_size
+            )
+
+            # Define constant sources for the FOV angles about the up and right vectors
+            right_angle_source = kcl.ConstantSourced(right_angle_rad)
+            up_angle_source = kcl.ConstantSourced(up_angle_rad)
+
+            # Define a source which builds a rectangle object using the FOV position, up and right
+            # unit vectors, and FOV angles.
+            # This is a Variable object so it must be added to the variables list to be updated.
+            fov_source = kcl.VectorAngleRectViewSource(
+                pos_fov_target_source,
+                up_target_source,
+                right_target_source,
+                up_angle_source,
+                right_angle_source,
+                buff_size,
+            )
+
+            # Define a Viewer object for the FOV shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
+            fov_viewer = kcl.ViewerRectView3d(fov_source)
+
+            # Add variables to list
+            variables.append(up_target_source)
+            variables.append(right_target_source)
+            variables.append(fov_source)
+        elif isinstance(fov, PolygonFieldOfView):
+
+            # Define the polygon vertices and interior point in the FOV frame
+            vertices_fov = [gte.Vector3d(v) for v in fov.boundary_corners]
+            interior_fov = gte.Vector3d(fov.boresight)
+
+            # Define a source which builds a spherical polygon object using the FOV position,
+            # polygon vertices and interior point.
+            # This is a Variable object so it must be added to the variables list to be updated.
+            fov_source = kcl.SphericalPolySource(
+                vertices_fov,
+                interior_fov,
+                pos_fov_target_source,
+                fov_to_target_source,
+                buff_size,
+            )
+
+            # Define a Viewer object for the polygon shape. Viewer objects are used to make the shape
+            # compatible with constructive solid geometry (CSG) operations.
+            fov_viewer = kcl.ViewerSphericalPolygond(fov_source)
+
+            # Add variables to list
+            variables.append(fov_source)
         else:
             raise ValueError("Unsupported field of view type.")
 
@@ -356,7 +524,7 @@ class SpecularCoverage:
                 pos_fov_target_source,
                 specular_source,
                 radar_gain,
-                buff_size,
+                buff_size_full,
             )
 
             radius_source = kcl.ConstantSourced(specular_radius)
