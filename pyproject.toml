@@ -32,11 +32,12 @@ dev = [
     "black",
     "coverage",
     "sphinx",
-    "sphinx-rtd-theme"
+    "sphinx-rtd-theme",
+    "pandas"
 ]
 
 [tool.scikit-build]
-wheel.packages = ["src/orbitpy"]
+wheel.packages = ["orbitpy"]
 
 [tool.scikit-build.cmake.define]
 CMAKE_BUILD_TYPE = "Release"

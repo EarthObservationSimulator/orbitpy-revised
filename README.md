@@ -26,13 +26,13 @@ git submodule update --recursive
 Then, install the package into the environment using pip. 
 
 ```
-pip install .
+pip install -e .
 ```
 
 Or, to install the development version (includes tests, formatting utilities, and docs):
 
 ```
-pip install ".[dev]"
+pip install -e ".[dev]"
 ```
 
 Next, install the `eosimutils` package: first download the repository and follow the instructions provided in its README file. This package installs the core utilities required by `orbitpy`.
