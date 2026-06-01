@@ -16,7 +16,6 @@ eclipse finding, coverage) based on the defined resources and their properties.
 """
 
 from typing import Dict, Any, Optional, Union, List
-import uuid
 from uuid import uuid4
 
 from eosimutils.state import GeographicPosition
@@ -53,19 +52,14 @@ class GroundStation:
         """
         Args:
             identifier (str or None): Unique identifier for the ground station.
-                               Must be a valid UUID.
+                              Any string is accepted; it need not be a UUID.
                               If None, a new UUID is generated.
             name (str or None): Name of the ground station.
             geographic_position (:class:`orbitpy.util.GeographicPosition`):
                                     Geographic position of the ground station.
             min_elevation_angle_deg (float): Minimum elevation angle in degrees.
         """
-        if identifier is not None:
-            try:
-                uuid.UUID(identifier)
-            except ValueError as exc:
-                raise ValueError("identifier must be a valid UUID.") from exc
-        else:
+        if identifier is None:
             identifier = str(
                 uuid4()
             )  # Generate a new UUID if identifier is None
@@ -143,18 +137,13 @@ class Sensor:
     ):
         """
         Args:
-            identifier (str or None): Unique identifier for the ground station.
-                               Must be a valid UUID.
+            identifier (str or None): Unique identifier for the sensor.
+                              Any string is accepted; it need not be a UUID.
                               If None, a new UUID is generated.
             name (str or None): Name of the sensor.
             fov (FieldOfView): Field of view object.
         """
-        if identifier is not None:
-            try:
-                uuid.UUID(identifier)
-            except ValueError as exc:
-                raise ValueError("identifier must be a valid UUID.") from exc
-        else:
+        if identifier is None:
             identifier = str(
                 uuid4()
             )  # Generate a new UUID if identifier is None
@@ -216,8 +205,8 @@ class Spacecraft:
     ):
         """
         Args:
-            identifier (str or None): Unique identifier for the ground station.
-                               Must be a valid UUID.
+            identifier (str or None): Unique identifier for the spacecraft.
+                              Any string is accepted; it need not be a UUID.
                               If None, a new UUID is generated.
             name (Optional[str]): Name of the spacecraft. Defaults to None.
             norad_id (Optional[Union[int, str]]): NORAD ID of the spacecraft. Defaults to None.
@@ -229,12 +218,7 @@ class Spacecraft:
             sensor (Optional[Union[List[Sensor], Sensor]]):
                     List of Sensor objects or a single Sensor object.
         """
-        if identifier is not None:
-            try:
-                uuid.UUID(identifier)
-            except ValueError as exc:
-                raise ValueError("identifier must be a valid UUID.") from exc
-        else:
+        if identifier is None:
             identifier = str(
                 uuid4()
             )  # Generate a new UUID if identifier is None

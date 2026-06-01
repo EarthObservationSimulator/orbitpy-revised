@@ -91,18 +91,15 @@ class TestGroundStation(unittest.TestCase):
         except ValueError:
             self.fail("id is not a valid UUID")
 
-    def test_invalid_identifier(self):
-        invalid_identifier = "invalid-uuid"
-        with self.assertRaises(ValueError) as context:
-            GroundStation(
-                invalid_identifier,
-                self.name,
-                self.geographic_position,
-                self.min_elevation_angle_deg,
-            )
-        self.assertTrue(
-            "identifier must be a valid UUID." in str(context.exception)
+    def test_non_uuid_identifier(self):
+        non_uuid_identifier = "my-station-1"
+        gs = GroundStation(
+            non_uuid_identifier,
+            self.name,
+            self.geographic_position,
+            self.min_elevation_angle_deg,
         )
+        self.assertEqual(gs.identifier, non_uuid_identifier)
 
 
 class TestSensor(unittest.TestCase):
@@ -171,14 +168,11 @@ class TestSensor(unittest.TestCase):
         except ValueError:
             self.fail("Generated identifier is not a valid UUID.")
 
-    def test_invalid_identifier(self):
-        """Test that an invalid UUID raises a ValueError."""
-        invalid_identifier = "invalid-uuid"
-        with self.assertRaises(ValueError) as context:
-            Sensor(invalid_identifier, self.name, self.fov)
-        self.assertIn(
-            "identifier must be a valid UUID.", str(context.exception)
-        )
+    def test_non_uuid_identifier(self):
+        """Test that a non-UUID identifier is accepted as-is."""
+        non_uuid_identifier = "my-sensor-1"
+        sensor = Sensor(non_uuid_identifier, self.name, self.fov)
+        self.assertEqual(sensor.identifier, non_uuid_identifier)
 
 
 class TestSpacecraft(unittest.TestCase):
@@ -380,21 +374,18 @@ class TestSpacecraft(unittest.TestCase):
         except ValueError:
             self.fail("Generated identifier is not a valid UUID.")
 
-    def test_invalid_identifier(self):
-        """Test that an invalid UUID raises a ValueError."""
-        invalid_identifier = "invalid-uuid"
-        with self.assertRaises(ValueError) as context:
-            Spacecraft(
-                invalid_identifier,
-                self.name,
-                self.norad_id,
-                self.orbit,
-                self.local_orbital_frame_handler,
-                [self.sensor],
-            )
-        self.assertIn(
-            "identifier must be a valid UUID.", str(context.exception)
+    def test_non_uuid_identifier(self):
+        """Test that a non-UUID identifier is accepted as-is."""
+        non_uuid_identifier = "my-spacecraft-1"
+        spc = Spacecraft(
+            non_uuid_identifier,
+            self.name,
+            self.norad_id,
+            self.orbit,
+            self.local_orbital_frame_handler,
+            [self.sensor],
         )
+        self.assertEqual(spc.identifier, non_uuid_identifier)
 
     def test_invalid_sensor_list(self):
         """Test that an invalid sensor list raises a TypeError."""
