@@ -3,8 +3,12 @@ This module provides function to convert the results from orbitpy-revised missio
 evaluations into the D-SHIELD project CSV format.
 """
 import os
+import math
 import shutil
 import pandas as pd
+
+from eosimutils.state import Cartesian3DPosition
+from eosimutils.base import ReferenceFrame
 
 
 def write_dshield_format_of_propagator_results(
@@ -135,6 +139,10 @@ def write_dshield_format_of_contact_results(
             "step_size_seconds must be positive to compute time indices."
         )
 
+    if not contact_results:
+        print("No contact results to write.")
+        return
+
     # parse epoch to string and datetime
     def _to_dt(t):
         if isinstance(t, dict):
@@ -177,17 +185,15 @@ def write_dshield_format_of_contact_results(
             continue
 
         for g_idx, gs in enumerate(contacts):
-            gs_name = gs.get(
-                "ground_station_name",
-                gs.get("ground_station_id", "groundstation"),
-            )
+            gs_id = gs.get("ground_station_id")
+            gs_name = gs.get("ground_station_name", gs_id)
             contact_info = gs.get("contact_info", [])
             if len(contact_info) == 0:
                 print(f"Skipping {sc_name} -> {gs_name}: no contact intervals")
                 continue
 
             # write CSV
-            out_fp = os.path.join(results_dir, f"gs{g_idx+1}_contacts.csv")
+            out_fp = os.path.join(results_dir, f"{gs_id}")
             with open(out_fp, "w", newline="", encoding="utf-8") as f:
                 header_title = f"Contacts between spacecraft {sc_name} and Ground station {gs_name}"
                 f.write(header_title + "\n")
@@ -297,7 +303,7 @@ def write_dshield_format_of_eclipse_results(
             print(f"Skipping {sc_name}: no eclipse intervals")
             continue
 
-        out_fp = os.path.join(results_dir, "eclipse_intervals.csv")
+        out_fp = os.path.join(results_dir, "eclipse")
         with open(out_fp, "w", newline="", encoding="utf-8") as f:
             header_title = f"Eclipse intervals for spacecraft {sc_name}"
             f.write(header_title + "\n")
@@ -469,9 +475,14 @@ def write_dshield_format_of_gnssr_coverage_results(
         for sensor_idx, sensor in enumerate(sensors):
             sensor_name = sensor.get("sensor_name") or ""
             sensor_id = sensor.get("sensor_id")
-            out_fp = os.path.join(
-                coverage_dir, f"sensor{sensor_idx+1}_access.csv"
-            )
+            if len(sensors)==1:
+                out_fp = os.path.join(
+                    coverage_dir, f"DDMI.csv"
+                )
+            else:
+                out_fp = os.path.join(
+                    coverage_dir, f"sensor{sensor_idx+1}_access.csv"
+                )
 
             sensor_coverages = sensor.get("total_sensor_coverage", [])
             if not sensor_coverages:
@@ -489,7 +500,7 @@ def write_dshield_format_of_gnssr_coverage_results(
                     f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
                 )
                 f.write(f"Step size [s] is {float(step_size_seconds)}\n")
-                f.write('"time index" "source name" "GP index"\n')
+                f.write('"time index" "source id" "GP index"\n')
 
                 # iterate over gnss spacecrafts (sources) source => gnss spacecraft
                 for source in sensor_coverages:
@@ -531,12 +542,12 @@ def write_dshield_format_of_gnssr_coverage_results(
                 f"Wrote coverage CSV for {sc_name} sensor {sensor_name}: {out_fp}"
             )
 
-            aggregate_gnssr_coverage_by_time(
-                out_fp,
-                os.path.join(
-                    coverage_dir, f"sensor{sensor_idx+1}_access_aggregated.csv"
-                ),
-            )
+            #aggregate_gnssr_coverage_by_time(
+            #    out_fp,
+            #    os.path.join(
+            #        coverage_dir, f"sensor{sensor_idx+1}_access_aggregated.csv"
+            #    ),
+            #)
 
 
 def aggregate_gnssr_coverage_by_time(
@@ -671,7 +682,7 @@ def write_dshield_format_of_specular_trajectory_results(
             print(f"Skipping {sc_name}: no specular trajectories")
             continue
 
-        out_fp = os.path.join(results_dir, "specular_points.csv")
+        out_fp = os.path.join(results_dir, "specular.csv")
         with open(out_fp, "w", newline="", encoding="utf-8") as f:
             f.write(
                 f"Specular points between spacecraft {sc_name} and all GNSS transmitters\n"
@@ -680,7 +691,7 @@ def write_dshield_format_of_specular_trajectory_results(
                 f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
             )
             f.write(f"Step size [s] is {float(step_size_seconds)}\n")
-            f.write("time index,gnss_spacecraft_name,x [km],y [km],z [km]\n")
+            f.write("time index,source id,lat [deg],lon [deg]\n")
 
             for (
                 gnss
@@ -707,11 +718,30 @@ def write_dshield_format_of_specular_trajectory_results(
                     continue
 
                 for t, pos in zip(times, positions):
+                    px, py, pz = (pos + [None] * 3)[:3]
+                    # Specular positions are in ITRF (km). No-LOS time points are
+                    # stored as NaN vectors; skip those rows.
+                    if (
+                        px is None
+                        or py is None
+                        or pz is None
+                        or math.isnan(px)
+                        or math.isnan(py)
+                        or math.isnan(pz)
+                    ):
+                        continue
                     time_idx = int(
                         round((t - epoch_ephemeris_seconds) / step_size_seconds)
                     )
-                    px, py, pz = (pos + [None] * 3)[:3]
-                    row = f"{time_idx},{gnss_name},{px},{py},{pz}\n"
+                    geo = Cartesian3DPosition.from_array(
+                        [px, py, pz], ReferenceFrame.get("ITRF")
+                    ).to_geographic_position()
+                    # Reference format uses a 0-360 deg longitude convention.
+                    lon = geo.longitude % 360
+                    row = (
+                        f"{time_idx},{gnss_name},"
+                        f"{round(geo.latitude, 3)},{round(lon, 3)}\n"
+                    )
                     f.write(row)
 
         print(f"Wrote specular CSV for {sc_name}: {out_fp}")

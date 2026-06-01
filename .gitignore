@@ -13,3 +13,4 @@ htmlcov/
 MissionOutput.json
 examples/cygnss_gnssr/results/*
 examples/planet_skysat/results/*
+examples/dshield-cygnss-demo/dshield-cygnss-demo/output/*

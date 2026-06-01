@@ -42,6 +42,7 @@ mission settings.)
 """
 
 import os
+import time
 from typing import Dict, Any, Union, List, Optional, Tuple
 import numpy as np
 
@@ -77,6 +78,10 @@ def auto_retrieve_orbit(
         OrbitalMeanElementsMessage: The closest available Orbital Mean Elements Message (OMM).
     """
     api = SpaceTrackAPI(space_track_credentials_fp)
+
+    # Throttle requests to avoid hitting Space-Track.org rate limits, since
+    # this function is called once per spacecraft.
+    time.sleep(1)
 
     # Log in to Space-Track.org
     api.login()
@@ -136,6 +141,7 @@ def propagate_spacecraft(
     if spacecraft.orbit is not None:
         orbit = spacecraft.orbit
     elif spacecraft.norad_id is not None:
+        
         orbit = auto_retrieve_orbit(
             spacecraft.norad_id, t0, space_track_credentials_fp
         )
@@ -1255,9 +1261,9 @@ class Mission:
                 )
 
                 # Compute specular points
-                sp_posseries = get_specular_trajectory(
-                    transmitter=tx_trajectory_itrf,
-                    receiver=rx_trajectory_itrf,
+                sp_posseries, _rcg = get_specular_trajectory(
+                    transmitter_states_itrf=tx_trajectory_itrf,
+                    receiver_states_itrf=rx_trajectory_itrf,
                     times=rx_times,
                     surface=self.settings.surface_type,
                 )

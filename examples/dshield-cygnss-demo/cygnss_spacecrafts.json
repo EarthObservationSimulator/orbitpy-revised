@@ -1,0 +1,118 @@
+[    
+    {
+        "name": "CYG41887",
+        "norad_id": "41887",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41887"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41887",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }
+        ]
+    },
+    {
+        "name": "CYG41886",
+        "norad_id": "41886",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41886"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41886",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }
+        ]
+    },
+    {
+        "name": "CYG41891",
+        "norad_id": "41891",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41891"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41891",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }
+        ]
+    },
+    {
+        "name": "CYG41885",
+        "norad_id": "41885",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41885"
+        },
+        "sensor": [{
+            "name": "GNSSR-B",
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41885",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }]
+    },
+    {
+        "name": "CYG41884",
+        "norad_id": "41884",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41884"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41884",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }]
+    },
+    {
+        "name": "CYG41890",
+        "norad_id": "41890",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41890"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41890",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }]
+    },
+    {
+        "name": "CYG41888",
+        "norad_id": "41888",
+        "local_orbital_frame_handler": {
+            "frame_type": "LVLH_TYPE_1",
+            "name": "LVLH_CYG41888"
+        },
+        "sensor": [{
+            "fov": {
+                "fov_type": "CIRCULAR",
+                "diameter": 107.35,
+                "frame": "LVLH_CYG41888",
+                "boresight": [0.0, 0.0, 1.0]
+            }
+        }]
+    }
+]
