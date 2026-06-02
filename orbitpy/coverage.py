@@ -34,8 +34,8 @@ class DiscreteCoverageTP:
     Attributes:
         time (AbsoluteDateArray): An array of time points.
         coverage (List[List[int]]): For each time point, the list of accessed grid indices, where
-            each time index corresponds to the (zero-indexed) position in the time array. Length of
-            time and coverage must be identical.
+            each grid index corresponds to the (zero-indexed) position in the grid_points array.
+            Length of time and coverage must be identical.
         grid_points (Cartesian3DPositionArray): The positions of the grid points.
     """
 
@@ -50,9 +50,9 @@ class DiscreteCoverageTP:
 
         Args:
             time (AbsoluteDateArray): Array of time points.
-            coverage (List[List[int]]): For each time point, the list of accessed time-indices,
-                where each time index corresponds to the (zero-indexed) position in the time array.
-                Length of time and coverage must be identical.
+            coverage (List[List[int]]): For each time point, the list of accessed grid-indices,
+                where each grid index corresponds to the (zero-indexed) position in the grid_points
+                array. Length of time and coverage must be identical.
             grid_points (Cartesian3DPositionArray): The positions of the grid points.
         """
         self.time = time
