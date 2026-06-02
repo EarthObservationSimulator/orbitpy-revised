@@ -70,8 +70,10 @@ mission_dict.setdefault("settings", {})[
 mission = Mission.from_dict(mission_dict)
 
 # Execute the mission
+# topk=4: for each time step, keep coverage from only the 4 highest-RCG
+# specular trajectories across all GNSS transmitters.
 print("Start mission.")
-results = mission.execute_all()
+results = mission.execute_all(topk=4)
 
 propagator_results = results.get("propagator_results", [])
 contact_finder_results = results.get("contact_finder_results", {})

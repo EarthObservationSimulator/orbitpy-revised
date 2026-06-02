@@ -50,7 +50,7 @@ from eosimutils.base import ReferenceFrame, SurfaceType, JsonSerializer
 from eosimutils.time import AbsoluteDate
 from eosimutils.state import Cartesian3DPositionArray, GeographicPositionArray
 from eosimutils.framegraph import FrameGraph
-from eosimutils.trajectory import StateSeries
+from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.fieldofview import OmnidirectionalFieldOfView
 
 from .propagator import PropagatorFactory, SGP4Propagator
@@ -59,7 +59,7 @@ from .eclipsefinder import EclipseFinder, EclipseInfo
 from .contactfinder import ElevationAwareContactFinder, ContactInfo
 from .coveragecalculator import PointCoverage, SpecularCoverage, CoverageType
 from .orbits import SpaceTrackAPI, OrbitalMeanElementsMessage
-from .specular import get_specular_trajectory
+from .specular import get_specular_trajectory, get_topk_trajectories
 
 
 def auto_retrieve_orbit(
@@ -898,6 +898,7 @@ class Mission:
         self,
         propagated_rx_trajectories: List[Dict[str, Union[str, StateSeries]]],
         propagated_tx_trajectories: List[Dict[str, Union[str, StateSeries]]],
+        topk: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Calculate GNSS-R coverage for receiver spacecraft using GNSS satellites.
         The GNSS satellites are the transmitter satellites, and the receiver
@@ -910,6 +911,16 @@ class Mission:
                 Output of execute_propagation()[0].
             propagated_tx_trajectories:
                 Output of execute_propagation()[1].
+            topk (Optional[int]): If specified, the returned per-sensor coverage is
+                reduced, at each time step, to only the ``topk`` GNSS transmitters
+                with the highest range-corrected gain (RCG). The per-sensor coverage
+                then contains ``topk`` ranked entries (rank 1 = highest RCG at each
+                time step) instead of one entry per GNSS transmitter. Because the
+                selected transmitter varies per time step, each rank reports the
+                selected transmitter id/name as a per-time-step list. If None
+                (default), coverage for all transmitters is returned, one entry per
+                GNSS transmitter. ``topk`` is clamped to the number of GNSS
+                transmitters.
 
         Returns:
             List[Dict[str, Any]]: List of nested (3 levels) dictionary mapping
@@ -928,6 +939,16 @@ class Mission:
                         - "gnss_spacecraft_name": str
                         - "coverage_info": DiscreteCoverageTP
                         - "rcg_factor": List[float]
+
+                When ``topk`` is specified, each "total_sensor_coverage" dict
+                describes a rank rather than a fixed transmitter:
+                    - "rank": int (1 = highest RCG at each time step)
+                    - "gnss_spacecraft_id": List[str] (selected transmitter id per
+                        time step)
+                    - "gnss_spacecraft_name": List[Optional[str]] (selected
+                        transmitter name per time step)
+                    - "coverage_info": DiscreteCoverageTP
+                    - "rcg_factor": List[float]
 
 
             Example:
@@ -1096,22 +1117,78 @@ class Mission:
                     surface=self.settings.surface_type,
                 )
 
-                # Structure the result as a list of dictionaries for clarity
-                rsc_x = [
-                    {
-                        "gnss_spacecraft_id": tx_spacecraft_id[
-                            i
-                        ],  # GNSS spacecraft ID
-                        "gnss_spacecraft_name": tx_spacecraft_name[
-                            i
-                        ],  # GNSS spacecraft name
-                        "coverage_info": coverage[
-                            0
-                        ],  # DiscreteCoverageTP object
-                        "rcg_factor": coverage[1],  # RCG proportionality factor
-                    }
-                    for i, coverage in enumerate(result)
-                ]
+                if topk is None:
+                    # Structure the result as a list of dictionaries for clarity,
+                    # one entry per GNSS transmitter.
+                    rsc_x = [
+                        {
+                            "gnss_spacecraft_id": tx_spacecraft_id[
+                                i
+                            ],  # GNSS spacecraft ID
+                            "gnss_spacecraft_name": tx_spacecraft_name[
+                                i
+                            ],  # GNSS spacecraft name
+                            "coverage_info": coverage[
+                                0
+                            ],  # DiscreteCoverageTP object
+                            "rcg_factor": coverage[
+                                1
+                            ],  # RCG proportionality factor
+                        }
+                        for i, coverage in enumerate(result)
+                    ]
+                else:
+                    # Reduce to the top-k specular trajectories by RCG at each
+                    # time step.
+                    topk_cov = coverage_calculator.get_topk_coverage(
+                        result, topk
+                    )
+
+                    # Recover which GNSS transmitter supplies each (time, rank).
+                    # get_topk_trajectories ranks by RCG with the same logic as
+                    # get_topk_coverage, so feeding it the per-transmitter
+                    # coverage RCGs makes the selected ids line up exactly with
+                    # the top-k coverage ranks. Only the RCG drives the
+                    # selection; the position series is an unused placeholder
+                    # (shared across entries to avoid redundant construction).
+                    num_tp = len(rx_times)
+                    placeholder_series = PositionSeries(
+                        time=rx_times,
+                        data=np.zeros((num_tp, 3)),
+                        frame=rx_local_orbital_frame,
+                    )
+                    traj_list = [
+                        (placeholder_series, coverage[1]) for coverage in result
+                    ]
+                    _, selected_ids_by_time = get_topk_trajectories(
+                        traj_list, topk, ids=tx_spacecraft_id
+                    )
+
+                    id_to_name = dict(
+                        zip(tx_spacecraft_id, tx_spacecraft_name)
+                    )
+                    rsc_x = []
+                    for rank, coverage in enumerate(topk_cov):
+                        ids_per_time = [
+                            selected_ids_by_time[i][rank]
+                            for i in range(num_tp)
+                        ]
+                        names_per_time = [
+                            id_to_name.get(_id) for _id in ids_per_time
+                        ]
+                        rsc_x.append(
+                            {
+                                "rank": rank + 1,  # 1 = highest RCG
+                                "gnss_spacecraft_id": ids_per_time,
+                                "gnss_spacecraft_name": names_per_time,
+                                "coverage_info": coverage[
+                                    0
+                                ],  # DiscreteCoverageTP object
+                                "rcg_factor": coverage[
+                                    1
+                                ],  # RCG proportionality factor
+                            }
+                        )
                 rx_sensor_cov.append(
                     {
                         "sensor_id": rx_sensor.identifier,
@@ -1286,8 +1363,17 @@ class Mission:
 
         return all_specular_info
 
-    def execute_all(self) -> Dict[str, Any]:
+    def execute_all(self, topk: Optional[int] = None) -> Dict[str, Any]:
         """Run all configured mission analyses and return a structured result bundle.
+
+        Args:
+            topk (Optional[int]): Forwarded to
+                `execute_gnssr_coverage_calculator()` for SPECULAR_COVERAGE
+                missions. If specified, the GNSS-R coverage is reduced, at each
+                time step, to only the ``topk`` highest-RCG specular trajectories
+                (see that method for the output structure). Ignored for
+                POINT_COVERAGE missions. If None (default), coverage for all GNSS
+                transmitters is returned.
 
         Returns:
             Dict[str, Any]:
@@ -1352,6 +1438,7 @@ class Mission:
                 coverage = self.execute_gnssr_coverage_calculator(
                     propagated_rx_trajectories=propagated_trajectories,
                     propagated_tx_trajectories=gnss_trajectories,
+                    topk=topk,
                 )
                 # form the mission results dictionary
                 mission_results = {

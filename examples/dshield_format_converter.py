@@ -557,13 +557,14 @@ def write_dshield_format_of_gnssr_coverage_results(
                 f.write(f"Step size [s] is {float(step_size_seconds)}\n")
                 f.write('"time index" "source id" "GP index"\n')
 
-                # iterate over gnss spacecrafts (sources) source => gnss spacecraft
+                # Iterate over coverage entries (sources). Without top-k each
+                # entry is one GNSS transmitter and "gnss_spacecraft_name" /
+                # "gnss_spacecraft_id" are scalars. With top-k each entry is a
+                # rank and those fields are per-time-step lists naming the
+                # transmitter selected at each time step.
                 for source in sensor_coverages:
-                    source_name = (
-                        source.get("gnss_spacecraft_name")
-                        or "UNKNOWN SOURCE NAME"
-                    )
-                    #source_id = source.get("gnss_spacecraft_id")
+                    name_field = source.get("gnss_spacecraft_name")
+                    id_field = source.get("gnss_spacecraft_id")
                     coverage_info = source.get("coverage_info", {})
                     time_info = coverage_info.get("time", {})
                     # expected time format is 'SPICE_ET'
@@ -571,16 +572,41 @@ def write_dshield_format_of_gnssr_coverage_results(
                     if not ephemeris_seconds:  # no coverage logged
                         continue
 
+                    num_times = len(ephemeris_seconds)
+
+                    # Normalize the source identity to per-time-step lists so the
+                    # same writing logic handles both cases: a scalar (no top-k)
+                    # is broadcast to every time step; a list (top-k) is used as
+                    # is.
+                    names_by_time = (
+                        name_field
+                        if isinstance(name_field, list)
+                        else [name_field] * num_times
+                    )
+                    ids_by_time = (
+                        id_field
+                        if isinstance(id_field, list)
+                        else [id_field] * num_times
+                    )
+
                     coverage_lists = coverage_info.get("coverage", [])
-                    if len(ephemeris_seconds) != len(coverage_lists):
+                    if num_times != len(coverage_lists):
                         print(
                             f"Warning: Mismatched lengths for coverage times and lists for \
-                                {sc_name} sensor {sensor_name} source {source_name}"
+                                {sc_name} sensor {sensor_name}"
                         )
-                    for idx in range(len(ephemeris_seconds)):
+                    for idx in range(num_times):
                         gp_indices = coverage_lists[idx]
                         if not gp_indices:
                             continue
+                        # Prefer the transmitter name, fall back to its id.
+                        source_name = None
+                        if idx < len(names_by_time):
+                            source_name = names_by_time[idx]
+                        if source_name is None and idx < len(ids_by_time):
+                            source_name = ids_by_time[idx]
+                        if source_name is None:
+                            source_name = "UNKNOWN SOURCE NAME"
                         time_idx = int(
                             round(
                                 (
