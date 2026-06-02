@@ -513,12 +513,13 @@ class SpaceTrackAPI:
                         f"target date-time {tdt}. Something is wrong."
                     )
 
-                # Check if the retrieved CREATION_DATE is more than 1 day before the target
+                # Check if the retrieved CREATION_DATE is more than within_days before the target
                 # date-time
                 if (tdt_datetime - retrieved_cd_datetime).days > within_days:
                     raise ValueError(
-                        f"Retrieved OMM CREATION_DATE {retrieved_cd} is more than {within_days} "
-                        f"days before the target date-time {tdt}. Something is wrong."
+                        f"Retrieved OMM CREATION_DATE {retrieved_cd} for NORAD ID {norad_id} "
+                        f"is more than {within_days} days before the target date-time {tdt}. "
+                        f"Something is wrong."
                     )
 
                 return closest_omm

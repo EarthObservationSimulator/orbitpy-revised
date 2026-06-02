@@ -94,7 +94,7 @@ def auto_retrieve_orbit(
     )["calendar_date"]
 
     omm_data = api.get_closest_omm(
-        norad_id=norad_id, target_date_time=target_date_time_str, within_days=5
+        norad_id=norad_id, target_date_time=target_date_time_str, within_days=15
     )
 
     # Log out from Space-Track.org
