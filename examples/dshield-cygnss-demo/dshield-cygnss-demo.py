@@ -33,6 +33,7 @@ import sys
 import os
 import time
 import json
+from datetime import datetime, timedelta, timezone
 
 from eosimutils.base import JsonSerializer
 
@@ -65,6 +66,16 @@ with open(mission_specs_path, "r", encoding="utf-8") as mission_specs:
 mission_dict.setdefault("settings", {})[
     "user_dir"
 ] = user_dir  # Ensure settings and set user directory.
+
+# Set the mission start epoch to (current UTC date + 2 days) at 00:00:00 UTC.
+# e.g. running on 2026-06-02 yields a start epoch of 2026-06-04T00:00:00.
+epoch_date = (datetime.now(timezone.utc) + timedelta(days=2)).date()
+mission_dict["start_time"] = {
+    "time_format": "GREGORIAN_DATE",
+    "calendar_date": f"{epoch_date.isoformat()}T00:00:00.00",
+    "time_scale": "UTC",
+}
+print(f"Mission start epoch set to {mission_dict['start_time']['calendar_date']} UTC.")
 
 # Create Mission object from dictionary
 mission = Mission.from_dict(mission_dict)
@@ -220,5 +231,18 @@ elapsed_time = time.time() - exec_start_time
 print(
     f"elapsed time for converting to csv format and writing to disk is {elapsed_time}"
 )
+
+#########################################################################################
+
+##### Copy the results to the D-SHIELD 2026 demo orbits directory. #####
+# The destination folder is named after the epoch calendar date (e.g. 20260604).
+dshield_demo_output_dir = "/home/ubuntu/dshield-2026-demo/orbits/output"
+dest_dir = os.path.join(dshield_demo_output_dir, epoch_date.strftime("%Y%m%d"))
+
+# Replace any existing copy for this epoch date with a fresh one.
+if os.path.exists(dest_dir):
+    shutil.rmtree(dest_dir)
+shutil.copytree(results_dir, dest_dir)
+print(f"Copied results to {dest_dir}.")
 
 #########################################################################################

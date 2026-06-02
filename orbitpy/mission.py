@@ -384,7 +384,17 @@ class Mission:
         )
 
         # setup mission parameters
-        start_time = AbsoluteDate.from_dict(dict_in["start_time"])
+        # Default to 2000-01-01 12:00:00 UTC (J2000 epoch) when not specified.
+        start_time = AbsoluteDate.from_dict(
+            dict_in.get(
+                "start_time",
+                {
+                    "time_format": "GREGORIAN_DATE",
+                    "calendar_date": "2000-01-01T12:00:00.00",
+                    "time_scale": "UTC",
+                },
+            )
+        )
         duration_days = dict_in["duration_days"]
 
         # setup spacecrafts
