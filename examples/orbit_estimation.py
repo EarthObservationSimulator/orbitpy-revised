@@ -2,7 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from eosimutils.time import AbsoluteDateArray
+from eosimutils.time import AbsoluteDate, AbsoluteDateArray
 from eosimutils.trajectory import StateSeries, PositionSeries
 from eosimutils.base import ReferenceFrame, SurfaceType
 from eosimutils.state import CartesianState
@@ -14,13 +14,6 @@ from orbitpy.specular import get_specular_trajectory, get_topk_trajectories
 import orbitpy.orekitpropagator  # triggers decorator registration
 from orbitpy.propagator import PropagatorFactory
 from orbitpy.orbits import TwoLineElementSet, SpaceTrackAPI, OrbitalMeanElementsMessage
-
-def get_first_idx(arr):
-    """Get index of first non-naan row in numpy array"""
-
-    mask = ~np.isnan(arr).all(axis=1)
-    first_idx = np.argmax(mask)
-    return first_idx
 
 def convert_datetime(np_dt):
     """Convert numpy datetime object to AbsoluteDateArray
@@ -86,26 +79,7 @@ ddm_timestamp_utc = np.loadtxt(
     dtype="datetime64[ns]"
 )
 
-id = "44"
-norad_id_gps = 26407
 norad_id = 41891
-gps_file = folder + "prn_" + id + "_trajectory.csv"
-gps_pos = np.genfromtxt(
-    gps_file,
-    delimiter=",",
-    skip_header=1,
-    usecols=(1, 2, 3),
-    dtype=float,
-    filling_values=np.nan
-)*M_TO_KM
-gps_vel = np.genfromtxt(
-    gps_file,
-    delimiter=",",
-    skip_header=1,
-    usecols=(4, 5, 6),
-    dtype=float,
-    filling_values=np.nan
-)*M_TO_KM
 
 # -----------------------------------
 # Process input into orbitpy objects
@@ -114,105 +88,72 @@ gps_vel = np.genfromtxt(
 # Create AbsoluteDateArray from ddm timestamps
 datearray = convert_datetime(ddm_timestamp_utc)
 
-# Create Stateseries from CYGNSS positions/velocities
-# sc_stateseries = StateSeries(
-#     time=datearray, data=[gps_pos, gps_vel], frame=ReferenceFrame.get("ITRF")
-# )
 sc_stateseries = StateSeries(
     time=datearray, data=[cyg_pos, cyg_vel], frame=ReferenceFrame.get("ITRF")
 )
 
 
-# Get first available state for receiver
-first_idx = get_first_idx(sc_stateseries.data[0])
-first_pos = sc_stateseries.data[0][first_idx]
-first_vel = sc_stateseries.data[1][first_idx]
-first_state = np.hstack((first_pos, first_vel))
-start_time = datearray[first_idx]
-stop_time = datearray[-1]
-duration_days = (stop_time.to_spice_ephemeris_time() - start_time.to_spice_ephemeris_time())/86400.0
-first_state = CartesianState.from_array(first_state, frame=ReferenceFrame.get("ITRF"), time=datearray[first_idx])
-
+# Transform reference data to inertial frame
 registry   = FrameGraph()
 to_frame = ReferenceFrame.get("ICRF_EC")
-first_state_icrf = registry.transform(first_state, to_frame, start_time)
 sc_stateseries_icrf = registry.transform_series(sc_stateseries, to_frame)
 
+# Start and stop time of reference data
+start_time = datearray[0]
+stop_time = datearray[-1]
+
+# Setup propagator
 specs = {
     "propagator_type": "OREKIT_PROPAGATOR",
     "stepSize": 10,
 }
-
-# duration_days = 1 # Propagate for 1 day
 prop = PropagatorFactory.from_dict(specs)
 prop.set_drag_coeff(0.0)
 
-sat_state_series = prop.execute(
-    t0=start_time, duration_days=duration_days, initial_state=first_state_icrf
-)
-
-diff = sat_state_series - sc_stateseries_icrf
-
-
-## Try again using SGP4 instead.
+# Use spacetrack to get initial tle
+# Convert AbsoluteDate to ISO 8601 string format
+date_str_start = start_time.to_dict(time_format="Gregorian_Date")["calendar_date"]
+date_str_stop = stop_time.to_dict(time_format="Gregorian_Date")["calendar_date"]
 file_dir = os.path.dirname(__file__)
 api = SpaceTrackAPI(os.path.join(file_dir, "spacetrack/credentials.json"))
 api.login()
-
-# Convert your AbsoluteDate to ISO 8601 string format
-# If your AbsoluteDate object is 'my_date':
-date_str = start_time.to_dict(time_format="Gregorian_Date")["calendar_date"]
 omm_dict = api.get_closest_omm(
     norad_id=norad_id,  # NORAD catalog ID of your satellite
-    target_date_time=date_str,
+    target_date_time=date_str_stop,
     within_days=1  # Optional: max days before target to search
 )
 
-# Extract the TLE from the OMM
+# Extract the TLE and time from the OMM
 if omm_dict:
+    tle_epoch = AbsoluteDate.from_dict({"time_scale" : omm_dict["TIME_SYSTEM"], "time_format" : "GREGORIAN_DATE", "calendar_date" : omm_dict["EPOCH"]})
     omm = OrbitalMeanElementsMessage.from_dict(omm_dict)
 
-# Difference in seconds between spacetrack start time and CYGNSS data start time
-time_diff = 8000 #abs(omm.epoch.to_spice_ephemeris_time() - start_time.to_spice_ephemeris_time())
-time_diff_days = time_diff / 86400.0
-sat_state_series_sgp4 = prop.execute(
-    t0=start_time, duration_days=duration_days+time_diff_days, initial_state=omm
-)
+# Create array of dates starting at TLE epoch and continuing until end of reference trajectory,
+# with a 300 second step size (5 min)
+datearray = AbsoluteDateArray.linspace(tle_epoch, stop_time, 300)
 
+omm = sc_stateseries_icrf.at(tle_epoch)
+omm = np.hstack((omm[0][0], omm[1][0]))
+omm = CartesianState.from_array(omm, frame=ReferenceFrame.get("ICRF_EC"), time=tle_epoch)
+# Propagate starting from TLE to each of the time points in the date array
+sat_state_series_sgp4 = prop.execute_2(times=datearray, initial_state=omm)
+
+# Resample reference trajectory onto these time points.
+sc_stateseries_icrf = sc_stateseries_icrf.resample(datearray)
+
+# Take difference between propagated and reference states
 diff_st = sat_state_series_sgp4 - sc_stateseries_icrf
 
 # --------------------------
 # Plot results
 # --------------------------
 
-# Results for Orekit propagator initialized with state from CYGNSS data
-
-# Plot individual error components
-plt.figure()
-plt.plot(sat_state_series.time.ephemeris_time*(1/86400.0), diff.data[0][:, 0], label="Propagated X")
-plt.plot(sat_state_series.time.ephemeris_time*(1/86400.0), diff.data[0][:, 1], label="Propagated Y")
-plt.plot(sat_state_series.time.ephemeris_time*(1/86400.0), diff.data[0][:, 2], label="Propagated Z")
-plt.xlabel("Ephemeris Time (s)")
-plt.ylabel("Position (km)")
-plt.title("Propagated Satellite Position Over Time")
-plt.legend()
-
-# Plot error norm
-plt.figure()
-error_norm = np.linalg.norm(diff.data[0], axis=1)
-plt.plot(sat_state_series.time.ephemeris_time*(1/86400.0), error_norm)
-plt.xlabel("Ephemeris Time (s)")
-plt.ylabel("Position Error Norm (km)")
-plt.title("Norm of Position Error Between Propagated State and Reference State")
-
-# Results for SGP4 propagator initialized with TLE from SpaceTrack
-
 # Plot individual error components
 plt.figure()
 plt.plot(sat_state_series_sgp4.time.ephemeris_time*(1/86400.0), diff_st.data[0][:, 0], label="Propagated X")
 plt.plot(sat_state_series_sgp4.time.ephemeris_time*(1/86400.0), diff_st.data[0][:, 1], label="Propagated Y")
 plt.plot(sat_state_series_sgp4.time.ephemeris_time*(1/86400.0), diff_st.data[0][:, 2], label="Propagated Z")
-plt.xlabel("Ephemeris Time (s)")
+plt.xlabel("Ephemeris Time (days)")
 plt.ylabel("Position (km)")
 plt.title("Propagated Satellite Position Over Time")
 plt.legend()
@@ -221,7 +162,7 @@ plt.legend()
 plt.figure()
 error_norm = np.linalg.norm(diff_st.data[0], axis=1)
 plt.plot(sat_state_series_sgp4.time.ephemeris_time*(1/86400.0), error_norm)
-plt.xlabel("Ephemeris Time (s)")
+plt.xlabel("Ephemeris Time (days)")
 plt.ylabel("Position Error Norm (km)")
 plt.title("Norm of Position Error Between Propagated State and Reference State")
 plt.show()
