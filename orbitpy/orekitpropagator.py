@@ -315,23 +315,26 @@ class OrekitPropagator:
             "use_moon_third_body": self.use_moon_third_body
         }
     
-    def execute(
+    def execute_2(
         self,
-        t0: AbsoluteDate,
-        duration_days: float,
+        times: AbsoluteDateArray,
         initial_state: Union[CartesianState, TwoLineElementSet, OrbitalMeanElementsMessage],
     ) -> StateSeries:
-        """Propagate an initial Cartesian state using the configured Orekit model.
+        """Propagate an initial Cartesian state at the requested times.
 
         Args:
-            t0: Start time for propagation.
-            duration_days: Duration of propagation in days.
+            times: AbsoluteDateArray defining the output epochs.
             initial_state: Initial state.
 
         Returns:
-            StateSeries: Trajectory sampled at `self.step_size`-second intervals.
+            StateSeries: Trajectory sampled at the requested times,
             containing Cartesian position (km) and velocity (km/s) in the ICRF_EC frame.
         """
+        if len(times) == 0:
+            raise ValueError("times must contain at least one epoch")
+
+        t0 = times[0]
+
         # Convert start time to Orekit AbsoluteDate using astropy
         py_datetime = t0.to_astropy_time().to_datetime()
         orekit_start_date = datetime_to_absolutedate(py_datetime)
@@ -392,26 +395,15 @@ class OrekitPropagator:
         self.propagator.resetInitialState(ic)
         self.propagator.setOrbitType(OrbitType.CARTESIAN)
 
-        # Setup time grid
-        duration_sec = float(duration_days) * 86400.0
-        step_time = float(self.step_size)
-        num_steps = int(np.floor(duration_sec / step_time)) + 1
-
         positions: list[list[float]] = []
         velocities: list[list[float]] = []
 
-        # Build the time array for output
-        t0_et = float(t0.ephemeris_time)
-
-        et_array = np.empty(num_steps, dtype=float)
-        et_array[0] = t0_et
-
         # Propagate
-        for k in range(num_steps):
-            dt = float(k) * step_time
-            if k > 0:
-                et_array[k] = t0_et + dt
+        t0_et = float(t0.ephemeris_time)
+        et_array = times.ephemeris_time.astype(float, copy=True)
 
+        for k, et in enumerate(et_array):
+            dt = float(et - t0_et)
             tt = orekit_start_date.shiftedBy(dt)
             st = self.propagator.propagate(tt)
 
@@ -434,3 +426,17 @@ class OrekitPropagator:
             data=[positions_arr, velocities_arr],
             frame=reference_frame,
         )
+
+    def execute(
+        self,
+        t0: AbsoluteDate,
+        duration_days: float,
+        initial_state: Union[CartesianState, TwoLineElementSet, OrbitalMeanElementsMessage],
+    ) -> StateSeries:
+        """Backward-compatible wrapper that builds the sample times from t0 and duration."""
+        duration_sec = float(duration_days) * 86400.0
+        step_time = float(self.step_size)
+        num_steps = int(np.floor(duration_sec / step_time)) + 1
+        et_array = t0.ephemeris_time + np.arange(num_steps, dtype=float) * step_time
+        times = AbsoluteDateArray(et_array)
+        return self.execute_2(times=times, initial_state=initial_state)
