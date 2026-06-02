@@ -1,0 +1,26 @@
+[
+    {
+            "name": "gs1",
+            "id": "HI",
+            "latitude": 19.0,
+            "longitude": -155.65,
+            "height": 367.0,
+            "min_elevation_angle": 7.0
+    },
+    {
+            "name": "gs2",
+            "id": "CHI",
+            "latitude": -33.13,
+            "longitude": -70.67,
+            "height": 723.4,
+            "min_elevation_angle": 7.0
+    },
+    {
+            "name": "gs3",
+            "id": "AUS",
+            "latitude": -29.08,
+            "longitude": 115.58,
+            "height": 250.0,
+            "min_elevation_angle": 7.0
+    }
+]

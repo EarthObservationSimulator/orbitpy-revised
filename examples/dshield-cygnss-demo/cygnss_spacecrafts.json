@@ -1,6 +1,7 @@
 [    
     {
         "name": "CYG41887",
+        "id": "CYG41887",
         "norad_id": "41887",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",
@@ -18,6 +19,7 @@
     },
     {
         "name": "CYG41886",
+        "id": "CYG41886",
         "norad_id": "41886",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",
@@ -35,6 +37,7 @@
     },
     {
         "name": "CYG41891",
+        "id": "CYG41891",
         "norad_id": "41891",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",
@@ -52,6 +55,7 @@
     },
     {
         "name": "CYG41885",
+        "id": "CYG41885",
         "norad_id": "41885",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",
@@ -69,6 +73,7 @@
     },
     {
         "name": "CYG41884",
+        "id": "CYG41884",
         "norad_id": "41884",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",
@@ -85,6 +90,7 @@
     },
     {
         "name": "CYG41890",
+        "id": "CYG41890",
         "norad_id": "41890",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",
@@ -101,6 +107,7 @@
     },
     {
         "name": "CYG41888",
+        "id": "CYG41888",
         "norad_id": "41888",
         "local_orbital_frame_handler": {
             "frame_type": "LVLH_TYPE_1",

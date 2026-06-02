@@ -9,6 +9,34 @@ import pandas as pd
 
 from eosimutils.state import Cartesian3DPosition
 from eosimutils.base import ReferenceFrame
+from eosimutils.time import AbsoluteDate
+
+
+def _epoch_jdut1_line(epoch_dict: dict) -> str:
+    """Build the ``Epoch [JDUT1] is <jd>`` header line for the D-SHIELD format.
+
+    The D-SHIELD format expects the epoch as a Julian Date in the UT1 time
+    scale (JDUT1). We compute the Julian Date in the **UTC** time scale using
+    ``eosimutils.time`` and use it directly as JDUT1 -- i.e. we approximate
+    ``UT1 ~ UTC``.
+
+    Approximation note: the difference between UT1 and UTC (DUT1) is kept below
+    0.9 s by the IERS leap-second convention. 0.9 s is ~1.04e-5 days, so the
+    error introduced in the Julian Date by treating JD(UTC) as JDUT1 is at most
+    of that order -- negligible for this application. If sub-second epoch
+    accuracy is ever required, replace this with a true UT1 conversion using
+    IERS Earth-orientation (DUT1) data.
+
+    Args:
+        epoch_dict (dict): Epoch as produced by ``AbsoluteDate.to_dict`` (any
+            supported time format/scale; typically GREGORIAN_DATE / UTC).
+
+    Returns:
+        str: The header line, newline-terminated.
+    """
+    epoch = AbsoluteDate.from_dict(epoch_dict)
+    jd_utc = epoch.to_dict(time_format="JULIAN_DATE", time_scale="UTC")["jd"]
+    return f"Epoch [JDUT1] is {jd_utc}\n"
 
 
 def write_dshield_format_of_propagator_results(
@@ -81,9 +109,17 @@ def write_dshield_format_of_propagator_results(
 
         with open(out_fp, "w", newline="", encoding="utf-8") as f:
             # header lines (exact wording as requested by the D-SHIELD project)
-            f.write(f"Satellite states are in {frame} frame\n")
+            #f.write(f"Satellite states are in {frame} frame\n")
+            if frame != "ICRF_EC":
+                raise ValueError(
+                    f"Unexpected frame: {frame}. Expected ICRF_EC."
+                )
+            f.write(f"Satellite states are in CARTESIAN_EARTH_CENTERED_INERTIAL (equatorial-plane) frame.\n")
+            #f.write(
+            #    f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+            #)
             f.write(
-                f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
+                _epoch_jdut1_line(epoch_dict)
             )
             f.write(f"Step size [s] is {float(step_seconds)}\n")
             f.write(f"Mission Duration [Days] is {mission_days}\n")
@@ -170,6 +206,7 @@ def write_dshield_format_of_contact_results(
         sc_name = sc.get(
             "spacecraft_name", sc.get("spacecraft_id", "spacecraft")
         )
+        sc_id = sc.get("spacecraft_id", "")
         sc_folder = os.path.join(out_dir, sc_name)
         os.makedirs(sc_folder, exist_ok=True)
 
@@ -193,12 +230,16 @@ def write_dshield_format_of_contact_results(
                 continue
 
             # write CSV
-            out_fp = os.path.join(results_dir, f"{gs_id}")
+            out_fp = os.path.join(results_dir, f"{gs_name}")
             with open(out_fp, "w", newline="", encoding="utf-8") as f:
-                header_title = f"Contacts between spacecraft {sc_name} and Ground station {gs_name}"
+                #header_title = f"Contacts between spacecraft {sc_name} and Ground station {gs_name}"
+                header_title = f"Contacts between Entity1 with id {sc_id} with Entity2 with id {gs_id}"
                 f.write(header_title + "\n")
+                #f.write(
+                #    f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+                #)
                 f.write(
-                    f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
+                    _epoch_jdut1_line(epoch_dict)
                 )
                 f.write(f"Step size [s] is {float(step_size_seconds)}\n")
                 f.write("start index,end index\n")
@@ -289,6 +330,7 @@ def write_dshield_format_of_eclipse_results(
         sc_name = sc.get(
             "spacecraft_name", sc.get("spacecraft_id", "spacecraft")
         )
+        sc_id = sc.get("spacecraft_id", "")
         sc_folder = os.path.join(out_dir, sc_name)
         os.makedirs(sc_folder, exist_ok=True)
 
@@ -305,10 +347,13 @@ def write_dshield_format_of_eclipse_results(
 
         out_fp = os.path.join(results_dir, "eclipse")
         with open(out_fp, "w", newline="", encoding="utf-8") as f:
-            header_title = f"Eclipse intervals for spacecraft {sc_name}"
+            header_title = f"Eclipse times for Spacecraft with id {sc_id}"
             f.write(header_title + "\n")
+            #f.write(
+            #    f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+            #)
             f.write(
-                f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+                _epoch_jdut1_line(epoch_dict)
             )
             f.write(f"Step size [s] is {float(step_size_seconds)}\n")
             f.write("start index,end index\n")
@@ -394,11 +439,17 @@ def write_dshield_format_of_point_coverage_results(
 
             with open(out_fp, "w", newline="", encoding="utf-8") as f:
                 f.write(
-                    f"Spacecraft with name {sc_name}, id {sc_id}. \
-                        Sensor with name {sensor_name}, id {sensor_id} \n"
+                    f"Spacecraft with id {sc_id}.\n"
                 )
+                #f.write(
+                #    f"Spacecraft with name {sc_name}, id {sc_id}. \
+                #        Sensor with name {sensor_name}, id {sensor_id} \n"
+                #)
+                #f.write(
+                #    f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+                #)
                 f.write(
-                    f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
+                    _epoch_jdut1_line(epoch_dict)
                 )
                 f.write(f"Step size [s] is {float(step_size_seconds)}\n")
                 f.write('"time index" "GP index"\n')
@@ -492,13 +543,17 @@ def write_dshield_format_of_gnssr_coverage_results(
                 continue
 
             with open(out_fp, "w", newline="", encoding="utf-8") as f:
+                f.write(f"Spacecraft with id {sc_id}\n")
                 f.write(
-                    f"Spacecraft with name {sc_name}, id {sc_id}. \
-                        Sensor with name {sensor_name}, id {sensor_id} \n"
+                    _epoch_jdut1_line(epoch_dict)
                 )
-                f.write(
-                    f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
-                )
+                #f.write(
+                #    f"Spacecraft with name {sc_name}, id {sc_id}. \
+                #        Sensor with name {sensor_name}, id {sensor_id} \n"
+                #)
+                #f.write(
+                #    f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+                #)
                 f.write(f"Step size [s] is {float(step_size_seconds)}\n")
                 f.write('"time index" "source id" "GP index"\n')
 
@@ -682,15 +737,37 @@ def write_dshield_format_of_specular_trajectory_results(
             print(f"Skipping {sc_name}: no specular trajectories")
             continue
 
+        # Mission duration in days, derived from the receiver time grid. All
+        # GNSS transmitters share the same time grid (specular positions are
+        # NaN where there is no line of sight), so the first non-empty time
+        # array spans the full mission.
+        mission_days = 0.0
+        for gnss in all_spacecraft_specular_info:
+            times = (
+                gnss.get("specular_info", {})
+                .get("time", {})
+                .get("ephemeris_time", [])
+            )
+            if times:
+                mission_days = (times[-1] - times[0]) / 86400.0
+                break
+
         out_fp = os.path.join(results_dir, "specular.csv")
         with open(out_fp, "w", newline="", encoding="utf-8") as f:
             f.write(
-                f"Specular points between spacecraft {sc_name} and all GNSS transmitters\n"
+                f"SPECULAR COVERAGE\n"
             )
+            #f.write(
+            #    f"Specular points between spacecraft {sc_name} and all GNSS transmitters\n"
+            #)
             f.write(
-                f"Epoch [Format: {tf_label}. Scale: {ts_label}] is {epoch_str}\n"
+                _epoch_jdut1_line(epoch_dict)
             )
+            #f.write(
+            #    f"Epoch [Format: {tf_label}, Scale: {ts_label}] is {epoch_str}\n"
+            #)
             f.write(f"Step size [s] is {float(step_size_seconds)}\n")
+            f.write(f"Mission Duration [Days] is {mission_days}\n")
             f.write("time index,source id,lat [deg],lon [deg]\n")
 
             for (

@@ -8,9 +8,11 @@ __pycache__/
 docs/build/
 htmlcov/
 .coverage
+*.pkl
 
 # ignore output files of example scripts
 MissionOutput.json
 examples/cygnss_gnssr/results/*
 examples/planet_skysat/results/*
-examples/dshield-cygnss-demo/dshield-cygnss-demo/output/*
+examples/dshield-cygnss-demo/output/*
+
