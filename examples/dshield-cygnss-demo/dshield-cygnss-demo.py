@@ -18,11 +18,16 @@ Note: This list may exclude GNSS satellites that were active during the mission 
      currently inactive at the time of writing this comment (4 Oct 2024). Also satellites not
      launched before the date of interest, and decayed satellites are excluded later in the script.
      This list will not include GNSS satellites active after 4 Oct 2024.
+Update (5 Jun 2026): removed GNSS27704 (appears decommissioned) and added 3 newer GPS
+     satellites (62339, 64202, 67588).
+Update (25 Jun 2026): removed GNSS26360 (appears decommissioned).
+                removed GNSS24876 and added GNSS68791 (newer GPS satellite).
 
-gps_sat_norad_ids = ['55268', '48859', '46826', '45854', '44506', '43873', '41328', '41019',
-                     '40730', '40534', '40294', '40105', '39741', '39533', '39166', '38833',
-                     '36585', '35752', '32711', '32384', '32260', '29601', '29486', '28874',
-                     '28474', '28190', '27704', '27663', '26407', '26360', '24876']
+gps_sat_norad_ids = ['67588', '64202', '62339', '55268', '48859', '46826', '45854', '44506',
+                     '43873', '41328', '41019', '40730', '40534', '40294', '40105', '39741',
+                     '39533', '39166', '38833', '36585', '35752', '32711', '32384', '32260',
+                     '29601', '29486', '28874', '28474', '28190', '27663', '26407', '26360',
+                     '24876']
 
 
 """
@@ -244,5 +249,11 @@ if os.path.exists(dest_dir):
     shutil.rmtree(dest_dir)
 shutil.copytree(results_dir, dest_dir)
 print(f"Copied results to {dest_dir}.")
+
+# The D-SHIELD demo only needs the CSV exports, not the full JSON bundle.
+copied_mission_output_fp = os.path.join(dest_dir, "MissionOutput.json")
+if os.path.exists(copied_mission_output_fp):
+    os.remove(copied_mission_output_fp)
+    print(f"Removed {copied_mission_output_fp}.")
 
 #########################################################################################
