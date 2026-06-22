@@ -22,17 +22,18 @@ The default surface type used for Earth surface representation is WGS84 ellipsoi
 **To do**: Update about the caveats of using WGS84 vs Sphere. For example, if WGS84 is used,
 currently cell-based preprocessing in coverage calculations is skipped.
 
-**Known issue (top-k ranking)**: When the GNSS-R analyses are run with ``topk`` (via
-``execute_all`` or the individual ``execute_...`` functions), the top-k ranking of
-``specular_trajectory_results`` is computed independently from that of
-``coverage_calculator_results`` and may select different GNSS transmitters for the same
-receiver at the same time step. The trajectory is ranked by the all-pairs line-of-sight
-RCG from ``get_specular_trajectory`` (no field-of-view check), whereas the coverage is
-ranked by an RCG that additionally gates on the receiver FOV and specular radius. So rank
-*r* of one output need not name the same transmitter as rank *r* of the other. This is
-intentional (the trajectory is defined over all transmitter/receiver pairs) but can
-surprise consumers that assume the two top-k outputs are aligned. See the ``KNOWN ISSUE``
-note in ``Mission.execute_specular_trajectory_calculator``.
+**Top-k ranking (specular trajectory vs. coverage)**: ``specular_trajectory_results`` and
+``coverage_calculator_results`` are both ranked by the *same* physical quantity -- the
+geometric, line-of-sight RCG at the specular point (G/(R_t^2 * R_r^2)). The receiver FOV
+and specular radius only shape which grid points count as covered; they do **not** enter
+the RCG used for ranking. To make the two top-k outputs select the same transmitter at
+every (receiver, time step), ``execute_all`` computes the geometric RCG once (via
+``_specular_data_by_rx``) and feeds it as the single ranking key to both the
+specular-trajectory top-k and the GNSS-R coverage top-k (the latter via
+``execute_gnssr_coverage_calculator``'s ``ranking_rcg`` argument). Caveat: calling the
+two ``execute_...`` methods individually (outside ``execute_all``) ranks each by its own
+specular-point solver (Python Newton vs. C++), so their selections can still differ at a
+near-tie -- use ``execute_all`` when aligned top-k outputs are required.
 
 The features currently supported are:
 - Mission with one or more spacecraft, each with one or more sensors.
@@ -921,6 +922,7 @@ class Mission:
         propagated_rx_trajectories: List[Dict[str, Union[str, StateSeries]]],
         propagated_tx_trajectories: List[Dict[str, Union[str, StateSeries]]],
         topk: Optional[int] = None,
+        ranking_rcg: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """Calculate GNSS-R coverage for receiver spacecraft using GNSS satellites.
         The GNSS satellites are the transmitter satellites, and the receiver
@@ -943,6 +945,18 @@ class Mission:
                 (default), coverage for all transmitters is returned, one entry per
                 GNSS transmitter. ``topk`` is clamped to the number of GNSS
                 transmitters.
+            ranking_rcg (Optional[Dict[str, Dict[str, Any]]]): Only used when
+                ``topk`` is set. A mapping ``{receiver_id: {transmitter_id:
+                rcg_per_time_step}}`` supplying the RCG to rank the top-k by,
+                in place of this method's own coverage RCG. ``execute_all`` passes
+                the geometric line-of-sight RCG from ``get_specular_trajectory``
+                (the same key used to rank ``specular_trajectory_results``) so the
+                two top-k outputs select the same transmitter at every (receiver,
+                time step). Both are the same physical quantity; sharing one key
+                removes any divergence from the two specular-point solvers. When
+                None (default), the top-k is ranked by this method's own coverage
+                RCG. Any (receiver, transmitter) missing from the mapping falls
+                back to the coverage RCG for that entry.
 
         Returns:
             List[Dict[str, Any]]: List of nested (3 levels) dictionary mapping
@@ -1160,23 +1174,41 @@ class Mission:
                         for i, coverage in enumerate(result)
                     ]
                 else:
-                    # Reduce to the top-k specular trajectories by RCG at each
-                    # time step. NOTE: this RCG includes the receiver FOV /
-                    # specular-radius gating, so the transmitters selected here
-                    # can differ from the top-k in
-                    # execute_specular_trajectory_calculator (see the KNOWN
-                    # ISSUE note there).
+                    # Reduce to the top-k transmitters by RCG at each time step.
+                    #
+                    # Ranking key: by default the coverage RCG (the geometric,
+                    # line-of-sight RCG from the C++ RCGSource, which is NOT
+                    # FOV/specular-radius gated -- the FOV and specular radius
+                    # only shape which grid points are covered, not the RCG).
+                    # When execute_all supplies ``ranking_rcg`` it is the
+                    # geometric RCG from get_specular_trajectory instead, which
+                    # makes this top-k select exactly the same transmitters per
+                    # (receiver, time step) as specular_trajectory_results. Both
+                    # are the same physical quantity; a single shared key
+                    # guarantees the two top-k outputs stay aligned.
+                    if ranking_rcg is not None:
+                        rx_ranking = ranking_rcg.get(rx_spc_id, {})
+                        result_for_rank = [
+                            (
+                                cov[0],
+                                rx_ranking.get(tx_spacecraft_id[j], cov[1]),
+                            )
+                            for j, cov in enumerate(result)
+                        ]
+                    else:
+                        result_for_rank = result
+
                     topk_cov = coverage_calculator.get_topk_coverage(
-                        result, topk
+                        result_for_rank, topk
                     )
 
                     # Recover which GNSS transmitter supplies each (time, rank).
                     # get_topk_trajectories ranks by RCG with the same logic as
-                    # get_topk_coverage, so feeding it the per-transmitter
-                    # coverage RCGs makes the selected ids line up exactly with
-                    # the top-k coverage ranks. Only the RCG drives the
-                    # selection; the position series is an unused placeholder
-                    # (shared across entries to avoid redundant construction).
+                    # get_topk_coverage, so feeding it the same ranking RCGs
+                    # makes the selected ids line up exactly with the top-k
+                    # coverage ranks. Only the RCG drives the selection; the
+                    # position series is an unused placeholder (shared across
+                    # entries to avoid redundant construction).
                     num_tp = len(rx_times)
                     placeholder_series = PositionSeries(
                         time=rx_times,
@@ -1184,7 +1216,7 @@ class Mission:
                         frame=rx_local_orbital_frame,
                     )
                     traj_list = [
-                        (placeholder_series, coverage[1]) for coverage in result
+                        (placeholder_series, cov[1]) for cov in result_for_rank
                     ]
                     _, selected_ids_by_time = get_topk_trajectories(
                         traj_list, topk, ids=tx_spacecraft_id
@@ -1202,6 +1234,7 @@ class Mission:
                         names_per_time = [
                             id_to_name.get(_id) for _id in ids_per_time
                         ]
+                        rcg_factor = coverage[1]
                         rsc_x.append(
                             {
                                 "rank": rank + 1,  # 1 = highest RCG
@@ -1210,9 +1243,11 @@ class Mission:
                                 "coverage_info": coverage[
                                     0
                                 ],  # DiscreteCoverageTP object
-                                "rcg_factor": coverage[
-                                    1
-                                ],  # RCG proportionality factor
+                                "rcg_factor": (
+                                    rcg_factor.tolist()
+                                    if hasattr(rcg_factor, "tolist")
+                                    else list(rcg_factor)
+                                ),  # RCG proportionality factor
                             }
                         )
                 rx_sensor_cov.append(
@@ -1232,6 +1267,198 @@ class Mission:
             all_coverage_info.append(rx_spc_coverage)
 
         return all_coverage_info
+
+    def _specular_data_by_rx(
+        self,
+        propagated_rx_trajectories: List[Dict[str, Union[str, StateSeries]]],
+        propagated_tx_trajectories: List[Dict[str, Union[str, StateSeries]]],
+    ) -> List[Dict[str, Any]]:
+        """Compute the specular point trajectory and RCG for every
+        (receiver, transmitter) pair, with no field-of-view check.
+
+        This is the shared computation behind
+        ``execute_specular_trajectory_calculator`` and the top-k ranking applied
+        by ``execute_all``. The RCG returned here is the canonical geometric,
+        line-of-sight RCG from ``get_specular_trajectory``; ranking both the
+        specular trajectories and the GNSS-R coverage by it guarantees the two
+        top-k outputs select the same transmitters per (receiver, time step).
+
+        Returns:
+            List[Dict[str, Any]]: one entry per receiver, each with:
+                - "rx_id": str
+                - "rx_name": Optional[str]
+                - "rx_times": AbsoluteDateArray
+                - "tx_ids": List[str]
+                - "tx_names": List[Optional[str]]
+                - "traj_list": List[Tuple[PositionSeries, np.ndarray]] aligned
+                  1:1 with "tx_ids".
+        """
+        spec_data: List[Dict[str, Any]] = []
+        for rx_item in propagated_rx_trajectories:
+
+            rx_spc_id = rx_item["spacecraft_id"]
+            rx_spc_name = rx_item.get("spacecraft_name")
+            rx_trajectory_icrf = rx_item["trajectory"]
+            rx_times = (
+                rx_trajectory_icrf.time
+            )  # times at which coverage is to be calculated
+
+            # Convert the propgated trajectories from ICRF_EC frame to
+            # ITRF frame since the specular point calculation
+            # assumes the input trajectories are in the ITRF frame.
+            rx_pos_icrf = rx_trajectory_icrf.data[0]
+            rx_vel_icrf = rx_trajectory_icrf.data[1]
+            rx_rot_array, rx_w_array = (
+                self.frame_graph.get_orientation_transform(
+                    from_frame=ReferenceFrame.get("ICRF_EC"),
+                    to_frame=ReferenceFrame.get("ITRF"),
+                    t=rx_times,
+                )
+            )
+            pos_itrf = rx_rot_array.apply(rx_pos_icrf)
+            vel_itrf = rx_rot_array.apply(rx_vel_icrf) + np.cross(
+                rx_w_array, rx_pos_icrf
+            )
+            rx_trajectory_itrf = StateSeries(
+                time=rx_trajectory_icrf.time,
+                data=[pos_itrf, vel_itrf],
+                frame=ReferenceFrame.get("ITRF"),
+            )
+
+            # Collect the specular trajectory and RCG for every GNSS
+            # transmitter (aligned with tx_ids).
+            tx_ids: List[Any] = []
+            tx_names: List[Any] = []
+            traj_list: List[Tuple[PositionSeries, np.ndarray]] = []
+            for tx_item in propagated_tx_trajectories:
+
+                tx_spc_id = tx_item["spacecraft_id"]
+                tx_spc_name = tx_item.get("spacecraft_name")
+                tx_trajectory_icrf = tx_item["trajectory"]
+
+                # Convert the propagated trajectories from ICRF_EC frame
+                # to ITRF frame since the specular point calculation assumes
+                # the input trajectories are in the ITRF frame.
+                tx_pos_icrf = tx_trajectory_icrf.data[0]
+                tx_vel_icrf = tx_trajectory_icrf.data[1]
+                tx_rot_array, tx_w_array = (
+                    self.frame_graph.get_orientation_transform(
+                        from_frame=ReferenceFrame.get("ICRF_EC"),
+                        to_frame=ReferenceFrame.get("ITRF"),
+                        t=rx_times,
+                    )
+                )
+                pos_itrf = tx_rot_array.apply(tx_pos_icrf)
+                vel_itrf = tx_rot_array.apply(tx_vel_icrf) + np.cross(
+                    tx_w_array, tx_pos_icrf
+                )
+                tx_trajectory_itrf = StateSeries(
+                    time=tx_trajectory_icrf.time,
+                    data=[pos_itrf, vel_itrf],
+                    frame=ReferenceFrame.get("ITRF"),
+                )
+
+                # Compute specular points
+                sp_posseries, rcg = get_specular_trajectory(
+                    transmitter_states_itrf=tx_trajectory_itrf,
+                    receiver_states_itrf=rx_trajectory_itrf,
+                    times=rx_times,
+                    surface=self.settings.surface_type,
+                )
+
+                tx_ids.append(tx_spc_id)
+                tx_names.append(tx_spc_name)
+                traj_list.append((sp_posseries, rcg))
+
+            spec_data.append(
+                {
+                    "rx_id": rx_spc_id,
+                    "rx_name": rx_spc_name,
+                    "rx_times": rx_times,
+                    "tx_ids": tx_ids,
+                    "tx_names": tx_names,
+                    "traj_list": traj_list,
+                }
+            )
+        return spec_data
+
+    @staticmethod
+    def _build_specular_output(
+        spec_data: List[Dict[str, Any]],
+        topk: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Build the ``execute_specular_trajectory_calculator`` result from the
+        per-receiver data returned by ``_specular_data_by_rx``.
+
+        When ``topk`` is None, returns one entry per transmitter. When ``topk``
+        is set, reduces to the top-k trajectories by the geometric RCG at each
+        time step (see ``execute_specular_trajectory_calculator`` for the output
+        shape).
+        """
+        all_specular_info: List[Dict[str, Any]] = []
+        for rx_data in spec_data:
+            tx_ids = rx_data["tx_ids"]
+            tx_names = rx_data["tx_names"]
+            traj_list = rx_data["traj_list"]
+            rx_times = rx_data["rx_times"]
+
+            if topk is None:
+                # One entry per GNSS transmitter.
+                all_spacecraft_specular_info: List[Dict[str, Any]] = [
+                    {
+                        "gnss_spacecraft_id": tx_ids[i],
+                        "gnss_spacecraft_name": tx_names[i],
+                        "specular_info": traj_list[i][0],
+                    }
+                    for i in range(len(traj_list))
+                ]
+            else:
+                # Reduce to the top-k specular trajectories by the geometric RCG
+                # at each time step. get_topk_trajectories ranks the
+                # per-transmitter trajectories by RCG and reports which
+                # transmitter supplies each (time, rank), so the position series
+                # and the selected ids stay consistent.
+                #
+                # This is the same geometric, line-of-sight RCG that
+                # execute_all feeds into the GNSS-R coverage top-k (via
+                # execute_gnssr_coverage_calculator's ``ranking_rcg``), so the
+                # two top-k outputs select the same transmitter at every
+                # (receiver, time step).
+                topk_traj, selected_ids_by_time = get_topk_trajectories(
+                    traj_list, topk, ids=tx_ids
+                )
+                id_to_name = dict(zip(tx_ids, tx_names))
+                num_tp = len(rx_times)
+                all_spacecraft_specular_info = []
+                for rank, (sp_posseries, rcg) in enumerate(topk_traj):
+                    ids_per_time = [
+                        selected_ids_by_time[i][rank] for i in range(num_tp)
+                    ]
+                    names_per_time = [
+                        id_to_name.get(_id) for _id in ids_per_time
+                    ]
+                    all_spacecraft_specular_info.append(
+                        {
+                            "rank": rank + 1,  # 1 = highest RCG
+                            "gnss_spacecraft_id": ids_per_time,
+                            "gnss_spacecraft_name": names_per_time,
+                            "specular_info": sp_posseries,
+                            "rcg_factor": (
+                                rcg.tolist()
+                                if hasattr(rcg, "tolist")
+                                else list(rcg)
+                            ),  # RCG proportionality factor
+                        }
+                    )
+
+            all_specular_info.append(
+                {
+                    "spacecraft_id": rx_data["rx_id"],
+                    "spacecraft_name": rx_data["rx_name"],
+                    "all_spacecraft_specular_info": all_spacecraft_specular_info,
+                }
+            )  # append results for this spacecraft
+        return all_specular_info
 
     def execute_specular_trajectory_calculator(
         self,
@@ -1260,10 +1487,13 @@ class Mission:
                 selected transmitter id/name as a per-time-step list. If None
                 (default), the specular trajectory for every transmitter is
                 returned, one entry per GNSS transmitter. ``topk`` is clamped to
-                the number of GNSS transmitters. This ranking is independent of
-                the GNSS-R coverage top-k: the trajectory is computed for all
-                transmitter/receiver pairs (no field-of-view check) and ranked by
-                the line-of-sight RCG from get_specular_trajectory.
+                the number of GNSS transmitters. The trajectory is computed for
+                all transmitter/receiver pairs (no field-of-view check) and
+                ranked by the geometric line-of-sight RCG from
+                get_specular_trajectory. ``execute_all`` ranks the GNSS-R coverage
+                top-k by this same RCG, so when run via ``execute_all`` the
+                ``topk`` entries here name the same transmitters, rank for rank,
+                as ``coverage_calculator_results`` at every time step.
 
         Returns:
             List[Dict[str, Any]]: List of nested dictionary mapping (receiver) spacecraft IDs/names
@@ -1322,155 +1552,10 @@ class Mission:
                 "No GNSS spacecrafts specified for GNSS-R coverage calculation."
             )
 
-        # initialize the results dictionary
-        all_specular_info: List[Dict[str, Any]] = (
-            []
-        )  # accumulate results over all receiver spacecrafts
-        for rx_item in propagated_rx_trajectories:
-
-            rx_spc_id = rx_item["spacecraft_id"]
-            rx_spc_name = rx_item.get("spacecraft_name")
-            rx_trajectory_icrf = rx_item["trajectory"]
-            rx_times = (
-                rx_trajectory_icrf.time
-            )  # times at which coverage is to be calculated
-
-            # Convert the propgated trajectories from ICRF_EC frame to
-            # ITRF frame since the specular point calculation
-            # assumes the input trajectories are in the ITRF frame.
-            rx_pos_icrf = rx_trajectory_icrf.data[0]
-            rx_vel_icrf = rx_trajectory_icrf.data[1]
-            rx_rot_array, rx_w_array = (
-                self.frame_graph.get_orientation_transform(
-                    from_frame=ReferenceFrame.get("ICRF_EC"),
-                    to_frame=ReferenceFrame.get("ITRF"),
-                    t=rx_times,
-                )
-            )
-            pos_itrf = rx_rot_array.apply(rx_pos_icrf)
-            vel_itrf = rx_rot_array.apply(rx_vel_icrf) + np.cross(
-                rx_w_array, rx_pos_icrf
-            )
-            rx_trajectory_itrf = StateSeries(
-                time=rx_trajectory_icrf.time,
-                data=[pos_itrf, vel_itrf],
-                frame=ReferenceFrame.get("ITRF"),
-            )
-
-            # Collect the specular trajectory and RCG for every GNSS
-            # transmitter. These feed either the one-entry-per-transmitter
-            # output (topk is None) or the top-k ranking below.
-            tx_ids: List[Any] = []
-            tx_names: List[Any] = []
-            traj_list: List[Tuple[PositionSeries, np.ndarray]] = []
-            for tx_item in propagated_tx_trajectories:
-
-                tx_spc_id = tx_item["spacecraft_id"]
-                tx_spc_name = tx_item.get("spacecraft_name")
-                tx_trajectory_icrf = tx_item["trajectory"]
-
-                # Convert the propagated trajectories from ICRF_EC frame
-                # to ITRF frame since the specular point calculation assumes
-                # the input trajectories are in the ITRF frame.
-                tx_pos_icrf = tx_trajectory_icrf.data[0]
-                tx_vel_icrf = tx_trajectory_icrf.data[1]
-                tx_rot_array, tx_w_array = (
-                    self.frame_graph.get_orientation_transform(
-                        from_frame=ReferenceFrame.get("ICRF_EC"),
-                        to_frame=ReferenceFrame.get("ITRF"),
-                        t=rx_times,
-                    )
-                )
-                pos_itrf = tx_rot_array.apply(tx_pos_icrf)
-                vel_itrf = tx_rot_array.apply(tx_vel_icrf) + np.cross(
-                    tx_w_array, tx_pos_icrf
-                )
-                tx_trajectory_itrf = StateSeries(
-                    time=tx_trajectory_icrf.time,
-                    data=[pos_itrf, vel_itrf],
-                    frame=ReferenceFrame.get("ITRF"),
-                )
-
-                # Compute specular points
-                sp_posseries, rcg = get_specular_trajectory(
-                    transmitter_states_itrf=tx_trajectory_itrf,
-                    receiver_states_itrf=rx_trajectory_itrf,
-                    times=rx_times,
-                    surface=self.settings.surface_type,
-                )
-
-                tx_ids.append(tx_spc_id)
-                tx_names.append(tx_spc_name)
-                traj_list.append((sp_posseries, rcg))
-
-            if topk is None:
-                # One entry per GNSS transmitter.
-                all_spacecraft_specular_info: List[Dict[str, Any]] = [
-                    {
-                        "gnss_spacecraft_id": tx_ids[i],
-                        "gnss_spacecraft_name": tx_names[i],
-                        "specular_info": traj_list[i][0],
-                    }
-                    for i in range(len(traj_list))
-                ]
-            else:
-                # Reduce to the top-k specular trajectories by RCG at each time
-                # step. get_topk_trajectories ranks the per-transmitter
-                # trajectories by RCG and reports which transmitter supplies
-                # each (time, rank), so the position series and the selected
-                # ids stay consistent.
-                #
-                # KNOWN ISSUE: this top-k ranking is independent of the top-k
-                # applied to GNSS-R coverage in
-                # execute_gnssr_coverage_calculator, and the two can select
-                # different transmitters for the same receiver at the same time
-                # step. They rank by different RCG definitions: the trajectory
-                # RCG here is the all-pairs line-of-sight RCG from
-                # get_specular_trajectory (no FOV check), whereas the coverage
-                # RCG additionally gates on the receiver FOV and specular radius
-                # (and is -inf where nothing is covered). So rank r of
-                # specular_trajectory_results need not name the same GNSS
-                # transmitter as rank r of coverage_calculator_results. This is
-                # intentional because the trajectory is defined over all
-                # transmitter/receiver pairs, but it can surprise downstream
-                # consumers that assume the two top-k outputs are aligned.
-                # Revisit if a single shared ranking is ever required.
-                topk_traj, selected_ids_by_time = get_topk_trajectories(
-                    traj_list, topk, ids=tx_ids
-                )
-                id_to_name = dict(zip(tx_ids, tx_names))
-                num_tp = len(rx_times)
-                all_spacecraft_specular_info = []
-                for rank, (sp_posseries, rcg) in enumerate(topk_traj):
-                    ids_per_time = [
-                        selected_ids_by_time[i][rank] for i in range(num_tp)
-                    ]
-                    names_per_time = [
-                        id_to_name.get(_id) for _id in ids_per_time
-                    ]
-                    all_spacecraft_specular_info.append(
-                        {
-                            "rank": rank + 1,  # 1 = highest RCG
-                            "gnss_spacecraft_id": ids_per_time,
-                            "gnss_spacecraft_name": names_per_time,
-                            "specular_info": sp_posseries,
-                            "rcg_factor": (
-                                rcg.tolist()
-                                if hasattr(rcg, "tolist")
-                                else list(rcg)
-                            ),  # RCG proportionality factor
-                        }
-                    )
-
-            all_specular_info.append(
-                {
-                    "spacecraft_id": rx_spc_id,
-                    "spacecraft_name": rx_spc_name,
-                    "all_spacecraft_specular_info": all_spacecraft_specular_info,
-                }
-            )  # append results for this spacecraft
-
-        return all_specular_info
+        spec_data = self._specular_data_by_rx(
+            propagated_rx_trajectories, propagated_tx_trajectories
+        )
+        return self._build_specular_output(spec_data, topk)
 
     def execute_all(self, topk: Optional[int] = None) -> Dict[str, Any]:
         """Run all configured mission analyses and return a structured result bundle.
@@ -1482,9 +1567,12 @@ class Mission:
                 missions. If specified, the GNSS-R coverage and the specular
                 trajectories are each reduced, at each time step, to only the
                 ``topk`` highest-RCG entries (see those methods for the output
-                structures; the two rankings are computed independently). Ignored
-                for POINT_COVERAGE missions. If None (default), results for all
-                GNSS transmitters are returned.
+                structures). Both are ranked by the same geometric specular RCG
+                (computed once here), so rank *r* of ``coverage_calculator_results``
+                names the same transmitter as rank *r* of
+                ``specular_trajectory_results`` at every time step. Ignored for
+                POINT_COVERAGE missions. If None (default), results for all GNSS
+                transmitters are returned.
 
         Returns:
             Dict[str, Any]:
@@ -1540,17 +1628,34 @@ class Mission:
                     raise ValueError(
                         "No GNSS spacecraft trajectories available for GNSS-R coverage calculation."
                     )
-                specular_trajectories = (
-                    self.execute_specular_trajectory_calculator(
-                        propagated_rx_trajectories=propagated_trajectories,
-                        propagated_tx_trajectories=gnss_trajectories,
-                        topk=topk,
-                    )
+                # Compute the specular trajectories + geometric RCG once, and use
+                # that single RCG to rank BOTH the specular-trajectory top-k and
+                # the GNSS-R coverage top-k, so the two outputs select the same
+                # transmitter per (receiver, time step). (No redundant work: the
+                # coverage calculator still computes its own specular points in
+                # C++ for the coverage geometry, exactly as before -- only the
+                # ranking key is shared.)
+                spec_data = self._specular_data_by_rx(
+                    propagated_rx_trajectories=propagated_trajectories,
+                    propagated_tx_trajectories=gnss_trajectories,
                 )
+                specular_trajectories = self._build_specular_output(
+                    spec_data, topk
+                )
+                ranking_rcg = {
+                    rx_data["rx_id"]: {
+                        tx_id: rcg
+                        for tx_id, (_sp, rcg) in zip(
+                            rx_data["tx_ids"], rx_data["traj_list"]
+                        )
+                    }
+                    for rx_data in spec_data
+                }
                 coverage = self.execute_gnssr_coverage_calculator(
                     propagated_rx_trajectories=propagated_trajectories,
                     propagated_tx_trajectories=gnss_trajectories,
                     topk=topk,
+                    ranking_rcg=ranking_rcg,
                 )
                 # form the mission results dictionary
                 mission_results = {
