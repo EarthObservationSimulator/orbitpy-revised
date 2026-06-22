@@ -796,31 +796,51 @@ def write_dshield_format_of_specular_trajectory_results(
             f.write(f"Mission Duration [Days] is {mission_days}\n")
             f.write("time index,source id,lat [deg],lon [deg]\n")
 
-            for (
-                gnss
-            ) in (
-                all_spacecraft_specular_info
-            ):  # iterate over all GNSS spacecrafts
-                gnss_name = gnss.get(
-                    "gnss_spacecraft_name",
-                    gnss.get("gnss_spacecraft_id", "gnss"),
+            # Iterate over specular entries (sources). Without top-k each entry
+            # is one GNSS transmitter and "gnss_spacecraft_name" /
+            # "gnss_spacecraft_id" are scalars. With top-k each entry is a rank
+            # and those fields are per-time-step lists naming the transmitter
+            # selected at each time step.
+            for gnss in all_spacecraft_specular_info:
+                name_field = gnss.get("gnss_spacecraft_name")
+                id_field = gnss.get("gnss_spacecraft_id")
+                # Label for diagnostics: the rank (top-k) or the scalar source.
+                rank = gnss.get("rank")
+                label = (
+                    f"rank {rank}"
+                    if rank is not None
+                    else (name_field or id_field or "gnss")
                 )
                 specular_info = gnss.get("specular_info", {})
                 if not specular_info:
-                    print(
-                        f"Skipping {sc_name} -> {gnss_name}: no specular info"
-                    )
+                    print(f"Skipping {sc_name} -> {label}: no specular info")
                     continue
 
                 times = specular_info.get("time", {}).get("ephemeris_time", [])
                 positions = specular_info.get("data", [[]])  # positions: [N, 3]
                 if not times or not positions:
                     print(
-                        f"Skipping {sc_name} -> {gnss_name}: missing times or positions"
+                        f"Skipping {sc_name} -> {label}: missing times or positions"
                     )
                     continue
 
-                for t, pos in zip(times, positions):
+                # Normalize the source identity to per-time-step lists so the
+                # same writing logic handles both cases: a scalar (no top-k) is
+                # broadcast to every time step; a list (top-k) names the
+                # transmitter selected at each time step.
+                num_times = len(times)
+                names_by_time = (
+                    name_field
+                    if isinstance(name_field, list)
+                    else [name_field] * num_times
+                )
+                ids_by_time = (
+                    id_field
+                    if isinstance(id_field, list)
+                    else [id_field] * num_times
+                )
+
+                for idx, (t, pos) in enumerate(zip(times, positions)):
                     px, py, pz = (pos + [None] * 3)[:3]
                     # Specular positions are in ITRF (km). No-LOS time points are
                     # stored as NaN vectors; skip those rows.
@@ -833,6 +853,14 @@ def write_dshield_format_of_specular_trajectory_results(
                         or math.isnan(pz)
                     ):
                         continue
+                    # Prefer the transmitter name, fall back to its id.
+                    source_name = None
+                    if idx < len(names_by_time):
+                        source_name = names_by_time[idx]
+                    if source_name is None and idx < len(ids_by_time):
+                        source_name = ids_by_time[idx]
+                    if source_name is None:
+                        source_name = "gnss"
                     time_idx = int(
                         round((t - epoch_ephemeris_seconds) / step_size_seconds)
                     )
@@ -842,7 +870,7 @@ def write_dshield_format_of_specular_trajectory_results(
                     # Reference format uses a 0-360 deg longitude convention.
                     lon = geo.longitude % 360
                     row = (
-                        f"{time_idx},{gnss_name},"
+                        f"{time_idx},{source_name},"
                         f"{round(geo.latitude, 3)},{round(lon, 3)}\n"
                     )
                     f.write(row)
