@@ -794,7 +794,7 @@ def write_dshield_format_of_specular_trajectory_results(
             #)
             f.write(f"Step size [s] is {float(step_size_seconds)}\n")
             f.write(f"Mission Duration [Days] is {mission_days}\n")
-            f.write("time index,source id,lat [deg],lon [deg]\n")
+            f.write("time index,source id,lat [deg],lon [deg],rank\n")
 
             # Iterate over specular entries (sources). Without top-k each entry
             # is one GNSS transmitter and "gnss_spacecraft_name" /
@@ -869,9 +869,13 @@ def write_dshield_format_of_specular_trajectory_results(
                     ).to_geographic_position()
                     # Reference format uses a 0-360 deg longitude convention.
                     lon = geo.longitude % 360
+                    # The specular ranking (rank 1 = highest RCG) is constant
+                    # across an entry; it is present only for top-k results and
+                    # left blank otherwise (one entry per transmitter, unranked).
+                    rank_str = "" if rank is None else str(rank)
                     row = (
                         f"{time_idx},{source_name},"
-                        f"{round(geo.latitude, 3)},{round(lon, 3)}\n"
+                        f"{round(geo.latitude, 3)},{round(lon, 3)},{rank_str}\n"
                     )
                     f.write(row)
 

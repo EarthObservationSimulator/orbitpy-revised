@@ -154,10 +154,15 @@ def propagate_spacecraft(
     if spacecraft.orbit is not None:
         orbit = spacecraft.orbit
     elif spacecraft.norad_id is not None:
-        
+
         orbit = auto_retrieve_orbit(
             spacecraft.norad_id, t0, space_track_credentials_fp
         )
+        # Record the retrieved orbit (OMM) on the spacecraft so callers can
+        # access the exact orbit used for propagation after the run (e.g. to
+        # serialize it). On a subsequent propagation of the same spacecraft
+        # this cached orbit is reused instead of re-fetching from Space-Track.
+        spacecraft.orbit = orbit
     else:
         raise ValueError(
             "Spacecraft must have either orbit specifications or a NORAD ID for OMM retrieval."

@@ -72,9 +72,10 @@ mission_dict.setdefault("settings", {})[
     "user_dir"
 ] = user_dir  # Ensure settings and set user directory.
 
-# Set the mission start epoch to (current UTC date + 2 days) at 00:00:00 UTC.
-# e.g. running on 2026-06-02 yields a start epoch of 2026-06-04T00:00:00.
-epoch_date = (datetime.now(timezone.utc) + timedelta(days=2)).date()
+# Set the mission start epoch to (current UTC date + 1 days) at 00:00:00 UTC.
+# e.g. running on 2026-06-02 yields a start epoch of 2026-06-03T00:00:00.
+epoch_date = (datetime.now(timezone.utc) + timedelta(days=1)).date()
+#epoch_date = datetime(2026, 6, 3).date()
 mission_dict["start_time"] = {
     "time_format": "GREGORIAN_DATE",
     "calendar_date": f"{epoch_date.isoformat()}T00:00:00.00",
@@ -86,10 +87,10 @@ print(f"Mission start epoch set to {mission_dict['start_time']['calendar_date']}
 mission = Mission.from_dict(mission_dict)
 
 # Execute the mission
-# topk=4: for each time step, keep coverage from only the 4 highest-RCG
+# When topk=4 is set, then for each time step, keep coverage from only the 4 highest-RCG
 # specular trajectories across all GNSS transmitters.
 print("Start mission.")
-results = mission.execute_all(topk=4)
+results = mission.execute_all(topk=None)
 
 propagator_results = results.get("propagator_results", [])
 contact_finder_results = results.get("contact_finder_results", {})
@@ -110,6 +111,30 @@ elapsed_time = time.time() - time_start
 print(
     f"Results written to MissionOutput.json. Time taken: {elapsed_time:.2f} seconds"
 )
+
+
+##### Save the OMM retrieved/used to propagate each satellite's orbit. #####
+# After execute_all(), each spacecraft's `orbit` attribute holds the exact OMM
+# used for propagation (auto-retrieved from Space-Track by NORAD ID for this
+# demo). Write one OMM JSON file per satellite (receivers + GNSS transmitters).
+omm_dir = os.path.join(results_dir, "omm")
+os.makedirs(omm_dir, exist_ok=True)
+num_omm_saved = 0
+for sc in [*mission.spacecrafts, *mission.gnss_spacecrafts]:
+    sc_label = sc.name or str(sc.norad_id) or sc.identifier
+    if sc.orbit is None:
+        print(f"Skipping OMM save for {sc_label}: no orbit available.")
+        continue
+    omm_fp = os.path.join(omm_dir, f"{sc_label}.json")
+    with open(omm_fp, "w", encoding="utf-8") as omm_f:
+        # OrbitalMeanElementsMessage serializes natively to OMM JSON; fall back
+        # to the generic to_dict() for any other orbit representation.
+        if hasattr(sc.orbit, "to_json"):
+            omm_f.write(sc.orbit.to_json())
+        else:
+            json.dump(sc.orbit.to_dict(), omm_f, indent=4)
+    num_omm_saved += 1
+print(f"Saved {num_omm_saved} OMM file(s) to {omm_dir}.")
 
 
 ##### Save results to the format expected in the D-SHIELD project #####

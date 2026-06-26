@@ -455,6 +455,7 @@ class SpaceTrackAPI:
 
         # Validate that target_date_time is a string in the
         # format %Y-%m-%dT%H:%M:%S.%f or %Y-%m-%dT%H:%M:%S
+        #target_date_time = "2026-06-03T00:00:00" # Override for testing with a fixed target date-time.
         try:
             # Try parsing with fractional seconds
             tdt_datetime = datetime.strptime(
