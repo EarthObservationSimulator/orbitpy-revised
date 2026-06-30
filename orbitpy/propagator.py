@@ -218,12 +218,19 @@ class SGP4Propagator:
         pos = geocentric.position.km
         vel = geocentric.velocity.km_per_s
 
-        # Convert Skyfield Time object to AbsoluteDateArray
+        # Convert Skyfield Time object to AbsoluteDateArray.
+        # The fractional-seconds (.%f) precision is required: with a sub-second
+        # (or otherwise non-whole-second) step the grid points fall between
+        # whole seconds, and a second-precision format quantizes them onto the
+        # same second. That collapses distinct time steps, so downstream code
+        # that maps times to integer indices via round((t - epoch)/step) skips
+        # and duplicates indices -- e.g. specular points appear to be "missing"
+        # at scattered time steps. Microsecond precision keeps the grid uniform.
         absolute_date_array = AbsoluteDateArray.from_dict(
             {
                 "time_format": "Gregorian_Date",
                 "calendar_date": propagate_time.utc_strftime(
-                    format="%Y-%m-%dT%H:%M:%S"
+                    format="%Y-%m-%dT%H:%M:%S.%f"
                 ),
                 "time_scale": "utc",
             }
