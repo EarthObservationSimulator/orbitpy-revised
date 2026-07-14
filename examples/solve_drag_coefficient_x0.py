@@ -1,10 +1,10 @@
 """Estimate CYGNSS drag coefficient and initial Cartesian state with GLSDC.
 
-Similar to the example solve_drag_coefficient, except it initializes the 
+Similar to the example solve_drag_coefficient, except it initializes the
 state using the cygnss data rather than SGP4, and also includes the initial
-state as a solved-for variable. Hence it achieves a very low position
-error over the course of the 3-day arc (max ~.06 km) and a positive drag coefficient
-(1.41). 
+state as a solved-for variable. Only the first half of the 3-day arc is used for
+orbit determination, and the resulting trajectory is evaluated over the full
+arc.
 
 """
 
@@ -137,11 +137,13 @@ def main():
     # -------------------------------------------------------------------------
 
     datearray = AbsoluteDateArray.linspace(init_time, stop_time, 300)
+    fit_datearray = datearray[: len(datearray) // 2]
 
     sc_stateseries_icrf = sc_stateseries_icrf_full.resample(datearray)
 
     y_reference_positions = sc_stateseries_icrf.data[0]
-    y = y_reference_positions.reshape(-1, 1)
+    y_fit_positions = y_reference_positions[: len(fit_datearray)]
+    y = y_fit_positions.reshape(-1, 1)
 
     def F(x: np.ndarray) -> np.ndarray:
         x = np.asarray(x, dtype=float).reshape(-1)
@@ -159,7 +161,7 @@ def main():
         )
 
         propagated_state_series = prop.execute_2(
-            times=datearray,
+            times=fit_datearray,
             initial_state=initial_state,
         )
 
@@ -223,7 +225,7 @@ def main():
 
     x_hat = results.x_hat.reshape(-1)
 
-    cd_hat = x_hat[0]
+    cd_hat = float(x_hat[0])
     r0_hat = x_hat[1:4]
     v0_hat = x_hat[4:7]
 
@@ -275,16 +277,36 @@ def main():
     # Plot final residuals
     # -------------------------------------------------------------------------
 
-    final_prop_positions = results.y_hat.reshape((-1, 3))
+    prop.set_drag_coeff(cd_hat)
+
+    estimated_initial_state = CartesianState.from_array(
+        np.concatenate((r0_hat, v0_hat)),
+        init_time,
+        "ICRF_EC",
+    )
+
+    final_state_series = prop.execute_2(
+        times=datearray,
+        initial_state=estimated_initial_state,
+    )
+
+    final_prop_positions = final_state_series.data[0]
     diff_pos = final_prop_positions - y_reference_positions
     error_norm = np.linalg.norm(diff_pos, axis=1)
 
     time_days = datearray.ephemeris_time * (1.0 / 86400.0)
+    fit_end_day = fit_datearray.ephemeris_time[-1] * (1.0 / 86400.0)
 
     plt.figure()
     plt.plot(time_days, diff_pos[:, 0], label="X")
     plt.plot(time_days, diff_pos[:, 1], label="Y")
     plt.plot(time_days, diff_pos[:, 2], label="Z")
+    plt.axvline(
+        fit_end_day,
+        color="black",
+        linestyle="--",
+        label="End of fit data",
+    )
     plt.xlabel("Ephemeris Time (days)")
     plt.ylabel("Position Residual (km)")
     plt.title(f"Final Position Residuals, Cd = {cd_hat:.6f}")
@@ -293,9 +315,16 @@ def main():
 
     plt.figure()
     plt.plot(time_days, error_norm)
+    plt.axvline(
+        fit_end_day,
+        color="black",
+        linestyle="--",
+        label="End of fit data",
+    )
     plt.xlabel("Ephemeris Time (days)")
     plt.ylabel("Position Error Norm (km)")
     plt.title("Final Position Error Norm")
+    plt.legend()
     plt.grid(True)
 
     plt.figure()
