@@ -51,7 +51,7 @@ def write_dshield_format_of_propagator_results(
 
         <out_dir>/<spacecraft_name>/<propagation>/state.csv
 
-    - Each spacrcraft produces one CSV file named state.csv.
+    - Each spacecraft produces one CSV file named state.csv.
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<propagation>' folder is erased and recreated.
 
@@ -150,9 +150,10 @@ def write_dshield_format_of_contact_results(
 
     The resulting files are produced within the following directory structure:
 
-        <out_dir>/<spacecraft_name>/<ground_contact>/<ground_station_name>_contacts.csv
+        <out_dir>/<spacecraft_name>/<ground_contact>/<ground_station_name>
 
-    - Each ground station will produce one CSV file named <ground_station_name>_contacts.csv.
+    - Each ground station produces one CSV file named after the ground station
+      (no file extension).
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<ground_contact>' folder is erased and recreated.
 
@@ -283,9 +284,9 @@ def write_dshield_format_of_eclipse_results(
 
     The resulting files are produced within the following directory structure:
 
-        <out_dir>/<spacecraft_name>/eclipse/eclipse_intervals.csv
+        <out_dir>/<spacecraft_name>/eclipse/eclipse
 
-    - Each spacecraft produces one CSV file named eclipse_intervals.csv.
+    - Each spacecraft produces one CSV file named eclipse (no file extension).
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<eclipse>' folder is erased and recreated.
 
@@ -493,6 +494,16 @@ def write_dshield_format_of_gnssr_coverage_results(
 ) -> None:
     """
     Write per-spacecraft, per-sensor coverage CSV files in the D-SHIELD format.
+
+    The resulting files are produced within the following directory structure:
+
+        <out_dir>/<spacecraft_name>/access/DDMI.csv                (single sensor)
+        <out_dir>/<spacecraft_name>/access/sensor<N>_access.csv    (multiple sensors)
+
+    - If the spacecraft has exactly one sensor, the file is named DDMI.csv; otherwise
+      one file per sensor is written, named sensor<N>_access.csv (N starting at 1).
+    - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
+    - The 'access' folder is erased and recreated.
     """
     if step_size_seconds <= 0:
         raise ValueError(
@@ -716,9 +727,9 @@ def write_dshield_format_of_specular_trajectory_results(
     for GNSS spacecraft name.
 
     The resulting files are produced within the following directory structure:
-        <out_dir>/<spacecraft_name>/specular/specular_points.csv
+        <out_dir>/<spacecraft_name>/specular/specular.csv
 
-    - Each spacecraft produces one CSV file named specular_points.csv containing all
+    - Each spacecraft produces one CSV file named specular.csv containing all
         GNSS transmitters' specular points.
     - The '<spacecraft_name>' folder is created if it does not exist. If it exists, it is reused.
     - The '<specular>' folder is erased and recreated.

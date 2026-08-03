@@ -10,7 +10,7 @@ methods to serialize and deserialize the resource information to and from
 dictionaries. The primary application is in the `mission` module, where
 these resources are used to define the mission configuration.
 
-The mission module provoides methods to run simulations (propagate, contact finding,
+The mission module provides methods to run simulations (propagate, contact finding,
 eclipse finding, coverage) based on the defined resources and their properties.
 
 """
@@ -55,7 +55,7 @@ class GroundStation:
                               Any string is accepted; it need not be a UUID.
                               If None, a new UUID is generated.
             name (str or None): Name of the ground station.
-            geographic_position (:class:`orbitpy.util.GeographicPosition`):
+            geographic_position (:class:`eosimutils.state.GeographicPosition`):
                                     Geographic position of the ground station.
             min_elevation_angle_deg (float): Minimum elevation angle in degrees.
         """
@@ -201,7 +201,7 @@ class Spacecraft:
         local_orbital_frame_handler: Optional[
             Union[LVLHType1FrameHandler]
         ] = None,
-        sensor: Optional[List[Sensor]] = None,
+        sensor: Optional[Union[List[Sensor], Sensor]] = None,
     ):
         """
         Args:
@@ -214,7 +214,7 @@ class Spacecraft:
                                                                 Orbit information. Defaults to None.
             local_orbital_frame_handler (Optional[LVLHType1FrameHandler]):
                 Local orbital frame information (e.g., LVLH Type-1 frame handler).
-                If not provided, defaults to LVLH Type-1 frame handler with the name "LVLH_<spacecraft_id in upper case>".
+                If not provided, defaults to LVLH Type-1 frame handler with the name "LVLH_<spacecraft_id>".
             sensor (Optional[Union[List[Sensor], Sensor]]):
                     List of Sensor objects or a single Sensor object.
         """
@@ -273,13 +273,13 @@ class Spacecraft:
                             If not provided, the created Spacecraft object defaults
                             to a new UUID. (See __init__ method.)
                 - "name" (str): (Optional) Name of the spacecraft.
-                - "norad_id" (int): (Optional) NORAD ID of the spacecraft.
+                - "norad_id" (int or str): (Optional) NORAD ID of the spacecraft.
                 - "orbit" (dict): (Optional) Orbit information.
                                             See `orbitpy.orbits.OrbitFactory.from_dict`.
                 - "local_orbital_frame_handler" (dict): (Optional) Local orbital frame (handler).
                             See `eosimutils.standardframes.StandardFrameHandlerFactory.from_dict`.
                             If not provided, the created Spacecraft object defaults to LVLH Type-1
-                            frame handler with the name "LVLH_<spacecraft_id in upper case>".
+                            frame handler with the name "LVLH_<spacecraft_id>".
                             (See __init__ method.)
                 - "sensor" (List[dict] or dict): (Optional) List of Sensors or a single Sensor.
                                                         See `orbitpy.resources.Sensor.from_dict`.

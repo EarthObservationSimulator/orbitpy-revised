@@ -50,7 +50,7 @@ The coding style is such that each of the dictionaries within the mission dictio
 is formatted so that it can be directly converted to the corresponding object using the
 `from_dict` function of the respective class. For example, the dictionary for a spacecraft
 is such that it can be directly converted to a `Spacecraft` object using the
-`Spacecraft.from_dict` function. (An exception is the `Settings` class which contains misscellaneous
+`Spacecraft.from_dict` function. (An exception is the `Settings` class which contains miscellaneous
 mission settings.)
 """
 
@@ -791,7 +791,7 @@ class Mission:
                     - "total_spacecraft_coverage": List[Dict[str, Any]] where each dict has:
                         - "sensor_id": str
                         - "sensor_name": str
-                        - "coverage": PointCoverage
+                        - "coverage_info": DiscreteCoverageTP
 
             Example:
             [
@@ -1581,24 +1581,35 @@ class Mission:
 
         Returns:
             Dict[str, Any]:
-                A dictionary with the following keys (present only if the respective analysis runs):
+                For POINT_COVERAGE missions, a dictionary with the keys:
                 - "propagator_results": List[Dict[str, Union[str, StateSeries]]]
                                   Primary spacecraft propagation results
                                   (see `execute_propagation()`).
-                - "gnssr_propagator_results": Optional[List[Dict[str, Union[str, StateSeries]]]]
-                                      GNSS spacecraft propagation results
-                                      (see `execute_propagation()`).
-                                      Applies for the case of gnssr missions.
                 - "eclipse_finder_results": List[Dict[str, Union[str, EclipseInfo]]]
                              Eclipse results per spacecraft
                              (see `execute_eclipse_finder()`).
-                - "contact_finder_results": List[Dict[str, Any]]
+                - "contact_finder_results": Optional[List[Dict[str, Any]]]
                               Ground-station contact results
-                              (see `execute_gs_contact_finder()`).
+                              (see `execute_gs_contact_finder()`), or None if no
+                              ground stations are configured.
                 - "coverage_calculator_results": List[Dict[str, Any]]
                               Coverage calculator results
                               (see `execute_coverage_calculator()`).
 
+                For SPECULAR_COVERAGE missions, the same keys plus:
+                - "gnssr_propagator_results": List[Dict[str, Union[str, StateSeries]]]
+                                      GNSS (transmitter) spacecraft propagation results
+                                      (see `execute_propagation()`).
+                - "specular_trajectory_results": List[Dict[str, Any]]
+                              Specular point trajectories per receiver
+                              (see `execute_specular_trajectory_calculator()`).
+                In this case "coverage_calculator_results" holds the GNSS-R coverage
+                (see `execute_gnssr_coverage_calculator()`).
+
+                Note: if no spatial points are configured
+                (``cartesian_spatial_points`` is None), an **empty** dictionary is
+                returned -- the propagation, eclipse, and contact analyses still run
+                but their results are not included in the bundle.
         """
         mission_results = {}
         # propagation

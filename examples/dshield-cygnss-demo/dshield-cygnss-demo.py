@@ -14,10 +14,11 @@ NORAD IDs of GNSS Satellites
 ============================
 This example considers only GPS GNSS satellites.
 NORAD IDs of GNSS satellites sourced from: https://celestrak.org/NORAD/elements/
-Note: This list may exclude GNSS satellites that were active during the mission epoch but are
-     currently inactive at the time of writing this comment (4 Oct 2024). Also satellites not
-     launched before the date of interest, and decayed satellites are excluded later in the script.
-     This list will not include GNSS satellites active after 4 Oct 2024.
+Note: The transmitter set is defined statically in gnss_spacecrafts.json (referenced by
+     MissionSpecs.json); this script performs no filtering of its own. The list below
+     mirrors that file. It may exclude GNSS satellites that were active during the mission
+     epoch but have since been decommissioned, and satellites launched after the list was
+     last updated.
 Update (5 Jun 2026): removed GNSS27704 (appears decommissioned) and added 3 newer GPS
      satellites (62339, 64202, 67588).
 Update (25 Jun 2026): removed GNSS26360 (appears decommissioned).
@@ -26,8 +27,7 @@ Update (25 Jun 2026): removed GNSS26360 (appears decommissioned).
 gps_sat_norad_ids = ['67588', '64202', '62339', '55268', '48859', '46826', '45854', '44506',
                      '43873', '41328', '41019', '40730', '40534', '40294', '40105', '39741',
                      '39533', '39166', '38833', '36585', '35752', '32711', '32384', '32260',
-                     '29601', '29486', '28874', '28474', '28190', '27663', '26407', '26360',
-                     '24876']
+                     '29601', '29486', '28874', '28474', '28190', '27663', '26407', '68791']
 
 
 """
@@ -87,8 +87,9 @@ print(f"Mission start epoch set to {mission_dict['start_time']['calendar_date']}
 mission = Mission.from_dict(mission_dict)
 
 # Execute the mission
-# When topk=4 is set, then for each time step, keep coverage from only the 4 highest-RCG
-# specular trajectories across all GNSS transmitters.
+# topk=None keeps results for every GNSS transmitter. Passing an integer k instead
+# reduces both the GNSS-R coverage and the specular trajectories, at each time step,
+# to the k highest-RCG transmitters.
 print("Start mission.")
 results = mission.execute_all(topk=None)
 
