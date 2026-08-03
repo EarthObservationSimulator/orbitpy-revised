@@ -22,7 +22,8 @@ dependencies = [
     "astropy",
     "skyfield",
     "spiceypy",
-    "requests"
+    "requests",
+    "orekit"
 ]
 
 [project.optional-dependencies]
