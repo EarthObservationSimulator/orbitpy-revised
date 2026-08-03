@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=3.13
   - pip
+  - orekit
 
   # portable build tools
   - cmake
